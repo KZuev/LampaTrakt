@@ -1793,6 +1793,7 @@
     var params = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
     var unauthorized = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : false;
     var requestOptions = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : {};
+    if (!window._traktRateLimitInfo) window._traktRateLimitInfo = {};
     return new Promise(function (resolve, reject) {
       var headers = ensureHeaders({
         unauthorized: unauthorized
@@ -1815,6 +1816,9 @@
       $.ajax(ajaxParams).done(function (data, _textStatus, jqXHR) {
         var status = jqXHR && typeof jqXHR.status === 'number' ? jqXHR.status : 200;
         var responseHeaders = parseResponseHeaders(jqXHR);
+        if (responseHeaders['x-ratelimit-limit'] || responseHeaders['x-ratelimit-remaining']) {
+          window._traktRateLimitInfo = { limit: responseHeaders['x-ratelimit-limit'], remaining: responseHeaders['x-ratelimit-remaining'], reset: responseHeaders['x-ratelimit-reset'] };
+        }
         if (withMeta) {
           resolve({
             data: data,
@@ -5101,6 +5105,12 @@
       trakt_watched_no: {
         ru: "Не просмотрено",
       },
+      trakttv_na: {
+        ru: "на",
+      },
+      trakttv_watched_label: {
+        ru: "Просмотрено",
+      },
       trakt_not_set: {
         ru: "не задан",
       }
@@ -5672,77 +5682,156 @@
   var TraktHistory = {
     // Функція для відображення прогресу перегляду серіалу
     showWatchProgress: function showWatchProgress(data, element) {
-      // Перевіряємо чи це серіал
-      if (data.movie && data.movie.first_air_date && element.object.method === 'tv') {
-        // Отримуємо історію серіалу
-        getShowHistory(data.movie.id).then(function (historyData) {
-          if (historyData && historyData.length > 0) {
-            // Отримуємо останній переглянутий епізод
-            var lastWatched = historyData[0];
-            if (lastWatched && lastWatched.episode) {
-              var _Lampa;
-              var season = lastWatched.episode.season;
-              var episode = lastWatched.episode.number;
-              var hasApplecation = Array.isArray((_Lampa = Lampa) === null || _Lampa === void 0 || (_Lampa = _Lampa.Manifest) === null || _Lampa === void 0 ? void 0 : _Lampa.plugins) && Lampa.Manifest.plugins.some(function (plugin) {
-                return plugin && plugin.name === 'Applecation';
-              });
-              var renderRoot = element.object.activity.render();
+      var _A = typeof api$1 !== 'undefined' && api$1 || null;
+      var method = element && element.object && element.object.method;
+      var isShow = method === 'tv';
+      var isMovie = method === 'movie';
+      if (!isShow && !isMovie) return;
 
-              // Для Applecation вставляємо прогрес у блок інформації, перед бейджами якості
-              if (hasApplecation) {
-                var tryInsertApplecation = function tryInsertApplecation() {
-                  var _rootNode$querySelect, _cardRoot$querySelect;
-                  var rootNode = renderRoot && renderRoot.get ? renderRoot.get(0) : null;
-                  var cardRoot = (rootNode === null || rootNode === void 0 || (_rootNode$querySelect = rootNode.querySelector) === null || _rootNode$querySelect === void 0 ? void 0 : _rootNode$querySelect.call(rootNode, '.full-start-new.applecation')) || document.querySelector('.full-start-new.applecation');
-                  var applecationInfo = cardRoot === null || cardRoot === void 0 || (_cardRoot$querySelect = cardRoot.querySelector) === null || _cardRoot$querySelect === void 0 ? void 0 : _cardRoot$querySelect.call(cardRoot, '.applecation__info');
-                  if (!applecationInfo) return false;
-                  var existingDefault = cardRoot.querySelector('.full-start-new__details.trakt');
-                  if (existingDefault) existingDefault.remove();
-                  var existingApplecation = applecationInfo.querySelector('.trakt-applecation-progress');
-                  if (existingApplecation) existingApplecation.remove();
-                  var applecationProgress = document.createElement('span');
-                  applecationProgress.className = 'trakt-applecation-progress';
-                  applecationProgress.innerHTML = "\n                                        <span class=\"trakt-icon\">".concat(icons.TRAKT_ICON, "</span>\n                                        <span class=\"trakt-applecation-progress__text\">S").concat(season, " \xB7 E").concat(episode, "</span>\n                                    ");
-                  var badges = applecationInfo.querySelector('.applecation__quality-badges');
-                  if (badges) {
-                    badges.before(applecationProgress);
-                  } else {
-                    applecationInfo.append(applecationProgress);
-                  }
-                  return true;
-                };
-                if (tryInsertApplecation()) return;
-                var attempts = 0;
-                var _retryInsert = function retryInsert() {
-                  if (tryInsertApplecation()) return;
-                  attempts += 1;
-                  if (attempts < 10) setTimeout(_retryInsert, 200);
-                };
-                _retryInsert();
-                return;
-              }
+      var movieData = (data && data.movie) || data || {};
+      var itemId = movieData.id;
+      if (!itemId) return;
 
-              // Створюємо елемент для відображення прогресу
-              var progressElement = document.createElement('div');
-              progressElement.className = 'full-start-new__details trakt';
-              progressElement.innerHTML = "\n                                <div class=\"trakt-icon\" style=\"width:22px; height:22px;\">".concat(icons.TRAKT_ICON, "</div>\n                                <span>\u041F\u0440\u043E\u0441\u043C\u043E\u0442\u0440\u0435\u043D\u043E:</span><span class=\"full-start-new__split\">\u25CF</span>\n                                <span>").concat(Lampa.Lang.translate('full_season'), " ").concat(season, " \xB7 ").concat(Lampa.Lang.translate('full_episode'), " ").concat(episode, "</span>\n                            ");
+      var renderRoot = element && element.object && element.object.activity && typeof element.object.activity.render === 'function'
+        ? element.object.activity.render() : null;
+      if (!renderRoot) return;
 
-              // Знаходимо елемент після якого вставити прогрес
-              var taglineElement = renderRoot.find('.full-start-new__rate-line');
-              if (taglineElement.length) {
-                // Перевіряємо чи вже є елемент прогресу
-                var existingProgress = renderRoot.find('.full-start-new__details.trakt');
-                if (existingProgress.length) {
-                  existingProgress.remove();
+      function buildProgressElement(labelType, season, episodeNum, watched) {
+        var iconColor = watched ? '#9b59d0' : 'rgba(255,255,255,0.38)';
+        var iconHtml = '<div class="trakt-icon" style="width:22px;height:22px;color:' + iconColor + '">' + icons.TRAKT_ICON + '</div>';
+        var bodyHtml;
+        if (labelType === 'completed') {
+          bodyHtml = '<span>' + Lampa.Lang.translate('trakt_show_completed') + '</span>';
+        } else if (labelType === 'dropped' && season) {
+          bodyHtml = '<span>' + Lampa.Lang.translate('trakt_show_dropped') + ' ' + Lampa.Lang.translate('trakttv_na') + ':</span>' +
+                     '<span class="full-start-new__split">●</span>' +
+                     '<span>' + Lampa.Lang.translate('full_season') + ' ' + season + ' · ' + Lampa.Lang.translate('full_episode') + ' ' + episodeNum + '</span>';
+        } else if (labelType === 'movie') {
+          bodyHtml = '<span>' + (watched ? Lampa.Lang.translate('trakt_watched_yes') : Lampa.Lang.translate('trakt_watched_no')) + '</span>';
+        } else {
+          bodyHtml = '<span>' + Lampa.Lang.translate('trakttv_watched_label') + ':</span>' +
+                     '<span class="full-start-new__split">●</span>' +
+                     '<span>' + Lampa.Lang.translate('full_season') + ' ' + season + ' · ' + Lampa.Lang.translate('full_episode') + ' ' + episodeNum + '</span>';
+        }
+        var el = document.createElement('div');
+        el.className = 'full-start-new__details trakt selector trakt-status-clickable';
+        el.innerHTML = iconHtml + bodyHtml;
+        $(el).on('hover:enter', function() {
+          if (isShow) {
+            Lampa.Select.show({
+              title: Lampa.Lang.translate('trakt_show_status_title'),
+              items: [
+                { title: Lampa.Lang.translate('trakt_show_completed'), action: 'completed' },
+                { title: Lampa.Lang.translate('trakt_show_in_progress'), action: 'in_progress' },
+                { title: Lampa.Lang.translate('trakt_show_dropped'), action: 'dropped' }
+              ],
+              onSelect: function(a) {
+                if (a.action === 'dropped' && _A) {
+                  Lampa.Storage.set('trakt_show_status_' + itemId, 'dropped');
+                  _A.hideFromProgress({ id: itemId }).catch(function() {});
+                  invalidateWatchedCache();
+                } else if (a.action === 'completed' && _A) {
+                  Lampa.Storage.set('trakt_show_status_' + itemId, 'completed');
+                  _A.addToHistory({ method: 'show', id: itemId, ids: { tmdb: itemId } }, 'all').then(function() {
+                    invalidateWatchedCache();
+                    TraktHistory.showWatchProgress(data, element);
+                  }).catch(function() {});
+                } else {
+                  Lampa.Storage.remove('trakt_show_status_' + itemId);
+                  TraktHistory.showWatchProgress(data, element);
                 }
-                taglineElement.after(progressElement);
-              }
-            }
+              },
+              onBack: function() { Lampa.Controller.toggle('content'); }
+            });
+          } else {
+            Lampa.Select.show({
+              title: Lampa.Lang.translate('trakt_watched_title'),
+              items: [
+                { title: Lampa.Lang.translate('trakt_watched_now'), action: 'now' },
+                { title: Lampa.Lang.translate('trakt_watched_unknown_date'), action: 'unknown' }
+              ],
+              onSelect: function(a) {
+                if (!_A) return;
+                var payload = { method: 'movie', id: itemId, ids: { tmdb: itemId } };
+                if (a.action === 'unknown') payload.watched_at = null;
+                _A.addToHistory(payload).then(function() {
+                  invalidateWatchedCache();
+                  TraktHistory.showWatchProgress(data, element);
+                }).catch(function() {});
+              },
+              onBack: function() { Lampa.Controller.toggle('content'); }
+            });
           }
-        })["catch"](function (error) {
-          logWarn('Failed to load show history for progress badge', error, {
-            debugOnly: true
-          });
+        });
+        return el;
+      }
+
+      function insertElement(el) {
+        var taglineElement = renderRoot.find('.full-start-new__rate-line');
+        if (taglineElement.length) {
+          renderRoot.find('.full-start-new__details.trakt').remove();
+          taglineElement.after(el);
+        }
+      }
+
+      if (isShow) {
+        var storedStatus = Lampa.Storage.get('trakt_show_status_' + itemId);
+        var hasApplecation = Array.isArray(window.Lampa && Lampa.Manifest && Lampa.Manifest.plugins) &&
+          Lampa.Manifest.plugins.some(function(p) { return p && p.name === 'Applecation'; });
+
+        getShowHistory(itemId).then(function(historyData) {
+          var hasHistory = historyData && historyData.length > 0;
+          var lastWatched = hasHistory ? historyData[0] : null;
+          var season = lastWatched && lastWatched.episode ? lastWatched.episode.season : null;
+          var ep = lastWatched && lastWatched.episode ? lastWatched.episode.number : null;
+
+          if (hasApplecation) {
+            var tryInsertApplecation = function() {
+              var rootNode = renderRoot && renderRoot.get ? renderRoot.get(0) : null;
+              var cardRoot = (rootNode && rootNode.querySelector && rootNode.querySelector('.full-start-new.applecation')) || document.querySelector('.full-start-new.applecation');
+              var applecationInfo = cardRoot && cardRoot.querySelector && cardRoot.querySelector('.applecation__info');
+              if (!applecationInfo) return false;
+              var existing = applecationInfo.querySelector('.trakt-applecation-progress');
+              if (existing) existing.remove();
+              renderRoot.find('.full-start-new__details.trakt').remove();
+              if (season && ep) {
+                var span = document.createElement('span');
+                span.className = 'trakt-applecation-progress';
+                span.innerHTML = '<span class="trakt-icon">' + icons.TRAKT_ICON + '</span><span class="trakt-applecation-progress__text">S' + season + ' · E' + ep + '</span>';
+                var badges = applecationInfo.querySelector('.applecation__quality-badges');
+                if (badges) badges.before(span); else applecationInfo.append(span);
+              }
+              return true;
+            };
+            if (!tryInsertApplecation()) {
+              var attempts2 = 0;
+              var retry = function() { if (tryInsertApplecation()) return; if (++attempts2 < 10) setTimeout(retry, 200); };
+              retry();
+            }
+            return;
+          }
+
+          var labelType;
+          if (storedStatus === 'completed') {
+            labelType = 'completed';
+          } else if (storedStatus === 'dropped' && season) {
+            labelType = 'dropped';
+          } else if (hasHistory && season) {
+            labelType = 'watching';
+          } else {
+            return;
+          }
+          insertElement(buildProgressElement(labelType, season, ep, true));
+        }).catch(function(error) {
+          logWarn('Failed to load show history for progress badge', error, { debugOnly: true });
+        });
+
+      } else {
+        if (!_A) return;
+        _A.inHistory({ method: 'movie', id: itemId, ids: { tmdb: itemId } }).then(function(inHist) {
+          insertElement(buildProgressElement('movie', null, null, !!inHist));
+        }).catch(function() {
+          insertElement(buildProgressElement('movie', null, null, false));
         });
       }
     },
@@ -6733,6 +6822,18 @@
           item.append("<div class=\"settings-param__name\"><b>".concat(Lampa.Lang.translate('trakttv_user_info'), "</b></div>"));
           item.append("<div class=\"settings-param__value trakt-userinfo-name\">".concat(Lampa.Lang.translate('trakttv_username'), ": ").concat((user === null || user === void 0 ? void 0 : user.username) || '-', "</div>"));
           item.append("\n                    <div class=\"settings-param__value trakt-userinfo-vip\">\n                        <span class=\"trakt-userinfo-vip__label\">".concat(Lampa.Lang.translate('trakttv_vip_status'), ":</span>\n                        <span class=\"trakt-vip-badge ").concat(vipClass, "\">").concat(Lampa.Lang.translate(vipStatusKey), "</span>\n                    </div>\n                "));
+          var rl = window._traktRateLimitInfo || {};
+          if (rl.limit || rl.remaining) {
+            var rlUsed = rl.limit && rl.remaining ? (Number(rl.limit) - Number(rl.remaining)) : '';
+            var rlTotal = rl.limit || '';
+            var rlReset = '';
+            if (rl.reset) {
+              var resetTs = Number(rl.reset);
+              var resetDate = resetTs > 1e9 ? new Date(resetTs * 1000) : new Date(resetTs);
+              rlReset = ' · обновится в ' + resetDate.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+            }
+            item.append('<div class="settings-param__value trakt-ratelimit" style="opacity:.7;font-size:.88em;margin-top:.3em">Запросов API: ' + (rlUsed !== '' ? rlUsed : '?') + '/' + (rlTotal || '?') + rlReset + '</div>');
+          }
         })["catch"](function () {
           loading.remove();
           item.append("<div>".concat(Lampa.Lang.translate('trakttvAuthError'), "</div>"));
@@ -9135,96 +9236,6 @@
     });
   }
 
-  function addWatchedStatusButton(data) {
-    var _A = typeof api$1 !== 'undefined' && api$1 || null;
-    if (!_A) return null;
-
-    var button = document.createElement('div');
-    button.className = 'full-start__button selector trakt-watched-status-button';
-    button.innerHTML = icons.HISTORY_ICON + ' <span>' + Lampa.Lang.translate('trakt_watched_no') + '</span>';
-
-    var isMovie = !(data.movie && (data.movie.first_air_date || data.movie.name));
-    var cardData = data.movie || data;
-    var apiData = {
-      method: isMovie ? 'movie' : 'show',
-      id: cardData.id,
-      ids: cardData.ids || {}
-    };
-    if (cardData.id && !apiData.ids.tmdb) apiData.ids.tmdb = cardData.id;
-
-    function setWatched(yes) {
-      if (yes) {
-        button.style.color = '#9b59d0';
-        button.querySelector('span').textContent = Lampa.Lang.translate('trakt_watched_yes');
-      } else {
-        button.style.color = '';
-        button.querySelector('span').textContent = Lampa.Lang.translate('trakt_watched_no');
-      }
-    }
-
-    _A.inHistory(apiData).then(function(inHist) { setWatched(!!inHist); }).catch(function() {});
-
-    $(button).on('hover:enter', function() {
-      if (isMovie) {
-        Lampa.Select.show({
-          title: Lampa.Lang.translate('trakt_watched_title'),
-          items: [
-            { title: Lampa.Lang.translate('trakt_watched_now'), action: 'now' },
-            { title: Lampa.Lang.translate('trakt_watched_unknown_date'), action: 'unknown' }
-          ],
-          onSelect: function(a) {
-            var payload = Object.assign({}, apiData);
-            if (a.action === 'unknown') payload.watched_at = null;
-            _A.addToHistory(payload).then(function() {
-              setWatched(true);
-              invalidateWatchedCache();
-              Lampa.Bell.push({ text: Lampa.Lang.translate('trakt_history_added') });
-            }).catch(function() {
-              Lampa.Bell.push({ text: Lampa.Lang.translate('trakt_history_addError') });
-            });
-          },
-          onBack: function() { Lampa.Controller.toggle('content'); }
-        });
-      } else {
-        Lampa.Select.show({
-          title: Lampa.Lang.translate('trakt_show_status_title'),
-          items: [
-            { title: Lampa.Lang.translate('trakt_show_completed'), action: 'completed' },
-            { title: Lampa.Lang.translate('trakt_show_in_progress'), action: 'in_progress' },
-            { title: Lampa.Lang.translate('trakt_show_dropped'), action: 'dropped' }
-          ],
-          onSelect: function(a) {
-            if (a.action === 'dropped') {
-              _A.hideFromProgress(apiData).then(function() {
-                Lampa.Bell.push({ text: Lampa.Lang.translate('trakt_show_hidden') });
-              }).catch(function() {
-                Lampa.Bell.push({ text: Lampa.Lang.translate('trakt_history_addError') });
-              });
-            } else if (a.action === 'completed') {
-              _A.addToHistory(apiData, 'all').then(function() {
-                setWatched(true);
-                invalidateWatchedCache();
-                Lampa.Bell.push({ text: Lampa.Lang.translate('trakt_history_added') });
-              }).catch(function() {
-                Lampa.Bell.push({ text: Lampa.Lang.translate('trakt_history_addError') });
-              });
-            } else {
-              _A.addToHistory(apiData, 'last_episode').then(function() {
-                setWatched(true);
-                invalidateWatchedCache();
-                Lampa.Bell.push({ text: Lampa.Lang.translate('trakt_history_added') });
-              }).catch(function() {
-                Lampa.Bell.push({ text: Lampa.Lang.translate('trakt_history_addError') });
-              });
-            }
-          },
-          onBack: function() { Lampa.Controller.toggle('content'); }
-        });
-      }
-    });
-
-    return button;
-  }
 
   /**
    * Модуль для обробки подій плагіна
@@ -9496,10 +9507,6 @@
             var button = watchlist.addWatchlistButton(e.data);
             buttonsContainer.append(button);
           }
-          if (buttonsContainer.find('.trakt-watched-status-button').length === 0) {
-            var watchedBtn = addWatchedStatusButton(e.data);
-            if (watchedBtn) buttonsContainer.append(watchedBtn);
-          }
           return;
         }
         if ((attempt || 0) < 8) setTimeout(function () { tryInjectBtn((attempt || 0) + 1); }, 300);
@@ -9554,10 +9561,8 @@
       this.addRelatedListsBlock(eventForLists);
 
       // Додаємо прогрес перегляду для серіалів
-      if (e.object.method === 'tv') {
-        // Перевіряємо налаштування trakttv_show_tv_progress
+      if (e.object.method === 'tv' || e.object.method === 'movie') {
         var showProgress = Lampa.Storage.field('trakttv_show_tv_progress');
-        // Показуємо прогрес, якщо налаштування не існуё true
         if (showProgress === undefined || showProgress === true) {
           TraktHistory.showWatchProgress(e.data, e);
         }
@@ -11461,7 +11466,7 @@
     } catch (e) {/* noop */}
 
     // Додаємо стилі
-    Lampa.Template.add('trakt_style', "<style>@charset 'UTF-8';.full-start-new__details.trakt{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;color:#fff}.trakt-brand-icon{width:100%;height:100%;display:block;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0;color:inherit}.trakt-brand-icon path{fill:currentColor}.trakt-head-action.focus .trakt-brand-icon,.trakt-head-action.hover .trakt-brand-icon,.menu__item.focus .trakt-brand-icon,.menu__item.hover .trakt-brand-icon,.menu__item.traverse .trakt-brand-icon,.settings-folder.focus .trakt-brand-icon{color:inherit}.full-start-new__details.trakt .trakt-icon{margin-right:.5em;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center}.full-start-new__details.trakt .full-start-new__split{margin:0 .5em}.trakt-applecation-progress{display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.4em;margin-right:.6em;margin-left:.6em}.trakt-applecation-progress .trakt-icon{width:18px;height:18px;display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center}.trakt-applecation-progress .trakt-icon svg{width:100%;height:100%}.trakt-applecation-progress__text{white-space:nowrap}.trakt-lists-container{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:1em;padding:1em}.trakt-list-card{width:150px;background:rgba(255,255,255,0.1);-webkit-border-radius:.5em;border-radius:.5em;padding:.5em;cursor:pointer;-webkit-transition:background .3s ease;-o-transition:background .3s ease;transition:background .3s ease}.trakt-list-card:hover{background:rgba(255,255,255,0.2)}.trakt-list-card__poster{width:100%;height:225px;background-size:cover;background-position:center;-webkit-border-radius:.5em;border-radius:.5em;margin-bottom:.5em}.trakt-list-card__title{font-size:.9em;text-align:center;white-space:nowrap;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis}.trakt-list-detail-header{padding:1em;background:rgba(0,0,0,0.3);margin-bottom:1em}.trakt-list-detail-title{font-size:1.5em;margin-bottom:.5em}.trakt-list-detail-description{font-size:1em;opacity:.8}.trakt-head-action{color:#ff4d4d}.trakt-head-action--ok{color:#37ff54}.trakt-head-action--error{color:#ff4d4d}.trakt-head-action svg{width:100%;height:100%;display:block}.trakt-head-icon{width:100%;height:100%;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center}.trakt-list-manager-button{display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.5em}.trakt-list-manager-button svg{width:1.2em;height:1.2em}.trakt-watchlist-hub{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;height:100%}.trakt-watchlist-hub__controls{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;gap:.55em;padding:.8em 1.5em .2em}.trakt-watchlist-hub__tabs{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:1.2em}.trakt-watchlist-hub__tabs .simple-button{margin-right:0;-webkit-box-flex:1;-webkit-flex:1 1 8em;-ms-flex:1 1 8em;flex:1 1 8em;min-width:0;padding:1.1em 1.4em;font-size:1.6em;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;text-align:center;-webkit-border-radius:1.1em;border-radius:1.1em}.trakt-watchlist-hub__tabs .simple-button--filter>div{width:100%;margin-left:0;padding:0;background:transparent;text-align:center;font-weight:800;font-size:1em;letter-spacing:.02em}.trakt-watchlist-hub__sorts{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:.55em}.trakt-watchlist__sort{margin-right:0;-webkit-box-flex:1;-webkit-flex:1 1 10em;-ms-flex:1 1 10em;flex:1 1 10em;min-width:7.6em;padding:.65em .85em;-webkit-box-pack:justify;-webkit-justify-content:space-between;-ms-flex-pack:justify;justify-content:space-between;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.55em;-webkit-border-radius:.9em;border-radius:.9em}.trakt-watchlist__sort>div{margin-left:0}.trakt-watchlist__sort .trakt-watchlist__sort-label{min-width:0;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis;white-space:nowrap;font-weight:600;text-align:left}.trakt-watchlist__sort .trakt-watchlist__sort-state{-webkit-box-flex:0;-webkit-flex:0 0 auto;-ms-flex:0 0 auto;flex:0 0 auto;min-width:1em;font-size:1.05em;line-height:1;font-weight:700;text-align:center;opacity:.88}.trakt-watchlist__sort .trakt-watchlist__sort-state:empty{display:none}.trakt-watchlist__sort--active{background:rgba(255,255,255,0.14);-webkit-box-shadow:inset 0 0 0 1px rgba(255,255,255,0.16);box-shadow:inset 0 0 0 1px rgba(255,255,255,0.16)}.trakt-watchlist__sort--more{-webkit-flex-basis:8.4em;-ms-flex-preferred-size:8.4em;flex-basis:8.4em}.trakt-watchlist__sort--desc .trakt-watchlist__sort-state,.trakt-watchlist__sort--asc .trakt-watchlist__sort-state{opacity:1}.trakt-watchlist-hub__body{-webkit-box-flex:1;-webkit-flex:1;-ms-flex:1;flex:1;min-height:0}.trakt-watchlist__view.hide{display:none}.trakt-list-wide-card__meta{margin-top:.6em;font-size:1.1em;opacity:.8}.trakt-list-wide-card:not(.trakt-list-wide-card--create) .card__promo{display:none !important}.trakt-list-wide-card--create .card__view{background:-webkit-linear-gradient(315deg,rgba(23,129,255,0.28),rgba(53,255,145,0.22));background:-o-linear-gradient(315deg,rgba(23,129,255,0.28),rgba(53,255,145,0.22));background:linear-gradient(135deg,rgba(23,129,255,0.28),rgba(53,255,145,0.22));-webkit-border-radius:1em;border-radius:1em}.trakt-list-wide-card--create .card__view::before{content:'+';position:absolute;inset:0;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;font-size:6em;line-height:1;color:rgba(255,255,255,0.82);font-weight:500;z-index:0}.trakt-list-wide-card--create .card__img{opacity:0}.trakt-list-wide-card--create .card__promo{z-index:2}.trakt-list-wide-card--create .card__promo-title{font-weight:700}.trakt-userinfo-name{line-height:1.35;margin-bottom:.3em}.trakt-userinfo-vip{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.5em;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;line-height:1.35;margin-top:.1em}.trakt-userinfo-vip__label{opacity:.75}.trakt-vip-badge{display:inline-block;-webkit-border-radius:999px;border-radius:999px;padding:.2em .65em;font-size:.9em;line-height:1.25;border:1px solid transparent;vertical-align:middle}.trakt-vip-badge--enabled{color:#1be26f;border-color:rgba(27,226,111,0.45);background:rgba(27,226,111,0.14)}.trakt-vip-badge--disabled{color:#aeb5bc;border-color:rgba(174,181,188,0.45);background:rgba(174,181,188,0.12)}.trakt-device-auth{padding:.4em 1.2em 1.2em}.trakt-device-auth__inner{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:horizontal;-webkit-box-direction:normal;-webkit-flex-direction:row;-ms-flex-direction:row;flex-direction:row;gap:1.5em;-webkit-box-align:start;-webkit-align-items:flex-start;-ms-flex-align:start;align-items:flex-start}.trakt-device-auth__qr-col{-webkit-box-flex:0;-webkit-flex:0 0 auto;-ms-flex:0 0 auto;flex:0 0 auto;width:min(45%,14em)}.trakt-device-auth__info-col{-webkit-box-flex:1;-webkit-flex:1 1 auto;-ms-flex:1 1 auto;flex:1 1 auto;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;gap:.6em;-webkit-box-align:start;-webkit-align-items:flex-start;-ms-flex-align:start;align-items:flex-start;padding-top:.4em}.trakt-device-auth__qr-container{width:100%}.trakt-device-auth__qr-container--hidden{display:none}.trakt-device-auth__qr-link{display:block}.trakt-device-auth__qr-image{display:block;width:100%;height:auto;background:#fff;border:2px solid #e3e3e3;-webkit-border-radius:.8em;border-radius:.8em;padding:.35em;-webkit-box-sizing:border-box;box-sizing:border-box}.trakt-device-auth__qr-caption{margin-top:.6em;font-size:.95em;opacity:.72;text-align:center}.trakt-device-auth__verification{font-size:1.05em;line-height:1.5;word-break:break-word;opacity:.9}.trakt-device-auth__code{margin:0}.trakt-device-auth__code strong{letter-spacing:.08em}.trakt-check-btn{cursor:pointer;margin-top:.4em}@media screen and (max-width:480px){.trakt-device-auth{padding:0 .6em -webkit-calc(0.8em + env(safe-area-inset-bottom));padding:0 .6em calc(0.8em + env(safe-area-inset-bottom))}.trakt-device-auth__inner{-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center}.trakt-device-auth__qr-col{width:min(100%,18.5em)}.trakt-device-auth__info-col{-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;text-align:center}}.trakt-watchlist-hub__tabs .trakt-watchlist__tab{border-bottom:3px solid transparent;-webkit-transition:background .2s,border-color .2s;transition:background .2s,border-color .2s}.trakt-watchlist-hub__tabs .trakt-watchlist__tab.active{background:rgba(155,89,208,0.18);border-bottom:3px solid #9b59d0;-webkit-box-shadow:inset 0 0 0 1px rgba(155,89,208,0.3);box-shadow:inset 0 0 0 1px rgba(155,89,208,0.3)}.trakt-watchlist-hub__tabs .trakt-watchlist__tab.active>div{font-weight:800;opacity:1}.trakt-upnext-badge{position:absolute;top:.3em;right:.3em;background:rgba(0,0,0,.78);color:#fff;font-size:1.35em;font-weight:800;min-width:1.6em;height:1.6em;-webkit-border-radius:999px;border-radius:999px;z-index:2;pointer-events:none;line-height:1;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;padding:0 .3em}.trakt-upcoming-section{width:100%;flex-basis:100%;margin-top:1.8em;padding:1em 0 .5em;font-size:1.15em;font-weight:700;letter-spacing:.04em;text-transform:uppercase;opacity:.9;color:#fff;display:flex;align-items:center;gap:.9em;pointer-events:none}.trakt-upcoming-section::before{content:'';flex:0 0 3px;height:1.2em;background:linear-gradient(180deg,#e8572a,#ff9844);border-radius:3px}.trakt-upcoming-section::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(255,255,255,.25),rgba(255,255,255,0))}.trakt-watched-badge{position:absolute;bottom:.35em;left:.35em;width:1.45em;height:1.45em;border-radius:999px;display:flex;align-items:center;justify-content:center;z-index:2;pointer-events:none;background:rgba(155,89,208,.82);color:#fff}.trakt-watched-badge svg{width:.82em;height:.82em;display:block}.trakt-watched-status-button{display:inline-flex;align-items:center;gap:.5em}.trakt-watched-status-button svg{width:1.2em;height:1.2em}</style>");
+    Lampa.Template.add('trakt_style', "<style>@charset 'UTF-8';.full-start-new__details.trakt{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;color:#fff}.trakt-brand-icon{width:100%;height:100%;display:block;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0;color:inherit}.trakt-brand-icon path{fill:currentColor}.trakt-head-action.focus .trakt-brand-icon,.trakt-head-action.hover .trakt-brand-icon,.menu__item.focus .trakt-brand-icon,.menu__item.hover .trakt-brand-icon,.menu__item.traverse .trakt-brand-icon,.settings-folder.focus .trakt-brand-icon{color:inherit}.full-start-new__details.trakt .trakt-icon{margin-right:.5em;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center}.full-start-new__details.trakt .full-start-new__split{margin:0 .5em}.trakt-applecation-progress{display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.4em;margin-right:.6em;margin-left:.6em}.trakt-applecation-progress .trakt-icon{width:18px;height:18px;display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center}.trakt-applecation-progress .trakt-icon svg{width:100%;height:100%}.trakt-applecation-progress__text{white-space:nowrap}.trakt-lists-container{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:1em;padding:1em}.trakt-list-card{width:150px;background:rgba(255,255,255,0.1);-webkit-border-radius:.5em;border-radius:.5em;padding:.5em;cursor:pointer;-webkit-transition:background .3s ease;-o-transition:background .3s ease;transition:background .3s ease}.trakt-list-card:hover{background:rgba(255,255,255,0.2)}.trakt-list-card__poster{width:100%;height:225px;background-size:cover;background-position:center;-webkit-border-radius:.5em;border-radius:.5em;margin-bottom:.5em}.trakt-list-card__title{font-size:.9em;text-align:center;white-space:nowrap;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis}.trakt-list-detail-header{padding:1em;background:rgba(0,0,0,0.3);margin-bottom:1em}.trakt-list-detail-title{font-size:1.5em;margin-bottom:.5em}.trakt-list-detail-description{font-size:1em;opacity:.8}.trakt-head-action{color:#ff4d4d}.trakt-head-action--ok{color:#37ff54}.trakt-head-action--error{color:#ff4d4d}.trakt-head-action svg{width:100%;height:100%;display:block}.trakt-head-icon{width:100%;height:100%;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center}.trakt-list-manager-button{display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.5em}.trakt-list-manager-button svg{width:1.2em;height:1.2em}.trakt-watchlist-hub{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;height:100%}.trakt-watchlist-hub__controls{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;gap:.55em;padding:.8em 1.5em .2em}.trakt-watchlist-hub__tabs{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:1.2em}.trakt-watchlist-hub__tabs .simple-button{margin-right:0;-webkit-box-flex:1;-webkit-flex:1 1 8em;-ms-flex:1 1 8em;flex:1 1 8em;min-width:0;padding:1.1em 1.4em;font-size:1.6em;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;text-align:center;-webkit-border-radius:1.1em;border-radius:1.1em}.trakt-watchlist-hub__tabs .simple-button--filter>div{width:100%;margin-left:0;padding:0;background:transparent;text-align:center;font-weight:800;font-size:1em;letter-spacing:.02em}.trakt-watchlist-hub__sorts{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:.55em}.trakt-watchlist__sort{margin-right:0;-webkit-box-flex:1;-webkit-flex:1 1 10em;-ms-flex:1 1 10em;flex:1 1 10em;min-width:7.6em;padding:.65em .85em;-webkit-box-pack:justify;-webkit-justify-content:space-between;-ms-flex-pack:justify;justify-content:space-between;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.55em;-webkit-border-radius:.9em;border-radius:.9em}.trakt-watchlist__sort>div{margin-left:0}.trakt-watchlist__sort .trakt-watchlist__sort-label{min-width:0;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis;white-space:nowrap;font-weight:600;text-align:left}.trakt-watchlist__sort .trakt-watchlist__sort-state{-webkit-box-flex:0;-webkit-flex:0 0 auto;-ms-flex:0 0 auto;flex:0 0 auto;min-width:1em;font-size:1.05em;line-height:1;font-weight:700;text-align:center;opacity:.88}.trakt-watchlist__sort .trakt-watchlist__sort-state:empty{display:none}.trakt-watchlist__sort--active{background:rgba(255,255,255,0.14);-webkit-box-shadow:inset 0 0 0 1px rgba(255,255,255,0.16);box-shadow:inset 0 0 0 1px rgba(255,255,255,0.16)}.trakt-watchlist__sort--more{-webkit-flex-basis:8.4em;-ms-flex-preferred-size:8.4em;flex-basis:8.4em}.trakt-watchlist__sort--desc .trakt-watchlist__sort-state,.trakt-watchlist__sort--asc .trakt-watchlist__sort-state{opacity:1}.trakt-watchlist-hub__body{-webkit-box-flex:1;-webkit-flex:1;-ms-flex:1;flex:1;min-height:0}.trakt-watchlist__view.hide{display:none}.trakt-list-wide-card__meta{margin-top:.6em;font-size:1.1em;opacity:.8}.trakt-list-wide-card:not(.trakt-list-wide-card--create) .card__promo{display:none !important}.trakt-list-wide-card--create .card__view{background:-webkit-linear-gradient(315deg,rgba(23,129,255,0.28),rgba(53,255,145,0.22));background:-o-linear-gradient(315deg,rgba(23,129,255,0.28),rgba(53,255,145,0.22));background:linear-gradient(135deg,rgba(23,129,255,0.28),rgba(53,255,145,0.22));-webkit-border-radius:1em;border-radius:1em}.trakt-list-wide-card--create .card__view::before{content:'+';position:absolute;inset:0;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;font-size:6em;line-height:1;color:rgba(255,255,255,0.82);font-weight:500;z-index:0}.trakt-list-wide-card--create .card__img{opacity:0}.trakt-list-wide-card--create .card__promo{z-index:2}.trakt-list-wide-card--create .card__promo-title{font-weight:700}.trakt-userinfo-name{line-height:1.35;margin-bottom:.3em}.trakt-userinfo-vip{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.5em;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;line-height:1.35;margin-top:.1em}.trakt-userinfo-vip__label{opacity:.75}.trakt-vip-badge{display:inline-block;-webkit-border-radius:999px;border-radius:999px;padding:.2em .65em;font-size:.9em;line-height:1.25;border:1px solid transparent;vertical-align:middle}.trakt-vip-badge--enabled{color:#1be26f;border-color:rgba(27,226,111,0.45);background:rgba(27,226,111,0.14)}.trakt-vip-badge--disabled{color:#aeb5bc;border-color:rgba(174,181,188,0.45);background:rgba(174,181,188,0.12)}.trakt-device-auth{padding:.4em 1.2em 1.2em}.trakt-device-auth__inner{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:horizontal;-webkit-box-direction:normal;-webkit-flex-direction:row;-ms-flex-direction:row;flex-direction:row;gap:1.5em;-webkit-box-align:start;-webkit-align-items:flex-start;-ms-flex-align:start;align-items:flex-start}.trakt-device-auth__qr-col{-webkit-box-flex:0;-webkit-flex:0 0 auto;-ms-flex:0 0 auto;flex:0 0 auto;width:min(45%,14em)}.trakt-device-auth__info-col{-webkit-box-flex:1;-webkit-flex:1 1 auto;-ms-flex:1 1 auto;flex:1 1 auto;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;gap:.6em;-webkit-box-align:start;-webkit-align-items:flex-start;-ms-flex-align:start;align-items:flex-start;padding-top:.4em}.trakt-device-auth__qr-container{width:100%}.trakt-device-auth__qr-container--hidden{display:none}.trakt-device-auth__qr-link{display:block}.trakt-device-auth__qr-image{display:block;width:100%;height:auto;background:#fff;border:2px solid #e3e3e3;-webkit-border-radius:.8em;border-radius:.8em;padding:.35em;-webkit-box-sizing:border-box;box-sizing:border-box}.trakt-device-auth__qr-caption{margin-top:.6em;font-size:.95em;opacity:.72;text-align:center}.trakt-device-auth__verification{font-size:1.05em;line-height:1.5;word-break:break-word;opacity:.9}.trakt-device-auth__code{margin:0}.trakt-device-auth__code strong{letter-spacing:.08em}.trakt-check-btn{cursor:pointer;margin-top:.4em}@media screen and (max-width:480px){.trakt-device-auth{padding:0 .6em -webkit-calc(0.8em + env(safe-area-inset-bottom));padding:0 .6em calc(0.8em + env(safe-area-inset-bottom))}.trakt-device-auth__inner{-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center}.trakt-device-auth__qr-col{width:min(100%,18.5em)}.trakt-device-auth__info-col{-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;text-align:center}}.trakt-watchlist-hub__tabs .trakt-watchlist__tab{border-bottom:3px solid transparent;-webkit-transition:background .2s,border-color .2s;transition:background .2s,border-color .2s}.trakt-watchlist-hub__tabs .trakt-watchlist__tab.active{background:rgba(155,89,208,0.18);border-bottom:3px solid #9b59d0;-webkit-box-shadow:inset 0 0 0 1px rgba(155,89,208,0.3);box-shadow:inset 0 0 0 1px rgba(155,89,208,0.3)}.trakt-watchlist-hub__tabs .trakt-watchlist__tab.active>div{font-weight:800;opacity:1}.trakt-upnext-badge{position:absolute;top:.3em;right:.3em;background:rgba(0,0,0,.78);color:#fff;font-size:1.35em;font-weight:800;min-width:1.6em;height:1.6em;-webkit-border-radius:999px;border-radius:999px;z-index:2;pointer-events:none;line-height:1;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;padding:0 .3em}.trakt-upcoming-section{width:100%;flex-basis:100%;margin-top:1.8em;padding:1em 0 .5em;font-size:1.15em;font-weight:700;letter-spacing:.04em;text-transform:uppercase;opacity:.9;color:#fff;display:flex;align-items:center;gap:.9em;pointer-events:none}.trakt-upcoming-section::before{content:'';flex:0 0 3px;height:1.2em;background:linear-gradient(180deg,#e8572a,#ff9844);border-radius:3px}.trakt-upcoming-section::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(255,255,255,.25),rgba(255,255,255,0))}.trakt-watched-badge{position:absolute;bottom:.35em;left:.35em;width:1.45em;height:1.45em;border-radius:999px;display:flex;align-items:center;justify-content:center;z-index:2;pointer-events:none;background:rgba(155,89,208,.82);color:#fff}.trakt-watched-badge svg{width:.82em;height:.82em;display:block}.trakt-status-clickable{cursor:pointer;border-radius:.6em;padding:.15em .4em .15em .1em;transition:background .15s}.trakt-status-clickable.hover,.trakt-status-clickable.focus{background:rgba(155,89,208,.18)}</style>");
     $('body').append(Lampa.Template.get('trakt_style', {}, true));
 
     // Фонова валідація токена при старті (єдиний шлях auth lifecycle).
