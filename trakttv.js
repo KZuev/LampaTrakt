@@ -2466,8 +2466,8 @@
         }).catch(function() { return []; });
       };
       return Promise.all([
-        safeGet('/sync/collection/movies?extended=full&limit=1000&page=1'),
-        safeGet('/sync/collection/shows?extended=full&limit=1000&page=1')
+        safeGet('/users/me/favorites/movies?extended=full&limit=1000&page=1'),
+        safeGet('/users/me/favorites/shows?extended=full&limit=1000&page=1')
       ]).then(function(results) {
         var raw = results[0].concat(results[1]);
         var mapped = formatTraktResults(raw).results;
