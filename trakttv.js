@@ -5838,23 +5838,24 @@
           var isCompleted = aired > 0 && aired === watchedCount;
 
           // TEMP DEBUG — remove after fix
-          var _A2 = typeof api$1 !== 'undefined' && api$1 || null;
-          Promise.all([
-            _A2 ? requestApi('GET', '/users/me/hidden/progress_watched') : Promise.resolve([]),
-            _A2 ? requestApi('GET', '/users/me/hidden/calendar') : Promise.resolve([]),
-            _A2 ? requestApi('GET', '/users/me/hidden/recommendations') : Promise.resolve([])
-          ]).then(function(rr) {
-            var msg = 'prog_watched(' + (rr[0]||[]).length + ')' +
-              ' cal(' + (rr[1]||[]).length + ')' +
-              ' rec(' + (rr[2]||[]).length + ')';
-            var allItems = [].concat(rr[0]||[]).concat(rr[1]||[]).concat(rr[2]||[]);
-            var match = allItems.find(function(x) {
-              var ids = x.show && x.show.ids;
-              return ids && (String(ids.tmdb) === String(itemId) || String(ids.trakt) === String(result.traktId));
+          var _dbgUrls = [
+            '/users/me/hidden/progress_watched',
+            '/users/me/hidden-items/progress_watched',
+            '/users/me/hidden/calendar',
+            '/users/me/hidden/shows'
+          ];
+          var _dbgResults = [];
+          _dbgUrls.reduce(function(p, url) {
+            return p.then(function() {
+              return requestApi('GET', url).then(function(r) {
+                _dbgResults.push(url.split('/').pop() + ':ok(' + (r||[]).length + ')');
+              }).catch(function(e) {
+                _dbgResults.push(url.split('/').pop() + ':' + (e&&e.status||'err'));
+              });
             });
-            msg += match ? ' FOUND in ' + (rr[0].indexOf(match) >= 0 ? 'prog_watched' : rr[1].indexOf(match) >= 0 ? 'cal' : 'rec') : ' NOT FOUND anywhere';
-            Lampa.Noty.show(msg);
-          }).catch(function(e) { Lampa.Noty.show('hidden err: ' + (e && e.message || e) + ' status=' + (e && e.status)); });
+          }, Promise.resolve()).then(function() {
+            Lampa.Noty.show(_dbgResults.join(' '));
+          });
 
           var labelType;
           if (isDropped) {
