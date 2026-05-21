@@ -1960,6 +1960,18 @@
       });
     });
   }
+  function getShowProgressData(tmdbId) {
+    return requestApi('GET', '/search/tmdb/' + tmdbId + '?type=show').then(function(res) {
+      if (!res || !res.length || !res[0].show || !res[0].show.ids || !res[0].show.ids.trakt) {
+        throw new Error('Show not found');
+      }
+      var traktId = res[0].show.ids.trakt;
+      return requestApi('GET', '/shows/' + traktId + '/progress/watched').then(function(prog) {
+        return { traktId: traktId, progress: prog || {} };
+      });
+    });
+  }
+
   function resolveTraktIds() {
     var _params$external_ids, _params$external_ids2, _params$external_ids3;
     var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
@@ -2228,6 +2240,14 @@
       if (data && data.ids) Object.assign(ids, data.ids);
       return requestApi('POST', '/users/me/hidden/progress_watched', { shows: [{ ids: ids }] });
     },
+    unhideFromProgress: function(data) {
+      var ids = {};
+      if (data && data.id) ids.tmdb = data.id;
+      if (data && data.ids) Object.assign(ids, data.ids);
+      return requestApi('DELETE', '/users/me/hidden/progress_watched', { shows: [{ ids: ids }] });
+    },
+    hiddenShows: function() { return requestApi('GET', '/users/me/hidden/progress_watched?type=show&limit=1000'); },
+    showWatchedProgress: function(traktId) { return requestApi('GET', '/shows/' + traktId + '/progress/watched'); },
     watchlistSortFields: Array.from(WATCHLIST_SORT_FIELDS),
     watchlistVipSortFields: Array.from(WATCHLIST_VIP_SORT_FIELDS),
     normalizeWatchlistSort: normalizeWatchlistSort,
@@ -5723,17 +5743,20 @@
               ],
               onSelect: function(a) {
                 if (a.action === 'dropped' && _A) {
-                  Lampa.Storage.set('trakt_show_status_' + itemId, 'dropped');
-                  _A.hideFromProgress({ id: itemId }).catch(function() {});
-                  invalidateWatchedCache();
-                } else if (a.action === 'completed' && _A) {
-                  Lampa.Storage.set('trakt_show_status_' + itemId, 'completed');
-                  _A.addToHistory({ method: 'show', id: itemId, ids: { tmdb: itemId } }, 'all').then(function() {
+                  _A.hideFromProgress({ id: itemId }).then(function() {
+                    if (_hiddenShowsCache) _hiddenShowsCache.add(String(itemId));
                     invalidateWatchedCache();
                     TraktHistory.showWatchProgress(data, element);
                   }).catch(function() {});
-                } else {
-                  Lampa.Storage.remove('trakt_show_status_' + itemId);
+                } else if (a.action === 'completed' && _A) {
+                  _A.addToHistory({ method: 'show', id: itemId, ids: { tmdb: itemId } }, 'all').then(function() {
+                    if (_hiddenShowsCache) _hiddenShowsCache.delete(String(itemId));
+                    invalidateWatchedCache();
+                    TraktHistory.showWatchProgress(data, element);
+                  }).catch(function() {});
+                } else if (_A) {
+                  _A.unhideFromProgress({ id: itemId }).catch(function() {});
+                  if (_hiddenShowsCache) _hiddenShowsCache.delete(String(itemId));
                   TraktHistory.showWatchProgress(data, element);
                 }
               },
@@ -5771,15 +5794,16 @@
       }
 
       if (isShow) {
-        var storedStatus = Lampa.Storage.get('trakt_show_status_' + itemId);
         var hasApplecation = Array.isArray(window.Lampa && Lampa.Manifest && Lampa.Manifest.plugins) &&
           Lampa.Manifest.plugins.some(function(p) { return p && p.name === 'Applecation'; });
 
-        getShowHistory(itemId).then(function(historyData) {
-          var hasHistory = historyData && historyData.length > 0;
-          var lastWatched = hasHistory ? historyData[0] : null;
-          var season = lastWatched && lastWatched.episode ? lastWatched.episode.season : null;
-          var ep = lastWatched && lastWatched.episode ? lastWatched.episode.number : null;
+        getShowProgressData(itemId).then(function(result) {
+          var progress = result.progress || {};
+          var aired = progress.aired || 0;
+          var watchedCount = progress.completed || 0;
+          var lastEp = progress.last_episode;
+          var season = lastEp && lastEp.season;
+          var ep = lastEp && lastEp.number;
 
           if (hasApplecation) {
             var tryInsertApplecation = function() {
@@ -5807,19 +5831,22 @@
             return;
           }
 
+          var isDropped = _hiddenShowsCache && _hiddenShowsCache.has(String(itemId));
+          var isCompleted = aired > 0 && aired === watchedCount;
+
           var labelType;
-          if (storedStatus === 'completed') {
-            labelType = 'completed';
-          } else if (storedStatus === 'dropped' && season) {
+          if (isDropped) {
             labelType = 'dropped';
-          } else if (hasHistory && season) {
+          } else if (isCompleted) {
+            labelType = 'completed';
+          } else if (watchedCount > 0 && season) {
             labelType = 'watching';
           } else {
             return;
           }
           insertElement(buildProgressElement(labelType, season, ep, true));
         }).catch(function(error) {
-          logWarn('Failed to load show history for progress badge', error, { debugOnly: true });
+          logWarn('Failed to load show progress', error, { debugOnly: true });
         });
 
       } else {
@@ -9186,6 +9213,27 @@
 
   function invalidateWatchedCache() { _watchedCache = null; }
 
+  var _hiddenShowsCache = null;
+  var _hiddenShowsCacheLoading = false;
+
+  function loadHiddenShowsCache() {
+    if (_hiddenShowsCacheLoading || !Lampa.Storage.get('trakt_token')) return;
+    var _A = typeof api$1 !== 'undefined' && api$1 || null;
+    if (!_A || typeof _A.hiddenShows !== 'function') return;
+    _hiddenShowsCacheLoading = true;
+    _A.hiddenShows().catch(function() { return []; }).then(function(res) {
+      var ids = new Set();
+      (res || []).forEach(function(item) {
+        var tmdb = item.show && item.show.ids && item.show.ids.tmdb;
+        if (tmdb) ids.add(String(tmdb));
+      });
+      _hiddenShowsCache = ids;
+    }).catch(function() { _hiddenShowsCache = new Set(); })
+      .then(function() { _hiddenShowsCacheLoading = false; });
+  }
+
+  function invalidateHiddenShowsCache() { _hiddenShowsCache = null; }
+
   function isWatchedFromCache(tmdbId, type) {
     if (!_watchedCache || !tmdbId) return false;
     var s = String(tmdbId);
@@ -9330,6 +9378,7 @@
       addMenuItems();
       // Кеш просмотренных для бейджей
       loadWatchedCache();
+      loadHiddenShowsCache();
     },
     /**
      * Додає блок з пов'язаними списками в картку медіа
