@@ -5055,13 +5055,13 @@
         ru: "Client ID приложения Trakt",
       },
       trakt_client_id_description: {
-        ru: "trakt.tv/oauth/applications",
+        ru: "Введите ID",
       },
       trakt_client_secret_label: {
         ru: "Client Secret приложения Trakt",
       },
       trakt_client_secret_description: {
-        ru: "trakt.tv/oauth/applications",
+        ru: "Введите Secret",
       },
       trakt_not_set: {
         ru: "не задан",
@@ -6702,22 +6702,6 @@
       }
     });
 
-    // Client ID и Client Secret — заголовок секции
-    Lampa.SettingsApi.addParam({
-      component: 'trakt',
-      param: {
-        name: 'trakt_credentials_header',
-        type: 'static'
-      },
-      field: {
-        name: 'API-ключи приложения',
-        description: 'Создайте приложение на trakt.tv/oauth/applications и введите Client ID и Client Secret ниже'
-      },
-      onRender: function onRender(item) {
-        item.find('.settings-param__value').hide();
-      }
-    });
-
     // Client ID и Client Secret
     Lampa.SettingsApi.addParam({
       component: 'trakt',
@@ -6782,7 +6766,8 @@
         type: 'button'
       },
       field: {
-        name: Lampa.Lang.translate('trakttvLogin')
+        name: Lampa.Lang.translate('trakttvLogin'),
+        description: 'Для входа укажите Client ID и Client Secret выше — без них авторизация недоступна'
       },
       onRender: function onRender(item) {
         item.show();
