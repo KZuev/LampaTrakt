@@ -5743,20 +5743,19 @@
               ],
               onSelect: function(a) {
                 if (a.action === 'dropped' && _A) {
-                  _A.hideFromProgress({ id: itemId }).then(function() {
-                    if (_hiddenShowsCache) _hiddenShowsCache.tmdb.add(String(itemId));
-                    invalidateWatchedCache();
-                    TraktHistory.showWatchProgress(data, element);
-                  }).catch(function() {});
+                  Lampa.Storage.set('trakt_show_status_' + itemId, 'dropped');
+                  _A.hideFromProgress({ id: itemId }).catch(function() {});
+                  invalidateWatchedCache();
+                  TraktHistory.showWatchProgress(data, element);
                 } else if (a.action === 'completed' && _A) {
+                  Lampa.Storage.remove('trakt_show_status_' + itemId);
                   _A.addToHistory({ method: 'show', id: itemId, ids: { tmdb: itemId } }, 'all').then(function() {
-                    if (_hiddenShowsCache) { _hiddenShowsCache.tmdb.delete(String(itemId)); }
                     invalidateWatchedCache();
                     TraktHistory.showWatchProgress(data, element);
                   }).catch(function() {});
                 } else if (_A) {
+                  Lampa.Storage.remove('trakt_show_status_' + itemId);
                   _A.unhideFromProgress({ id: itemId }).catch(function() {});
-                  if (_hiddenShowsCache) { _hiddenShowsCache.tmdb.delete(String(itemId)); }
                   TraktHistory.showWatchProgress(data, element);
                 }
               },
@@ -5797,9 +5796,7 @@
         var hasApplecation = Array.isArray(window.Lampa && Lampa.Manifest && Lampa.Manifest.plugins) &&
           Lampa.Manifest.plugins.some(function(p) { return p && p.name === 'Applecation'; });
 
-        Promise.all([getShowProgressData(itemId), ensureHiddenShowsCache()]).then(function(results) {
-          var result = results[0];
-          var hiddenSet = results[1];
+        getShowProgressData(itemId).then(function(result) {
           var progress = result.progress || {};
           var aired = progress.aired || 0;
           var watchedCount = progress.completed || 0;
@@ -5833,29 +5830,9 @@
             return;
           }
 
-          var isDropped = hiddenSet.tmdb.has(String(itemId)) ||
-            (result.traktId && hiddenSet.trakt.has(String(result.traktId)));
+          var storedStatus = Lampa.Storage.get('trakt_show_status_' + itemId);
+          var isDropped = storedStatus === 'dropped';
           var isCompleted = aired > 0 && aired === watchedCount;
-
-          // TEMP DEBUG — remove after fix
-          var _dbgUrls = [
-            '/users/me/hidden/progress_watched',
-            '/users/me/hidden-items/progress_watched',
-            '/users/me/hidden/calendar',
-            '/users/me/hidden/shows'
-          ];
-          var _dbgResults = [];
-          _dbgUrls.reduce(function(p, url) {
-            return p.then(function() {
-              return requestApi('GET', url).then(function(r) {
-                _dbgResults.push(url.split('/').pop() + ':ok(' + (r||[]).length + ')');
-              }).catch(function(e) {
-                _dbgResults.push(url.split('/').pop() + ':' + (e&&e.status||'err'));
-              });
-            });
-          }, Promise.resolve()).then(function() {
-            Lampa.Noty.show(_dbgResults.join(' '));
-          });
 
           var labelType;
           if (isDropped) {
@@ -9246,38 +9223,6 @@
 
   function invalidateWatchedCache() { _watchedCache = null; _watchedCachePromise = null; }
 
-  var _hiddenShowsCache = null;
-  var _hiddenShowsCachePromise = null;
-
-  function _emptyHiddenCache() { return { tmdb: new Set(), trakt: new Set() }; }
-
-  function ensureHiddenShowsCache() {
-    if (_hiddenShowsCache) return Promise.resolve(_hiddenShowsCache);
-    if (_hiddenShowsCachePromise) return _hiddenShowsCachePromise;
-    if (!Lampa.Storage.get('trakt_token')) return Promise.resolve(_emptyHiddenCache());
-    var _A = typeof api$1 !== 'undefined' && api$1 || null;
-    if (!_A || typeof _A.hiddenShows !== 'function') return Promise.resolve(_emptyHiddenCache());
-    _hiddenShowsCachePromise = _A.hiddenShows().then(function(res) {
-      var cache = _emptyHiddenCache();
-      (res || []).forEach(function(item) {
-        if (item.type !== 'show') return;
-        var ids = item.show && item.show.ids;
-        if (!ids) return;
-        if (ids.tmdb) cache.tmdb.add(String(ids.tmdb));
-        if (ids.trakt) cache.trakt.add(String(ids.trakt));
-      });
-      _hiddenShowsCache = cache;
-      _hiddenShowsCachePromise = null;
-      return cache;
-    }).catch(function() {
-      _hiddenShowsCachePromise = null;
-      _hiddenShowsCache = _emptyHiddenCache();
-      return _hiddenShowsCache;
-    });
-    return _hiddenShowsCachePromise;
-  }
-
-  function invalidateHiddenShowsCache() { _hiddenShowsCache = null; _hiddenShowsCachePromise = null; }
 
   function isWatchedFromCache(tmdbId, type) {
     if (!_watchedCache || !tmdbId) return false;
@@ -9423,7 +9368,6 @@
       addMenuItems();
       // Кеш просмотренных для бейджей
       loadWatchedCache();
-      ensureHiddenShowsCache();
     },
     /**
      * Додає блок з пов'язаними списками в картку медіа
