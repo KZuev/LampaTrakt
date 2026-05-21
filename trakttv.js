@@ -6036,13 +6036,21 @@
       var hasApplecation = isShow && Array.isArray(window.Lampa && Lampa.Manifest && Lampa.Manifest.plugins) &&
         Lampa.Manifest.plugins.some(function(p) { return p && p.name === 'Applecation'; });
 
-      // Build element now but insert on next tick so Lampa's initial focus
-      // lands on the main buttons first. By the time any key is pressed the
-      // element is already in DOM and in Lampa's navigation graph.
+      // Insert element synchronously so it is present when Lampa builds the
+      // navigation graph. Then in setTimeout(0) — after Lampa's toggle('content')
+      // has run and may have focused our element — explicitly rebuild the
+      // collection and restore focus to the first main button.
       var progress = null;
       if (!hasApplecation) {
         progress = buildProgressElement();
-        setTimeout(function() { insertElement(progress.el); }, 0);
+        insertElement(progress.el);
+        setTimeout(function() {
+          if (!progress.el.parentNode) return;
+          var firstBtn = renderRoot.find('.full-start-new__buttons .selector').first();
+          if (!firstBtn.length) return;
+          Lampa.Controller.collectionSet(renderRoot);
+          Lampa.Controller.collectionFocus(firstBtn[0], renderRoot);
+        }, 0);
       }
 
       if (isShow) {
