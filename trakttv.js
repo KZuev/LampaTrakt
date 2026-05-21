@@ -3905,7 +3905,7 @@
   function openHistoryItemActions(object, element) {
     if (!Api$2 || !element) return;
     Lampa.Select.show({
-      title: t$3('trakt_history_title', 'History'),
+      title: t$3('title_action', 'Action'),
       items: [{
         title: t$3('trakt_history_remove_action', 'Remove from history'),
         action: 'remove'
