@@ -2460,43 +2460,17 @@
     collection: function(params) {
       var page = Math.max(1, parseInt(params && params.page, 10) || 1);
       var limit = Math.max(1, parseInt(params && params.limit, 10) || 36);
+      var safeGet = function(url) {
+        return requestApi('GET', url).then(function(r) {
+          return Array.isArray(r) ? r : [];
+        }).catch(function() { return []; });
+      };
       return Promise.all([
-        requestApi('GET', '/sync/collection/movies?extended=full'),
-        requestApi('GET', '/sync/collection/shows?extended=full')
+        safeGet('/sync/collection/movies?extended=full&limit=1000&page=1'),
+        safeGet('/sync/collection/shows?extended=full&limit=1000&page=1')
       ]).then(function(results) {
-        var movies = Array.isArray(results[0]) ? results[0] : [];
-        var shows = Array.isArray(results[1]) ? results[1] : [];
-        var mapped = movies.map(function(item) {
-          if (!item || !item.movie || !item.movie.ids) return null;
-          return {
-            component: 'full',
-            id: item.movie.ids.tmdb || item.movie.ids.trakt,
-            ids: item.movie.ids,
-            title: item.movie.title,
-            original_title: item.movie.title,
-            release_date: item.movie.year ? String(item.movie.year) : '',
-            vote_average: Number(item.movie.rating || 0),
-            poster: getImageUrl(item.movie, 'poster'),
-            image: getImageUrl(item.movie, 'fanart'),
-            method: 'movie',
-            card_type: 'movie'
-          };
-        }).concat(shows.map(function(item) {
-          if (!item || !item.show || !item.show.ids) return null;
-          return {
-            component: 'full',
-            id: item.show.ids.tmdb || item.show.ids.trakt,
-            ids: item.show.ids,
-            title: item.show.title,
-            original_title: item.show.title,
-            release_date: item.show.year ? String(item.show.year) : '',
-            vote_average: Number(item.show.rating || 0),
-            poster: getImageUrl(item.show, 'poster'),
-            image: getImageUrl(item.show, 'fanart'),
-            method: 'tv',
-            card_type: 'tv'
-          };
-        })).filter(Boolean);
+        var raw = results[0].concat(results[1]);
+        var mapped = formatTraktResults(raw).results;
         var start = (page - 1) * limit;
         var pageItems = mapped.slice(start, start + limit);
         var total_pages = Math.ceil(mapped.length / limit) || 1;
