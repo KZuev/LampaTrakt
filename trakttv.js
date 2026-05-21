@@ -1927,6 +1927,32 @@
     };
   }
 
+  function mapHistoryItem(item) {
+    if (!item) return null;
+    var isEpisode = item.type === 'episode';
+    var isMovie = item.type === 'movie';
+    if (!isEpisode && !isMovie) return null;
+    var media = isMovie ? item.movie : item.show;
+    if (!media || !media.ids) return null;
+    var card = {
+      id: media.ids.tmdb || media.ids.trakt,
+      ids: media.ids,
+      title: media.title,
+      original_title: media.title,
+      release_date: media.year ? String(media.year) : '',
+      vote_average: Number(media.rating || 0),
+      poster: getImageUrl(media, 'poster'),
+      image: getImageUrl(media, 'fanart'),
+      method: isMovie ? 'movie' : 'tv',
+      card_type: isMovie ? 'movie' : 'tv',
+      trakt_watched_at: item.watched_at || null
+    };
+    if (isEpisode && item.episode) {
+      card.trakt_history_episode = { season: item.episode.season, number: item.episode.number, title: item.episode.title };
+    }
+    return card;
+  }
+
   // Функція для отримання історії серіалу за TMDB ID
   function getShowHistory(tmdbId) {
     var traktId = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
@@ -2414,6 +2440,17 @@
           page: pagination.page,
           limit: pagination.limit
         };
+      });
+    },
+    history: function(params) {
+      var page = Math.max(1, parseInt(params && params.page, 10) || 1);
+      var limit = Math.max(1, parseInt(params && params.limit, 10) || 36);
+      return requestApi('GET', '/sync/history?extended=full&limit=' + limit + '&page=' + page, {}, false, 0, { withMeta: true }).then(function(response) {
+        var payload = response && Array.isArray(response.data) ? response.data : [];
+        var headers = response && response.headers ? response.headers : {};
+        var mapped = payload.map(mapHistoryItem).filter(Boolean);
+        var pagination = resolvePaginationFromHeaders(headers, { page: page, limit: limit, total: (page - 1) * limit + mapped.length });
+        return { results: mapped, total: pagination.total, total_pages: pagination.total_pages, page: pagination.page, limit: pagination.limit };
       });
     },
     auth: {
@@ -3116,6 +3153,28 @@
     div.textContent = label;
     firstUnstarted.parentNode.insertBefore(div, firstUnstarted);
   }
+  function renderHistoryDateBadge(card, element) {
+    if (!element || !element.trakt_watched_at) return;
+    var cardNode = typeof card.render === 'function' ? card.render(true) : null;
+    if (!cardNode) return;
+    var cardView = cardNode.querySelector('.card__view');
+    if (!cardView || cardView.querySelector('.trakt-history-date-badge')) return;
+    var date = new Date(element.trakt_watched_at);
+    var now = new Date();
+    var day = date.getDate();
+    var month = date.toLocaleString('ru', { month: 'short' }).replace('.', '');
+    var dateStr = day + ' ' + month + (date.getFullYear() !== now.getFullYear() ? ' ' + date.getFullYear() : '');
+    var epStr = '';
+    if (element.trakt_history_episode) {
+      var ep = element.trakt_history_episode;
+      epStr = '<span class="trakt-history-ep">S' + ep.season + '·E' + ep.number + '</span>';
+    }
+    var badge = document.createElement('div');
+    badge.className = 'trakt-history-date-badge';
+    badge.innerHTML = epStr + '<span class="trakt-history-date">' + dateStr + '</span>';
+    cardView.appendChild(badge);
+  }
+
   function renderUpnextRemainingBadge(card, element) {
     var watched = Number(element.trakt_upnext_watched) || 0;
     var total = Number(element.trakt_upnext_total) || 0;
@@ -3267,6 +3326,9 @@
                 renderUpnextCardWatched(this, element);
                 renderUpnextRemainingBadge(this, element);
               }
+              if (type === 'history') {
+                renderHistoryDateBadge(this, element);
+              }
               if (type === 'watchlist' && element._trakt_upcoming_first) {
                 var node = typeof this.render === 'function' ? this.render(true) : null;
                 if (node) node.classList.add('trakt-upcoming-first');
@@ -3355,6 +3417,9 @@
         renderTvTypeBadge(card, element);
         if (type === 'upnext') {
           renderUpnextCardWatched(card, element);
+        }
+        if (type === 'history') {
+          renderHistoryDateBadge(card, element);
         }
         card.onMenu = type === 'myListItems' && object && object.can_manage && object.id ? function () {
           return openMyListItemActions(object, element);
@@ -4486,6 +4551,10 @@
     });
     return new baseComponent(paramsForBaseComponent, 'list');
   }
+  function history(object) {
+    if (!object.page) object.page = 1;
+    return new baseComponent(object, 'history');
+  }
   var Catalog = {
     watchlist: watchlist$1,
     upnext: upnext,
@@ -4495,7 +4564,8 @@
     my_lists: my_lists,
     list_detail: list_detail,
     my_list_detail: my_list_detail,
-    trakt_list_detail: trakt_list_detail
+    trakt_list_detail: trakt_list_detail,
+    history: history
   };
 
   function Main() {
@@ -4973,6 +5043,9 @@
       },
       trakttv_upnext: {
         ru: "Смотреть дальше",
+      },
+      trakt_watch_history: {
+        ru: "История просмотров",
       },
       trakttv_topshelf: {
         ru: "Top Shelf (Apple TV)",
@@ -6020,6 +6093,7 @@
     var menuTitle = t('trakttv_menu_title', 'Trakt.TV');
     var myListsTitle = t('trakt_my_lists', 'My Lists');
     var likedListsTitle = t('trakt_liked_lists', 'Liked Lists');
+    var historyTitle = t('trakt_watch_history', 'История просмотров');
     var watchlist = $("<li class=\"menu__item selector\">\n        <div class=\"menu__ico\">".concat(icons.TRAKT_ICON, " </div>\n        <div class=\"menu__text\">").concat(watchlistTitle, "</div>\n    </li>"));
     var upnext = $("<li class=\"menu__item selector\">\n        <div class=\"menu__ico\">".concat(icons.TRAKT_ICON, " </div>\n        <div class=\"menu__text\">").concat(upNextTitle, "</div>\n    </li>"));
     var timetable = $("<li class=\"menu__item selector\">\n    <div class=\"menu__ico\">\n         <div class=\"menu__ico\">".concat(icons.TRAKT_ICON, " </div>\n    </div>\n    <div class=\"menu__text\">").concat(calendarTitle, "</div>\n    </li>"));
@@ -6073,6 +6147,9 @@
     }, {
       title: watchlistTitle,
       component: 'trakt_watchlist'
+    }, {
+      title: historyTitle,
+      component: 'trakt_history'
     }, {
       title: calendarTitle,
       component: 'trakt_timetable_all'
@@ -11488,7 +11565,7 @@
     } catch (e) {/* noop */}
 
     // Додаємо стилі
-    Lampa.Template.add('trakt_style', "<style>@charset 'UTF-8';.full-start-new__details.trakt{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;color:#fff}.trakt-brand-icon{width:100%;height:100%;display:block;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0;color:inherit}.trakt-brand-icon path{fill:currentColor}.trakt-head-action.focus .trakt-brand-icon,.trakt-head-action.hover .trakt-brand-icon,.menu__item.focus .trakt-brand-icon,.menu__item.hover .trakt-brand-icon,.menu__item.traverse .trakt-brand-icon,.settings-folder.focus .trakt-brand-icon{color:inherit}.full-start-new__details.trakt .trakt-icon{margin-right:.5em;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center}.full-start-new__details.trakt .full-start-new__split{margin:0 .5em}.trakt-applecation-progress{display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.4em;margin-right:.6em;margin-left:.6em}.trakt-applecation-progress .trakt-icon{width:18px;height:18px;display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center}.trakt-applecation-progress .trakt-icon svg{width:100%;height:100%}.trakt-applecation-progress__text{white-space:nowrap}.trakt-lists-container{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:1em;padding:1em}.trakt-list-card{width:150px;background:rgba(255,255,255,0.1);-webkit-border-radius:.5em;border-radius:.5em;padding:.5em;cursor:pointer;-webkit-transition:background .3s ease;-o-transition:background .3s ease;transition:background .3s ease}.trakt-list-card:hover{background:rgba(255,255,255,0.2)}.trakt-list-card__poster{width:100%;height:225px;background-size:cover;background-position:center;-webkit-border-radius:.5em;border-radius:.5em;margin-bottom:.5em}.trakt-list-card__title{font-size:.9em;text-align:center;white-space:nowrap;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis}.trakt-list-detail-header{padding:1em;background:rgba(0,0,0,0.3);margin-bottom:1em}.trakt-list-detail-title{font-size:1.5em;margin-bottom:.5em}.trakt-list-detail-description{font-size:1em;opacity:.8}.trakt-head-action{color:#ff4d4d}.trakt-head-action--ok{color:#37ff54}.trakt-head-action--error{color:#ff4d4d}.trakt-head-action svg{width:100%;height:100%;display:block}.trakt-head-icon{width:100%;height:100%;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center}.trakt-list-manager-button{display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.5em}.trakt-list-manager-button svg{width:1.2em;height:1.2em}.trakt-watchlist-hub{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;height:100%}.trakt-watchlist-hub__controls{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;gap:.55em;padding:.8em 1.5em .2em}.trakt-watchlist-hub__tabs{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:1.2em}.trakt-watchlist-hub__tabs .simple-button{margin-right:0;-webkit-box-flex:1;-webkit-flex:1 1 8em;-ms-flex:1 1 8em;flex:1 1 8em;min-width:0;padding:1.1em 1.4em;font-size:1.6em;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;text-align:center;-webkit-border-radius:1.1em;border-radius:1.1em}.trakt-watchlist-hub__tabs .simple-button--filter>div{width:100%;margin-left:0;padding:0;background:transparent;text-align:center;font-weight:800;font-size:1em;letter-spacing:.02em}.trakt-watchlist-hub__sorts{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:.55em}.trakt-watchlist__sort{margin-right:0;-webkit-box-flex:1;-webkit-flex:1 1 10em;-ms-flex:1 1 10em;flex:1 1 10em;min-width:7.6em;padding:.65em .85em;-webkit-box-pack:justify;-webkit-justify-content:space-between;-ms-flex-pack:justify;justify-content:space-between;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.55em;-webkit-border-radius:.9em;border-radius:.9em}.trakt-watchlist__sort>div{margin-left:0}.trakt-watchlist__sort .trakt-watchlist__sort-label{min-width:0;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis;white-space:nowrap;font-weight:600;text-align:left}.trakt-watchlist__sort .trakt-watchlist__sort-state{-webkit-box-flex:0;-webkit-flex:0 0 auto;-ms-flex:0 0 auto;flex:0 0 auto;min-width:1em;font-size:1.05em;line-height:1;font-weight:700;text-align:center;opacity:.88}.trakt-watchlist__sort .trakt-watchlist__sort-state:empty{display:none}.trakt-watchlist__sort--active{background:rgba(255,255,255,0.14);-webkit-box-shadow:inset 0 0 0 1px rgba(255,255,255,0.16);box-shadow:inset 0 0 0 1px rgba(255,255,255,0.16)}.trakt-watchlist__sort--more{-webkit-flex-basis:8.4em;-ms-flex-preferred-size:8.4em;flex-basis:8.4em}.trakt-watchlist__sort--desc .trakt-watchlist__sort-state,.trakt-watchlist__sort--asc .trakt-watchlist__sort-state{opacity:1}.trakt-watchlist-hub__body{-webkit-box-flex:1;-webkit-flex:1;-ms-flex:1;flex:1;min-height:0}.trakt-watchlist__view.hide{display:none}.trakt-list-wide-card__meta{margin-top:.6em;font-size:1.1em;opacity:.8}.trakt-list-wide-card:not(.trakt-list-wide-card--create) .card__promo{display:none !important}.trakt-list-wide-card--create .card__view{background:-webkit-linear-gradient(315deg,rgba(23,129,255,0.28),rgba(53,255,145,0.22));background:-o-linear-gradient(315deg,rgba(23,129,255,0.28),rgba(53,255,145,0.22));background:linear-gradient(135deg,rgba(23,129,255,0.28),rgba(53,255,145,0.22));-webkit-border-radius:1em;border-radius:1em}.trakt-list-wide-card--create .card__view::before{content:'+';position:absolute;inset:0;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;font-size:6em;line-height:1;color:rgba(255,255,255,0.82);font-weight:500;z-index:0}.trakt-list-wide-card--create .card__img{opacity:0}.trakt-list-wide-card--create .card__promo{z-index:2}.trakt-list-wide-card--create .card__promo-title{font-weight:700}.trakt-userinfo-name{line-height:1.35;margin-bottom:.3em}.trakt-userinfo-vip{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.5em;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;line-height:1.35;margin-top:.1em}.trakt-userinfo-vip__label{opacity:.75}.trakt-vip-badge{display:inline-block;-webkit-border-radius:999px;border-radius:999px;padding:.2em .65em;font-size:.9em;line-height:1.25;border:1px solid transparent;vertical-align:middle}.trakt-vip-badge--enabled{color:#1be26f;border-color:rgba(27,226,111,0.45);background:rgba(27,226,111,0.14)}.trakt-vip-badge--disabled{color:#aeb5bc;border-color:rgba(174,181,188,0.45);background:rgba(174,181,188,0.12)}.trakt-device-auth{padding:.4em 1.2em 1.2em}.trakt-device-auth__inner{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:horizontal;-webkit-box-direction:normal;-webkit-flex-direction:row;-ms-flex-direction:row;flex-direction:row;gap:1.5em;-webkit-box-align:start;-webkit-align-items:flex-start;-ms-flex-align:start;align-items:flex-start}.trakt-device-auth__qr-col{-webkit-box-flex:0;-webkit-flex:0 0 auto;-ms-flex:0 0 auto;flex:0 0 auto;width:min(45%,14em)}.trakt-device-auth__info-col{-webkit-box-flex:1;-webkit-flex:1 1 auto;-ms-flex:1 1 auto;flex:1 1 auto;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;gap:.6em;-webkit-box-align:start;-webkit-align-items:flex-start;-ms-flex-align:start;align-items:flex-start;padding-top:.4em}.trakt-device-auth__qr-container{width:100%}.trakt-device-auth__qr-container--hidden{display:none}.trakt-device-auth__qr-link{display:block}.trakt-device-auth__qr-image{display:block;width:100%;height:auto;background:#fff;border:2px solid #e3e3e3;-webkit-border-radius:.8em;border-radius:.8em;padding:.35em;-webkit-box-sizing:border-box;box-sizing:border-box}.trakt-device-auth__qr-caption{margin-top:.6em;font-size:.95em;opacity:.72;text-align:center}.trakt-device-auth__verification{font-size:1.05em;line-height:1.5;word-break:break-word;opacity:.9}.trakt-device-auth__code{margin:0}.trakt-device-auth__code strong{letter-spacing:.08em}.trakt-check-btn{cursor:pointer;margin-top:.4em}@media screen and (max-width:480px){.trakt-device-auth{padding:0 .6em -webkit-calc(0.8em + env(safe-area-inset-bottom));padding:0 .6em calc(0.8em + env(safe-area-inset-bottom))}.trakt-device-auth__inner{-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center}.trakt-device-auth__qr-col{width:min(100%,18.5em)}.trakt-device-auth__info-col{-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;text-align:center}}.trakt-watchlist-hub__tabs .trakt-watchlist__tab{border-bottom:3px solid transparent;-webkit-transition:background .2s,border-color .2s;transition:background .2s,border-color .2s}.trakt-watchlist-hub__tabs .trakt-watchlist__tab.active{background:rgba(155,89,208,0.18);border-bottom:3px solid #9b59d0;-webkit-box-shadow:inset 0 0 0 1px rgba(155,89,208,0.3);box-shadow:inset 0 0 0 1px rgba(155,89,208,0.3)}.trakt-watchlist-hub__tabs .trakt-watchlist__tab.active>div{font-weight:800;opacity:1}.trakt-upnext-badge{position:absolute;top:.3em;right:.3em;background:rgba(0,0,0,.78);color:#fff;font-size:1.35em;font-weight:800;min-width:1.6em;height:1.6em;-webkit-border-radius:999px;border-radius:999px;z-index:2;pointer-events:none;line-height:1;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;padding:0 .3em}.trakt-upcoming-section{width:100%;flex-basis:100%;margin-top:1.8em;padding:1em 0 .5em;font-size:1.15em;font-weight:700;letter-spacing:.04em;text-transform:uppercase;opacity:.9;color:#fff;display:flex;align-items:center;gap:.9em;pointer-events:none}.trakt-upcoming-section::before{content:'';flex:0 0 3px;height:1.2em;background:linear-gradient(180deg,#e8572a,#ff9844);border-radius:3px}.trakt-upcoming-section::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(255,255,255,.25),rgba(255,255,255,0))}.trakt-watched-badge{position:absolute;bottom:.35em;left:.35em;width:1.45em;height:1.45em;border-radius:999px;display:flex;align-items:center;justify-content:center;z-index:2;pointer-events:none;background:rgba(155,89,208,.82);color:#fff}.trakt-watched-badge svg{width:.82em;height:.82em;display:block}.trakt-status-clickable{cursor:pointer;border-radius:.6em;padding:.15em .4em .15em .1em;transition:background .15s}.trakt-status-clickable.hover,.trakt-status-clickable.focus{background:rgba(155,89,208,.18)}</style>");
+    Lampa.Template.add('trakt_style', "<style>@charset 'UTF-8';.full-start-new__details.trakt{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;color:#fff}.trakt-brand-icon{width:100%;height:100%;display:block;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0;color:inherit}.trakt-brand-icon path{fill:currentColor}.trakt-head-action.focus .trakt-brand-icon,.trakt-head-action.hover .trakt-brand-icon,.menu__item.focus .trakt-brand-icon,.menu__item.hover .trakt-brand-icon,.menu__item.traverse .trakt-brand-icon,.settings-folder.focus .trakt-brand-icon{color:inherit}.full-start-new__details.trakt .trakt-icon{margin-right:.5em;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center}.full-start-new__details.trakt .full-start-new__split{margin:0 .5em}.trakt-applecation-progress{display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.4em;margin-right:.6em;margin-left:.6em}.trakt-applecation-progress .trakt-icon{width:18px;height:18px;display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center}.trakt-applecation-progress .trakt-icon svg{width:100%;height:100%}.trakt-applecation-progress__text{white-space:nowrap}.trakt-lists-container{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:1em;padding:1em}.trakt-list-card{width:150px;background:rgba(255,255,255,0.1);-webkit-border-radius:.5em;border-radius:.5em;padding:.5em;cursor:pointer;-webkit-transition:background .3s ease;-o-transition:background .3s ease;transition:background .3s ease}.trakt-list-card:hover{background:rgba(255,255,255,0.2)}.trakt-list-card__poster{width:100%;height:225px;background-size:cover;background-position:center;-webkit-border-radius:.5em;border-radius:.5em;margin-bottom:.5em}.trakt-list-card__title{font-size:.9em;text-align:center;white-space:nowrap;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis}.trakt-list-detail-header{padding:1em;background:rgba(0,0,0,0.3);margin-bottom:1em}.trakt-list-detail-title{font-size:1.5em;margin-bottom:.5em}.trakt-list-detail-description{font-size:1em;opacity:.8}.trakt-head-action{color:#ff4d4d}.trakt-head-action--ok{color:#37ff54}.trakt-head-action--error{color:#ff4d4d}.trakt-head-action svg{width:100%;height:100%;display:block}.trakt-head-icon{width:100%;height:100%;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center}.trakt-list-manager-button{display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.5em}.trakt-list-manager-button svg{width:1.2em;height:1.2em}.trakt-watchlist-hub{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;height:100%}.trakt-watchlist-hub__controls{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;gap:.55em;padding:.8em 1.5em .2em}.trakt-watchlist-hub__tabs{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:1.2em}.trakt-watchlist-hub__tabs .simple-button{margin-right:0;-webkit-box-flex:1;-webkit-flex:1 1 8em;-ms-flex:1 1 8em;flex:1 1 8em;min-width:0;padding:1.1em 1.4em;font-size:1.6em;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;text-align:center;-webkit-border-radius:1.1em;border-radius:1.1em}.trakt-watchlist-hub__tabs .simple-button--filter>div{width:100%;margin-left:0;padding:0;background:transparent;text-align:center;font-weight:800;font-size:1em;letter-spacing:.02em}.trakt-watchlist-hub__sorts{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:.55em}.trakt-watchlist__sort{margin-right:0;-webkit-box-flex:1;-webkit-flex:1 1 10em;-ms-flex:1 1 10em;flex:1 1 10em;min-width:7.6em;padding:.65em .85em;-webkit-box-pack:justify;-webkit-justify-content:space-between;-ms-flex-pack:justify;justify-content:space-between;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.55em;-webkit-border-radius:.9em;border-radius:.9em}.trakt-watchlist__sort>div{margin-left:0}.trakt-watchlist__sort .trakt-watchlist__sort-label{min-width:0;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis;white-space:nowrap;font-weight:600;text-align:left}.trakt-watchlist__sort .trakt-watchlist__sort-state{-webkit-box-flex:0;-webkit-flex:0 0 auto;-ms-flex:0 0 auto;flex:0 0 auto;min-width:1em;font-size:1.05em;line-height:1;font-weight:700;text-align:center;opacity:.88}.trakt-watchlist__sort .trakt-watchlist__sort-state:empty{display:none}.trakt-watchlist__sort--active{background:rgba(255,255,255,0.14);-webkit-box-shadow:inset 0 0 0 1px rgba(255,255,255,0.16);box-shadow:inset 0 0 0 1px rgba(255,255,255,0.16)}.trakt-watchlist__sort--more{-webkit-flex-basis:8.4em;-ms-flex-preferred-size:8.4em;flex-basis:8.4em}.trakt-watchlist__sort--desc .trakt-watchlist__sort-state,.trakt-watchlist__sort--asc .trakt-watchlist__sort-state{opacity:1}.trakt-watchlist-hub__body{-webkit-box-flex:1;-webkit-flex:1;-ms-flex:1;flex:1;min-height:0}.trakt-watchlist__view.hide{display:none}.trakt-list-wide-card__meta{margin-top:.6em;font-size:1.1em;opacity:.8}.trakt-list-wide-card:not(.trakt-list-wide-card--create) .card__promo{display:none !important}.trakt-list-wide-card--create .card__view{background:-webkit-linear-gradient(315deg,rgba(23,129,255,0.28),rgba(53,255,145,0.22));background:-o-linear-gradient(315deg,rgba(23,129,255,0.28),rgba(53,255,145,0.22));background:linear-gradient(135deg,rgba(23,129,255,0.28),rgba(53,255,145,0.22));-webkit-border-radius:1em;border-radius:1em}.trakt-list-wide-card--create .card__view::before{content:'+';position:absolute;inset:0;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;font-size:6em;line-height:1;color:rgba(255,255,255,0.82);font-weight:500;z-index:0}.trakt-list-wide-card--create .card__img{opacity:0}.trakt-list-wide-card--create .card__promo{z-index:2}.trakt-list-wide-card--create .card__promo-title{font-weight:700}.trakt-userinfo-name{line-height:1.35;margin-bottom:.3em}.trakt-userinfo-vip{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.5em;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;line-height:1.35;margin-top:.1em}.trakt-userinfo-vip__label{opacity:.75}.trakt-vip-badge{display:inline-block;-webkit-border-radius:999px;border-radius:999px;padding:.2em .65em;font-size:.9em;line-height:1.25;border:1px solid transparent;vertical-align:middle}.trakt-vip-badge--enabled{color:#1be26f;border-color:rgba(27,226,111,0.45);background:rgba(27,226,111,0.14)}.trakt-vip-badge--disabled{color:#aeb5bc;border-color:rgba(174,181,188,0.45);background:rgba(174,181,188,0.12)}.trakt-device-auth{padding:.4em 1.2em 1.2em}.trakt-device-auth__inner{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:horizontal;-webkit-box-direction:normal;-webkit-flex-direction:row;-ms-flex-direction:row;flex-direction:row;gap:1.5em;-webkit-box-align:start;-webkit-align-items:flex-start;-ms-flex-align:start;align-items:flex-start}.trakt-device-auth__qr-col{-webkit-box-flex:0;-webkit-flex:0 0 auto;-ms-flex:0 0 auto;flex:0 0 auto;width:min(45%,14em)}.trakt-device-auth__info-col{-webkit-box-flex:1;-webkit-flex:1 1 auto;-ms-flex:1 1 auto;flex:1 1 auto;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;gap:.6em;-webkit-box-align:start;-webkit-align-items:flex-start;-ms-flex-align:start;align-items:flex-start;padding-top:.4em}.trakt-device-auth__qr-container{width:100%}.trakt-device-auth__qr-container--hidden{display:none}.trakt-device-auth__qr-link{display:block}.trakt-device-auth__qr-image{display:block;width:100%;height:auto;background:#fff;border:2px solid #e3e3e3;-webkit-border-radius:.8em;border-radius:.8em;padding:.35em;-webkit-box-sizing:border-box;box-sizing:border-box}.trakt-device-auth__qr-caption{margin-top:.6em;font-size:.95em;opacity:.72;text-align:center}.trakt-device-auth__verification{font-size:1.05em;line-height:1.5;word-break:break-word;opacity:.9}.trakt-device-auth__code{margin:0}.trakt-device-auth__code strong{letter-spacing:.08em}.trakt-check-btn{cursor:pointer;margin-top:.4em}@media screen and (max-width:480px){.trakt-device-auth{padding:0 .6em -webkit-calc(0.8em + env(safe-area-inset-bottom));padding:0 .6em calc(0.8em + env(safe-area-inset-bottom))}.trakt-device-auth__inner{-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center}.trakt-device-auth__qr-col{width:min(100%,18.5em)}.trakt-device-auth__info-col{-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;text-align:center}}.trakt-watchlist-hub__tabs .trakt-watchlist__tab{border-bottom:3px solid transparent;-webkit-transition:background .2s,border-color .2s;transition:background .2s,border-color .2s}.trakt-watchlist-hub__tabs .trakt-watchlist__tab.active{background:rgba(155,89,208,0.18);border-bottom:3px solid #9b59d0;-webkit-box-shadow:inset 0 0 0 1px rgba(155,89,208,0.3);box-shadow:inset 0 0 0 1px rgba(155,89,208,0.3)}.trakt-watchlist-hub__tabs .trakt-watchlist__tab.active>div{font-weight:800;opacity:1}.trakt-upnext-badge{position:absolute;top:.3em;right:.3em;background:rgba(0,0,0,.78);color:#fff;font-size:1.35em;font-weight:800;min-width:1.6em;height:1.6em;-webkit-border-radius:999px;border-radius:999px;z-index:2;pointer-events:none;line-height:1;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;padding:0 .3em}.trakt-upcoming-section{width:100%;flex-basis:100%;margin-top:1.8em;padding:1em 0 .5em;font-size:1.15em;font-weight:700;letter-spacing:.04em;text-transform:uppercase;opacity:.9;color:#fff;display:flex;align-items:center;gap:.9em;pointer-events:none}.trakt-upcoming-section::before{content:'';flex:0 0 3px;height:1.2em;background:linear-gradient(180deg,#e8572a,#ff9844);border-radius:3px}.trakt-upcoming-section::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(255,255,255,.25),rgba(255,255,255,0))}.trakt-watched-badge{position:absolute;bottom:.35em;left:.35em;width:1.45em;height:1.45em;border-radius:999px;display:flex;align-items:center;justify-content:center;z-index:2;pointer-events:none;background:rgba(155,89,208,.82);color:#fff}.trakt-watched-badge svg{width:.82em;height:.82em;display:block}.trakt-status-clickable{cursor:pointer;border-radius:.6em;padding:.15em .4em .15em .1em;transition:background .15s}.trakt-status-clickable.hover,.trakt-status-clickable.focus{background:rgba(155,89,208,.18)}.trakt-history-date-badge{position:absolute;bottom:0;left:0;right:0;padding:.3em .45em .35em;background:linear-gradient(to top,rgba(0,0,0,.82) 0%,transparent 100%);display:flex;justify-content:space-between;align-items:flex-end;pointer-events:none;z-index:2}.trakt-history-ep{font-size:.72em;font-weight:700;color:rgba(255,255,255,.72);line-height:1.2;flex-shrink:0;margin-right:.4em}.trakt-history-date{font-size:.75em;font-weight:700;color:#fff;line-height:1.2;margin-left:auto;white-space:nowrap}</style>");
     $('body').append(Lampa.Template.get('trakt_style', {}, true));
 
     // Фонова валідація токена при старті (єдиний шлях auth lifecycle).
@@ -11540,6 +11617,9 @@
     }
     Lampa.Component.add('trakt_upnext', function (object) {
       return new Catalog.upnext(object);
+    });
+    Lampa.Component.add('trakt_history', function (object) {
+      return new Catalog.history(object);
     });
 
     // Додаємо нові компоненти
