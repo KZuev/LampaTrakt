@@ -5917,20 +5917,24 @@
         ? element.object.activity.render() : null;
       if (!renderRoot) return;
 
-      function buildProgressElement(labelType, season, episodeNum, watched) {
-        var iconColor = watched ? '#9b59d0' : 'rgba(255,255,255,0.38)';
-        var iconHtml = '<div class="trakt-icon" style="width:1.5em;height:1.5em;color:' + iconColor + '">' + icons.TRAKT_ICON + '</div>';
-        var bodyHtml;
-        if (labelType === 'completed') {
-          bodyHtml = '<span>' + Lampa.Lang.translate('trakt_show_completed') + '</span>';
-        } else if (labelType === 'movie' || labelType === 'not_watched') {
-          bodyHtml = '<span>' + (watched ? Lampa.Lang.translate('trakt_watched_yes') : Lampa.Lang.translate('trakt_watched_no')) + '</span>';
-        } else {
-          bodyHtml = '<span>' + Lampa.Lang.translate('trakttv_watched_label') + ': ' + Lampa.Lang.translate('full_season') + ' ' + season + ' · ' + Lampa.Lang.translate('full_episode') + ' ' + episodeNum + '</span>';
-        }
+      function buildProgressElement() {
         var el = document.createElement('div');
         el.className = 'full-start-new__details trakt selector trakt-status-clickable';
-        el.innerHTML = iconHtml + bodyHtml;
+        el.innerHTML = '<div class="trakt-icon" style="width:1.5em;height:1.5em;color:rgba(255,255,255,0.38)">' + icons.TRAKT_ICON + '</div><span>…</span>';
+
+        function updateVisual(labelType, season, episodeNum, watched) {
+          var iconEl = el.querySelector('.trakt-icon');
+          var spanEl = el.querySelector('span');
+          if (iconEl) iconEl.style.color = watched ? '#9b59d0' : 'rgba(255,255,255,0.38)';
+          if (!spanEl) return;
+          if (labelType === 'completed') {
+            spanEl.textContent = Lampa.Lang.translate('trakt_show_completed');
+          } else if (labelType === 'movie' || labelType === 'not_watched') {
+            spanEl.textContent = watched ? Lampa.Lang.translate('trakt_watched_yes') : Lampa.Lang.translate('trakt_watched_no');
+          } else {
+            spanEl.textContent = Lampa.Lang.translate('trakttv_watched_label') + ': ' + Lampa.Lang.translate('full_season') + ' ' + season + ' \xB7 ' + Lampa.Lang.translate('full_episode') + ' ' + episodeNum;
+          }
+        }
         function confirmRemoveFromHistory(method) {
           Lampa.Select.show({
             title: Lampa.Lang.translate('trakt_confirm_remove_history'),
@@ -6012,26 +6016,33 @@
             Lampa.Controller.toggle('content');
           });
         });
-        return el;
+        return { el: el, updateVisual: updateVisual };
       }
 
-      function insertElement(el) {
+      function insertElement(targetEl) {
         var taglineElement = renderRoot.find('.full-start-new__rate-line');
         if (taglineElement.length) {
           renderRoot.find('.full-start-new__details.trakt').remove();
-          taglineElement.after(el);
+          taglineElement.after(targetEl);
         }
       }
 
-      if (isShow) {
-        var hasApplecation = Array.isArray(window.Lampa && Lampa.Manifest && Lampa.Manifest.plugins) &&
-          Lampa.Manifest.plugins.some(function(p) { return p && p.name === 'Applecation'; });
+      var hasApplecation = isShow && Array.isArray(window.Lampa && Lampa.Manifest && Lampa.Manifest.plugins) &&
+        Lampa.Manifest.plugins.some(function(p) { return p && p.name === 'Applecation'; });
 
+      // Insert placeholder immediately so Lampa builds navigation with it in the graph
+      var progress = null;
+      if (!hasApplecation) {
+        progress = buildProgressElement();
+        insertElement(progress.el);
+      }
+
+      if (isShow) {
         getShowProgressData(itemId).then(function(result) {
-          var progress = result.progress || {};
-          var aired = progress.aired || 0;
-          var watchedCount = progress.completed || 0;
-          var lastEp = progress.last_episode;
+          var progressData = result.progress || {};
+          var aired = progressData.aired || 0;
+          var watchedCount = progressData.completed || 0;
+          var lastEp = progressData.last_episode;
           var season = lastEp && lastEp.season;
           var ep = lastEp && lastEp.number;
 
@@ -6062,7 +6073,6 @@
           }
 
           var isCompleted = aired > 0 && aired === watchedCount;
-
           var labelType;
           if (isCompleted) {
             labelType = 'completed';
@@ -6071,7 +6081,7 @@
           } else {
             labelType = 'not_watched';
           }
-          insertElement(buildProgressElement(labelType, season, ep, labelType !== 'not_watched'));
+          if (progress) progress.updateVisual(labelType, season, ep, labelType !== 'not_watched');
         }).catch(function(error) {
           logWarn('Failed to load show progress', error, { debugOnly: true });
         });
@@ -6079,9 +6089,9 @@
       } else {
         ensureWatchedCache().then(function(cache) {
           var isWatched = cache.movies.has(String(itemId));
-          insertElement(buildProgressElement('movie', null, null, isWatched));
+          if (progress) progress.updateVisual('movie', null, null, isWatched);
         }).catch(function() {
-          insertElement(buildProgressElement('movie', null, null, false));
+          if (progress) progress.updateVisual('movie', null, null, false);
         });
       }
     },
