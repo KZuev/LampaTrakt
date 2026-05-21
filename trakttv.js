@@ -5841,13 +5841,11 @@
         if (labelType === 'completed') {
           bodyHtml = '<span>' + Lampa.Lang.translate('trakt_show_completed') + '</span>';
         } else if (labelType === 'dropped' && season) {
-          bodyHtml = '<span>' + Lampa.Lang.translate('trakt_show_dropped') + ' ' + Lampa.Lang.translate('trakttv_na') + ':</span>' +
-                     '<span>' + Lampa.Lang.translate('full_season') + ' ' + season + ' · ' + Lampa.Lang.translate('full_episode') + ' ' + episodeNum + '</span>';
+          bodyHtml = '<span>' + Lampa.Lang.translate('trakt_show_dropped') + ' ' + Lampa.Lang.translate('trakttv_na') + ': ' + Lampa.Lang.translate('full_season') + ' ' + season + ' · ' + Lampa.Lang.translate('full_episode') + ' ' + episodeNum + '</span>';
         } else if (labelType === 'movie') {
           bodyHtml = '<span>' + (watched ? Lampa.Lang.translate('trakt_watched_yes') : Lampa.Lang.translate('trakt_watched_no')) + '</span>';
         } else {
-          bodyHtml = '<span>' + Lampa.Lang.translate('trakttv_watched_label') + ':</span>' +
-                     '<span>' + Lampa.Lang.translate('full_season') + ' ' + season + ' · ' + Lampa.Lang.translate('full_episode') + ' ' + episodeNum + '</span>';
+          bodyHtml = '<span>' + Lampa.Lang.translate('trakttv_watched_label') + ': ' + Lampa.Lang.translate('full_season') + ' ' + season + ' · ' + Lampa.Lang.translate('full_episode') + ' ' + episodeNum + '</span>';
         }
         var el = document.createElement('div');
         el.className = 'full-start-new__details trakt selector trakt-status-clickable';
