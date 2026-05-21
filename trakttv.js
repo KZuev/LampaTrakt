@@ -6030,11 +6030,13 @@
       var hasApplecation = isShow && Array.isArray(window.Lampa && Lampa.Manifest && Lampa.Manifest.plugins) &&
         Lampa.Manifest.plugins.some(function(p) { return p && p.name === 'Applecation'; });
 
-      // Insert placeholder immediately so Lampa builds navigation with it in the graph
+      // Build element now but insert on next tick so Lampa's initial focus
+      // lands on the main buttons first. By the time any key is pressed the
+      // element is already in DOM and in Lampa's navigation graph.
       var progress = null;
       if (!hasApplecation) {
         progress = buildProgressElement();
-        insertElement(progress.el);
+        setTimeout(function() { insertElement(progress.el); }, 0);
       }
 
       if (isShow) {
