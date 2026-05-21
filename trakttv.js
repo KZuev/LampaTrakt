@@ -2246,7 +2246,7 @@
       if (data && data.ids) Object.assign(ids, data.ids);
       return requestApi('DELETE', '/users/me/hidden/progress_watched', { shows: [{ ids: ids }] });
     },
-    hiddenShows: function() { return requestApi('GET', '/users/me/hidden/progress_watched?type=show&limit=1000'); },
+    hiddenShows: function() { return requestApi('GET', '/users/me/hidden/progress_watched?limit=100'); },
     showWatchedProgress: function(traktId) { return requestApi('GET', '/shows/' + traktId + '/progress/watched'); },
     watchlistSortFields: Array.from(WATCHLIST_SORT_FIELDS),
     watchlistVipSortFields: Array.from(WATCHLIST_VIP_SORT_FIELDS),
@@ -5852,9 +5852,9 @@
         });
 
       } else {
-        if (!_A) return;
-        _A.inHistory({ method: 'movie', id: itemId, ids: { tmdb: itemId } }).then(function(inHist) {
-          insertElement(buildProgressElement('movie', null, null, !!inHist));
+        ensureWatchedCache().then(function(cache) {
+          var isWatched = cache.movies.has(String(itemId));
+          insertElement(buildProgressElement('movie', null, null, isWatched));
         }).catch(function() {
           insertElement(buildProgressElement('movie', null, null, false));
         });
@@ -9195,14 +9195,15 @@
     if (bar) bar.style.width = "".concat(progress.percent || 0, "%");
   }
   var _watchedCache = null;
-  var _watchedCacheLoading = false;
+  var _watchedCachePromise = null;
 
-  function loadWatchedCache() {
-    if (_watchedCacheLoading || !Lampa.Storage.get('trakt_token')) return;
+  function ensureWatchedCache() {
+    if (_watchedCache) return Promise.resolve(_watchedCache);
+    if (_watchedCachePromise) return _watchedCachePromise;
+    if (!Lampa.Storage.get('trakt_token')) return Promise.resolve({ movies: new Set(), shows: new Set() });
     var _A = typeof api$1 !== 'undefined' && api$1 || null;
-    if (!_A || typeof _A.watchedMovies !== 'function') return;
-    _watchedCacheLoading = true;
-    Promise.all([
+    if (!_A) return Promise.resolve({ movies: new Set(), shows: new Set() });
+    _watchedCachePromise = Promise.all([
       _A.watchedMovies().catch(function() { return []; }),
       _A.watchedShows().catch(function() { return []; })
     ]).then(function(res) {
@@ -9210,10 +9211,19 @@
       (res[0] || []).forEach(function(x) { var id = x.movie && x.movie.ids && x.movie.ids.tmdb; if (id) ms.add(String(id)); });
       (res[1] || []).forEach(function(x) { var id = x.show && x.show.ids && x.show.ids.tmdb; if (id) ss.add(String(id)); });
       _watchedCache = { movies: ms, shows: ss };
-    }).catch(function() {}).then(function() { _watchedCacheLoading = false; });
+      _watchedCachePromise = null;
+      return _watchedCache;
+    }).catch(function() {
+      _watchedCachePromise = null;
+      _watchedCache = { movies: new Set(), shows: new Set() };
+      return _watchedCache;
+    });
+    return _watchedCachePromise;
   }
 
-  function invalidateWatchedCache() { _watchedCache = null; }
+  function loadWatchedCache() { ensureWatchedCache(); }
+
+  function invalidateWatchedCache() { _watchedCache = null; _watchedCachePromise = null; }
 
   var _hiddenShowsCache = null;
   var _hiddenShowsCachePromise = null;
@@ -9227,6 +9237,7 @@
     _hiddenShowsCachePromise = _A.hiddenShows().then(function(res) {
       var ids = new Set();
       (res || []).forEach(function(item) {
+        if (item.type !== 'show') return;
         var tmdb = item.show && item.show.ids && item.show.ids.tmdb;
         if (tmdb) ids.add(String(tmdb));
       });
