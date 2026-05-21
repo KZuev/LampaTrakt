@@ -5383,6 +5383,39 @@
         });
       });
     }
+    function enrichTimetableCards(episodes) {
+      var lang = Lampa.Storage ? Lampa.Storage.get('language', 'ru') : 'ru';
+      if (!episodes || !episodes.length) return Promise.resolve(episodes);
+      if (!Lampa.TMDB || !Lampa.Reguest) return Promise.resolve(episodes);
+      var seen = {};
+      var cards = [];
+      episodes.forEach(function (ep) {
+        var id = ep.card && ep.card.id;
+        if (id && !seen[id]) { seen[id] = true; cards.push(ep.card); }
+      });
+      var promises = cards.map(function (card) {
+        var cacheKey = 'tv/' + card.id + '/' + lang;
+        if (_tmdbLocaleCache[cacheKey]) {
+          var cached = _tmdbLocaleCache[cacheKey];
+          if (cached.title) card.name = cached.title;
+          if (cached.poster) card.poster = cached.poster;
+          return Promise.resolve();
+        }
+        return new Promise(function (resolve) {
+          var url = Lampa.TMDB.api('tv/' + card.id + '?api_key=' + Lampa.TMDB.key() + '&language=' + lang);
+          var network = new Lampa.Reguest();
+          network.silent(url, function (d) {
+            var entry = {};
+            var localTitle = d && d.name;
+            if (localTitle) { card.name = localTitle; entry.title = localTitle; }
+            if (d && d.poster_path) { card.poster = 'https://image.tmdb.org/t/p/w500' + d.poster_path; entry.poster = card.poster; }
+            _tmdbLocaleCache[cacheKey] = entry;
+            resolve();
+          }, function () { resolve(); });
+        });
+      });
+      return Promise.all(promises).then(function () { return episodes; });
+    }
     function fetchTraktCalendar() {
       return _fetchTraktCalendar.apply(this, arguments);
     }
@@ -5422,6 +5455,9 @@
           case 1:
             traktData = _context.v;
             episodes = prepareTimetableData(traktData);
+            _context.n = 2;
+            return enrichTimetableCards(episodes);
+          case 2:
             groupedByDate = groupEpisodesByDate(episodes);
             startDate = new Date();
             dates = [];
