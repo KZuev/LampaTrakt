@@ -5931,52 +5931,57 @@
           });
         }
         $(el).on('hover:enter', function() {
-          if (isShow) {
-            Lampa.Select.show({
-              title: Lampa.Lang.translate('trakt_show_status_title'),
-              items: [
+          var listParams = normalizeCardParams(data);
+          Promise.all([
+            (api$1 ? api$1.inWatchlist(listParams).catch(function() { return false; }) : Promise.resolve(false)),
+            (api$1 ? api$1.myLists({ page: 1, limit: 100 }).catch(function() { return { results: [] }; }) : Promise.resolve({ results: [] }))
+          ]).then(function(res) {
+            var watchlistState = res[0];
+            var myListsResponse = res[1];
+            var lists = myListsResponse && Array.isArray(myListsResponse.results) ? myListsResponse.results : [];
+            return loadMyListsMembership(listParams, lists).then(function(withMembership) {
+              var statusItems = isShow ? [
                 { title: Lampa.Lang.translate('trakt_show_completed'), action: 'completed' },
                 { title: Lampa.Lang.translate('trakt_show_in_progress'), action: 'in_progress' },
                 { title: Lampa.Lang.translate('trakt_watched_no'), action: 'not_watched' }
-              ],
-              onSelect: function(a) {
-                if (a.action === 'completed' && _A) {
-                  _A.addToHistory({ method: 'show', id: itemId, ids: { tmdb: itemId } }, 'all').then(function() {
-                    invalidateWatchedCache();
-                    TraktHistory.showWatchProgress(data, element);
-                  }).catch(function() {});
-                } else if (a.action === 'not_watched') {
-                  confirmRemoveFromHistory('show');
-                } else if (a.action === 'in_progress' && _A) {
-                  TraktHistory.showWatchProgress(data, element);
-                }
-              },
-              onBack: function() { Lampa.Controller.toggle('content'); }
-            });
-          } else {
-            Lampa.Select.show({
-              title: Lampa.Lang.translate('trakt_watched_title'),
-              items: [
+              ] : [
                 { title: Lampa.Lang.translate('trakt_watched_now'), action: 'now' },
                 { title: Lampa.Lang.translate('trakt_watched_unknown_date'), action: 'unknown' },
                 { title: Lampa.Lang.translate('trakt_watched_no'), action: 'not_watched' }
-              ],
-              onSelect: function(a) {
-                if (!_A) return;
-                if (a.action === 'not_watched') {
-                  confirmRemoveFromHistory('movie');
-                  return;
-                }
-                var payload = { method: 'movie', id: itemId, ids: { tmdb: itemId } };
-                if (a.action === 'unknown') payload.watched_at = null;
-                _A.addToHistory(payload).then(function() {
-                  invalidateWatchedCache();
-                  TraktHistory.showWatchProgress(data, element);
-                }).catch(function() {});
-              },
-              onBack: function() { Lampa.Controller.toggle('content'); }
+              ];
+              var allItems = statusItems.concat(buildManagerItems(!!watchlistState, withMembership));
+              Lampa.Select.show({
+                title: 'Trakt.TV',
+                items: allItems,
+                onSelect: function(a) {
+                  if (a.target === 'watchlist' || a.target === 'list') {
+                    handleSelectAction(a, listParams, function() {});
+                    return;
+                  }
+                  if (a.action === 'completed' && isShow && _A) {
+                    _A.addToHistory({ method: 'show', id: itemId, ids: { tmdb: itemId } }, 'all').then(function() {
+                      invalidateWatchedCache();
+                      TraktHistory.showWatchProgress(data, element);
+                    }).catch(function() {});
+                  } else if (a.action === 'not_watched') {
+                    confirmRemoveFromHistory(isShow ? 'show' : 'movie');
+                  } else if (a.action === 'in_progress' && _A) {
+                    TraktHistory.showWatchProgress(data, element);
+                  } else if ((a.action === 'now' || a.action === 'unknown') && !isShow && _A) {
+                    var payload = { method: 'movie', id: itemId, ids: { tmdb: itemId } };
+                    if (a.action === 'unknown') payload.watched_at = null;
+                    _A.addToHistory(payload).then(function() {
+                      invalidateWatchedCache();
+                      TraktHistory.showWatchProgress(data, element);
+                    }).catch(function() {});
+                  }
+                },
+                onBack: function() { Lampa.Controller.toggle('content'); }
+              });
             });
-          }
+          }).catch(function() {
+            Lampa.Controller.toggle('content');
+          });
         });
         return el;
       }
@@ -9718,26 +9723,7 @@
     onFullCardReady: function onFullCardReady(e) {
       if (!e || !e.data) return;
       if (!e.object || !e.object.activity || typeof e.object.activity.render !== 'function') return;
-      var _self = this;
-      function tryInjectBtn(attempt) {
-        var render = e.object.activity.render();
-        var buttonsContainer = render.find('.full-start-new__buttons');
-        if (!buttonsContainer.length) {
-          var el = document.querySelector('.full-start-new__buttons');
-          if (el) buttonsContainer = $(el);
-        }
-        if (buttonsContainer.length) {
-          if (buttonsContainer.find('.trakt-list-manager-button').length === 0) {
-            var button = watchlist.addWatchlistButton(e.data);
-            buttonsContainer.append(button);
-          }
-          return;
-        }
-        if ((attempt || 0) < 8) setTimeout(function () { tryInjectBtn((attempt || 0) + 1); }, 300);
-      }
-      tryInjectBtn(0);
-
-      // Видалено кнопку TraktHistory.addHistoryButton згідно з завданням
+      // Видалено кнопку TraktHistory.addHistoryButton та кнопку watchlist — об'єднані у статус-кнопку
       // const historyButton = TraktHistory.addHistoryButton(e.data);
       // e.object.activity.render().find('.full-start-new__buttons').append(historyButton);
 
