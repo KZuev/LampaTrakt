@@ -5837,6 +5837,12 @@
             (result.traktId && hiddenSet.trakt.has(String(result.traktId)));
           var isCompleted = aired > 0 && aired === watchedCount;
 
+          // TEMP DEBUG — remove after fix
+          Lampa.Noty.show('tmdbId=' + itemId + ' traktId=' + result.traktId +
+            ' hidTmdb=[' + Array.from(hiddenSet.tmdb).join(',') + ']' +
+            ' hidTrakt=[' + Array.from(hiddenSet.trakt).slice(0,5).join(',') + ']' +
+            ' drop=' + isDropped);
+
           var labelType;
           if (isDropped) {
             labelType = 'dropped';
