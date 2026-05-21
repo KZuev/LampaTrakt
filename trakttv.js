@@ -6638,17 +6638,9 @@
         name: Lampa.Lang.translate('trakttvLogin')
       },
       onRender: function onRender(item) {
-        var status = $('<div class="settings-param__status"></div>');
-        item.find('.settings-param__value').append(status);
-        if (!Lampa.Storage.get('trakt_token')) {
-          item.show();
-          status.removeClass('active error wait').addClass('wait');
-        } else {
-          item.hide();
-        }
+        item.show();
       },
       onChange: function onChange() {
-        if (Lampa.Storage.get('trakt_token')) return;
 
         // Device OAuth only
         if (!Api$1) {
