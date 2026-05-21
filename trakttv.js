@@ -5838,10 +5838,23 @@
           var isCompleted = aired > 0 && aired === watchedCount;
 
           // TEMP DEBUG — remove after fix
-          Lampa.Noty.show('tmdbId=' + itemId + ' traktId=' + result.traktId +
-            ' hidTmdb=[' + Array.from(hiddenSet.tmdb).join(',') + ']' +
-            ' hidTrakt=[' + Array.from(hiddenSet.trakt).slice(0,5).join(',') + ']' +
-            ' drop=' + isDropped);
+          var _A2 = typeof api$1 !== 'undefined' && api$1 || null;
+          Promise.all([
+            _A2 ? requestApi('GET', '/users/me/hidden/progress_watched') : Promise.resolve([]),
+            _A2 ? requestApi('GET', '/users/me/hidden/calendar') : Promise.resolve([]),
+            _A2 ? requestApi('GET', '/users/me/hidden/recommendations') : Promise.resolve([])
+          ]).then(function(rr) {
+            var msg = 'prog_watched(' + (rr[0]||[]).length + ')' +
+              ' cal(' + (rr[1]||[]).length + ')' +
+              ' rec(' + (rr[2]||[]).length + ')';
+            var allItems = [].concat(rr[0]||[]).concat(rr[1]||[]).concat(rr[2]||[]);
+            var match = allItems.find(function(x) {
+              var ids = x.show && x.show.ids;
+              return ids && (String(ids.tmdb) === String(itemId) || String(ids.trakt) === String(result.traktId));
+            });
+            msg += match ? ' FOUND in ' + (rr[0].indexOf(match) >= 0 ? 'prog_watched' : rr[1].indexOf(match) >= 0 ? 'cal' : 'rec') : ' NOT FOUND anywhere';
+            Lampa.Noty.show(msg);
+          }).catch(function(e) { Lampa.Noty.show('hidden err: ' + (e && e.message || e)); });
 
           var labelType;
           if (isDropped) {
