@@ -2329,6 +2329,8 @@
             original_title: movie.title,
             release_date: movie.year + '',
             vote_average: Number(movie.rating || 0),
+            runtime: Number(movie.runtime || 0),
+            votes: Number(movie.votes || 0),
             poster: getImageUrl(movie, 'poster'),
             method: 'movie',
             card_type: 'movie'
@@ -2344,6 +2346,8 @@
             original_name: show.original_title || show.title || '',
             release_date: show.year + '',
             vote_average: Number(show.rating || 0),
+            runtime: Number(show.runtime || 0),
+            votes: Number(show.votes || 0),
             poster: getImageUrl(show, 'poster'),
             type: 'tv',
             method: 'tv',
@@ -2364,28 +2368,38 @@
         }
         var _sf = options.sortField || 'random';
         var _so = options.sortOrder || 'desc';
-        if (_sf === 'title') {
-          combinedResults.sort(function(a, b) {
-            var ta = (a.title || '').toLowerCase(), tb = (b.title || '').toLowerCase();
-            return _so === 'asc' ? (ta > tb ? 1 : ta < tb ? -1 : 0) : (ta < tb ? 1 : ta > tb ? -1 : 0);
-          });
-        } else if (_sf === 'released') {
-          combinedResults.sort(function(a, b) {
-            var ya = parseInt(a.release_date, 10) || 0, yb = parseInt(b.release_date, 10) || 0;
-            return _so === 'asc' ? ya - yb : yb - ya;
-          });
-        } else if (_sf === 'percentage') {
-          combinedResults.sort(function(a, b) {
-            var ra = Number(a.vote_average) || 0, rb = Number(b.vote_average) || 0;
-            return _so === 'asc' ? ra - rb : rb - ra;
-          });
-        } else if (_sf !== 'rank') {
-          for (var i = combinedResults.length - 1; i > 0; i--) {
-            var j = Math.floor(Math.random() * (i + 1));
-            var _ref7 = [combinedResults[j], combinedResults[i]];
-            combinedResults[i] = _ref7[0];
-            combinedResults[j] = _ref7[1];
-          }
+        var _numSort = function(getVal) {
+          combinedResults.sort(function(a, b) { var va = getVal(a), vb = getVal(b); return _so === 'asc' ? va - vb : vb - va; });
+        };
+        switch (_sf) {
+          case 'title':
+            combinedResults.sort(function(a, b) {
+              var ta = (a.title || '').toLowerCase(), tb = (b.title || '').toLowerCase();
+              return _so === 'asc' ? (ta > tb ? 1 : ta < tb ? -1 : 0) : (ta < tb ? 1 : ta > tb ? -1 : 0);
+            });
+            break;
+          case 'released':
+            _numSort(function(x) { return parseInt(x.release_date, 10) || 0; });
+            break;
+          case 'runtime':
+            _numSort(function(x) { return Number(x.runtime) || 0; });
+            break;
+          case 'percentage': case 'imdb_rating': case 'tmdb_rating':
+          case 'rt_tomatometer': case 'rt_audience': case 'metascore':
+            _numSort(function(x) { return Number(x.vote_average) || 0; });
+            break;
+          case 'popularity': case 'votes': case 'imdb_votes': case 'tmdb_votes':
+            _numSort(function(x) { return Number(x.votes) || 0; });
+            break;
+          case 'rank': case 'added': case 'my_rating': case 'watched': case 'collected':
+            break;
+          default:
+            for (var i = combinedResults.length - 1; i > 0; i--) {
+              var j = Math.floor(Math.random() * (i + 1));
+              var _ref7 = [combinedResults[j], combinedResults[i]];
+              combinedResults[i] = _ref7[0];
+              combinedResults[j] = _ref7[1];
+            }
         }
         var total = combinedResults.length;
         var total_pages = Math.max(1, Math.ceil(total / limit));
@@ -4663,6 +4677,7 @@
     };
     var typeBtn, yearBtn, genreBtn, countryBtn, sortBtn;
     var activeSort = { field: object.sortField || 'random', order: object.sortOrder || 'desc' };
+    var vipEnabled = getTraktVipStatusCached();
 
     function tr(key, fallback) {
       try { return Lampa.Lang.translate(key) || fallback || key; } catch(e) { return fallback || key; }
@@ -4690,31 +4705,48 @@
     function getSortLabel() {
       var f = activeSort.field;
       if (!f || f === 'random') return '…';
-      if (f === 'rank') return formatWatchlistSortLabel('rank');
-      return formatWatchlistSortLabel(f) + (activeSort.order === 'asc' ? ' ↑' : ' ↓');
+      return formatWatchlistSortLabel(f) + ' ' + formatWatchlistSortArrow(activeSort.order);
+    }
+    function applySortAndUpdate(field, order) {
+      activeSort.field = field;
+      activeSort.order = order;
+      updateBtn(sortBtn, getSortLabel(), field !== 'random');
+      rebuildView();
+      restoreFilters();
+    }
+    function switchSort(field) {
+      var vipOnly = isWatchlistVipSortField(field);
+      var nextOrder = field === activeSort.field ? (activeSort.order === 'desc' ? 'asc' : 'desc') : 'desc';
+      if (!vipOnly) { applySortAndUpdate(field, nextOrder); return; }
+      loadTraktVipStatus().then(function(status) {
+        vipEnabled = !!status;
+        if (!vipEnabled) { notify$1(tr('trakttv_watchlist_sort_vip_required', '')); restoreFilters(); return; }
+        applySortAndUpdate(field, nextOrder);
+      }).catch(function() {
+        vipEnabled = getTraktVipStatusCached();
+        notify$1(tr('trakttv_watchlist_sort_vip_required', ''));
+        restoreFilters();
+      });
     }
     function openSortMenu() {
-      var opts = [
-        { title: tr('trakttv_recs_sort_random', 'Случайный'), value: 'random:desc' },
-        { title: tr('trakttv_recs_sort_rank', 'По рекомендациям'), value: 'rank:desc' },
-        { title: tr('trakttv_recs_sort_title_asc', 'Название А-Я'), value: 'title:asc' },
-        { title: tr('trakttv_recs_sort_title_desc', 'Название Я-А'), value: 'title:desc' },
-        { title: tr('trakttv_recs_sort_released_desc', 'Год выпуска ↓'), value: 'released:desc' },
-        { title: tr('trakttv_recs_sort_released_asc', 'Год выпуска ↑'), value: 'released:asc' },
-        { title: tr('trakttv_recs_sort_percentage_desc', 'Рейтинг ↓'), value: 'percentage:desc' },
-        { title: tr('trakttv_recs_sort_percentage_asc', 'Рейтинг ↑'), value: 'percentage:asc' }
-      ];
-      var curVal = activeSort.field + ':' + activeSort.order;
+      var fields = getWatchlistSortFields();
+      var items = [{ title: tr('trakttv_recs_sort_random', 'Случайный'), selected: activeSort.field === 'random', field: 'random' }];
+      fields.forEach(function(field) {
+        var vipOnly = isWatchlistVipSortField(field);
+        var isActive = field === activeSort.field;
+        var arrow = isActive ? ' ' + formatWatchlistSortArrow(activeSort.order) : '';
+        items.push({
+          title: formatWatchlistSortLabel(field) + arrow,
+          subtitle: vipOnly ? tr('trakttv_vip_status', 'VIP') : '',
+          selected: isActive,
+          ghost: vipOnly && !vipEnabled,
+          field: field
+        });
+      });
       Lampa.Select.show({
         title: tr('trakttv_recs_sort_menu_title', 'Сортировка'),
-        items: opts.map(function(o) { return Object.assign({ selected: o.value === curVal }, o); }),
-        onSelect: function(item) {
-          var parts = (item.value || 'random:desc').split(':');
-          activeSort.field = parts[0] || 'random';
-          activeSort.order = parts[1] || 'desc';
-          updateBtn(sortBtn, getSortLabel(), activeSort.field !== 'random');
-          rebuildView(); restoreFilters();
-        },
+        items: items,
+        onSelect: function(item) { if (!item || !item.field) { restoreFilters(); return; } switchSort(item.field); },
         onBack: restoreFilters
       });
     }
