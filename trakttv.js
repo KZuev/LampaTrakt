@@ -5878,7 +5878,7 @@
           bodyHtml = '<span>' + Lampa.Lang.translate('trakt_show_completed') + '</span>';
         } else if (labelType === 'dropped' && season) {
           bodyHtml = '<span>' + Lampa.Lang.translate('trakt_show_dropped') + ' ' + Lampa.Lang.translate('trakttv_na') + ': ' + Lampa.Lang.translate('full_season') + ' ' + season + ' · ' + Lampa.Lang.translate('full_episode') + ' ' + episodeNum + '</span>';
-        } else if (labelType === 'movie') {
+        } else if (labelType === 'movie' || labelType === 'not_watched') {
           bodyHtml = '<span>' + (watched ? Lampa.Lang.translate('trakt_watched_yes') : Lampa.Lang.translate('trakt_watched_no')) + '</span>';
         } else {
           bodyHtml = '<span>' + Lampa.Lang.translate('trakttv_watched_label') + ': ' + Lampa.Lang.translate('full_season') + ' ' + season + ' · ' + Lampa.Lang.translate('full_episode') + ' ' + episodeNum + '</span>';
@@ -5996,9 +5996,9 @@
           } else if (watchedCount > 0 && season) {
             labelType = 'watching';
           } else {
-            return;
+            labelType = 'not_watched';
           }
-          insertElement(buildProgressElement(labelType, season, ep, true));
+          insertElement(buildProgressElement(labelType, season, ep, labelType !== 'not_watched'));
         }).catch(function(error) {
           logWarn('Failed to load show progress', error, { debugOnly: true });
         });
