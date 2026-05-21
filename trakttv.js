@@ -2450,7 +2450,8 @@
         var headers = response && response.headers ? response.headers : {};
         var mapped = payload.map(mapHistoryItem).filter(Boolean);
         var pagination = resolvePaginationFromHeaders(headers, { page: page, limit: limit, total: (page - 1) * limit + mapped.length });
-        return { results: mapped, total: pagination.total, total_pages: pagination.total_pages, page: pagination.page, limit: pagination.limit };
+        var base = { results: mapped, total: pagination.total, total_pages: pagination.total_pages, page: pagination.page, limit: pagination.limit };
+        return enrichWithTmdbLocale(base);
       });
     },
     auth: {
