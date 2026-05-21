@@ -5854,7 +5854,7 @@
             });
             msg += match ? ' FOUND in ' + (rr[0].indexOf(match) >= 0 ? 'prog_watched' : rr[1].indexOf(match) >= 0 ? 'cal' : 'rec') : ' NOT FOUND anywhere';
             Lampa.Noty.show(msg);
-          }).catch(function(e) { Lampa.Noty.show('hidden err: ' + (e && e.message || e)); });
+          }).catch(function(e) { Lampa.Noty.show('hidden err: ' + (e && e.message || e) + ' status=' + (e && e.status)); });
 
           var labelType;
           if (isDropped) {
