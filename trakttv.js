@@ -4602,37 +4602,37 @@
         ru: "Календарь",
       },
       trakttv_menu_title: {
-        ru: "TraktTV",
+        ru: "Trakt.TV",
       },
       trakttv_row_upnext: {
-        ru: "TraktTV: Смотреть дальше",
+        ru: "Trakt.TV: Смотреть дальше",
       },
       trakttv_row_recommendations_main: {
-        ru: "TraktTV: Рекомендации (главная)",
+        ru: "Trakt.TV: Рекомендации (главная)",
       },
       trakttv_row_recommendations_movie: {
-        ru: "TraktTV: Рекомендации (фильмы)",
+        ru: "Trakt.TV: Рекомендации (фильмы)",
       },
       trakttv_row_recommendations_tv: {
-        ru: "TraktTV: Рекомендации (серіалы)",
+        ru: "Trakt.TV: Рекомендации (сериалы)",
       },
       trakttv_row_calendar_main: {
-        ru: "TraktTV: Календарь выходов",
+        ru: "Trakt.TV: Календарь выходов",
       },
       trakttv_row_calendar_tv: {
-        ru: "TraktTV: Календарь выходов (сериалы)",
+        ru: "Trakt.TV: Календарь выходов (сериалы)",
       },
       trakttv_row_dvd_calendar_main: {
-        ru: "TraktTV: DVD Релизы",
+        ru: "Trakt.TV: DVD Релизы",
       },
       trakttv_row_dvd_calendar_movies: {
-        ru: "TraktTV: DVD Релизы (фильмы)",
+        ru: "Trakt.TV: DVD Релизы (фильмы)",
       },
       trakttv_no_recommendations: {
         ru: "Нет рекомендаций",
       },
       trakttv_show_recommendations: {
-        ru: "Показывать рекомендации TraktTV на главной",
+        ru: "Показывать рекомендации Trakt.TV на главной",
       },
       trakttv_source_trending: {
         ru: "В тренде",
@@ -4650,19 +4650,19 @@
         ru: "Рекомендации: сериалы",
       },
       trakttv_source_section: {
-        ru: "Фильтры источника TraktTV",
+        ru: "Фильтры источника Trakt.TV",
       },
       trakttv_source_ignore_watched: {
         ru: "Источник: скрывать просмотренное",
       },
       trakttv_source_ignore_watched_descr: {
-        ru: "Применяется ко всем лентам TraktTV (категории, рекомендации, поиск)",
+        ru: "Применяется ко всем лентам Trakt.TV (категории, рекомендации, поиск)",
       },
       trakttv_source_ignore_watchlisted: {
         ru: "Источник: скрывать watchlist",
       },
       trakttv_source_ignore_watchlisted_descr: {
-        ru: "Применяется ко всем лентам TraktTV (категории, рекомендации, поиск)",
+        ru: "Применяется ко всем лентам Trakt.TV (категории, рекомендации, поиск)",
       },
       trakt_source_search_lists: {
         ru: "Списки",
@@ -4806,7 +4806,7 @@
         ru: "Имя пользователя",
       },
       trakttv_vip_status: {
-        ru: "VIP",
+        ru: "Trakt VIP",
       },
       trakttv_vip_enabled: {
         ru: "Активирован",
@@ -5055,13 +5055,13 @@
         ru: "Client ID приложения Trakt",
       },
       trakt_client_id_description: {
-        ru: "Введите Client ID из настроек вашего приложения на trakt.tv/oauth/applications",
+        ru: "trakt.tv/oauth/applications",
       },
       trakt_client_secret_label: {
         ru: "Client Secret приложения Trakt",
       },
       trakt_client_secret_description: {
-        ru: "Введите Client Secret из настроек вашего приложения на trakt.tv/oauth/applications",
+        ru: "trakt.tv/oauth/applications",
       },
       trakt_not_set: {
         ru: "не задан",
@@ -5867,7 +5867,7 @@
     var upNextTitle = t('trakttv_upnext', 'Up Next');
     var calendarTitle = t('trakttv_calendar', 'Calendar');
     var recommendationsTitle = t('trakttv_recommendations', 'Recommendations');
-    var menuTitle = t('trakttv_menu_title', 'TraktTV');
+    var menuTitle = t('trakttv_menu_title', 'Trakt.TV');
     var myListsTitle = t('trakt_my_lists', 'My Lists');
     var likedListsTitle = t('trakt_liked_lists', 'Liked Lists');
     var watchlist = $("<li class=\"menu__item selector\">\n        <div class=\"menu__ico\">".concat(icons.TRAKT_ICON, " </div>\n        <div class=\"menu__text\">").concat(watchlistTitle, "</div>\n    </li>"));
@@ -6702,6 +6702,22 @@
       }
     });
 
+    // Client ID и Client Secret — заголовок секции
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: {
+        name: 'trakt_credentials_header',
+        type: 'static'
+      },
+      field: {
+        name: 'API-ключи приложения',
+        description: 'Создайте приложение на trakt.tv/oauth/applications и введите Client ID и Client Secret ниже'
+      },
+      onRender: function onRender(item) {
+        item.find('.settings-param__value').hide();
+      }
+    });
+
     // Client ID и Client Secret
     Lampa.SettingsApi.addParam({
       component: 'trakt',
@@ -7012,7 +7028,7 @@
       },
       onRender: function onRender(item) {
         item.empty();
-        item.append("<div class=\"settings-param__name\"><b>".concat(t$1('trakttv_source_section', 'TraktTV source filters'), "</b></div>"));
+        item.append("<div class=\"settings-param__name\"><b>".concat(t$1('trakttv_source_section', 'Trakt.TV source filters'), "</b></div>"));
       }
     });
     Lampa.SettingsApi.addParam({
@@ -7024,7 +7040,7 @@
       },
       field: {
         name: t$1('trakttv_source_ignore_watched', 'Source: ignore watched'),
-        description: t$1('trakttv_source_ignore_watched_descr', 'Applies to all TraktTV source feeds (categories, recommendations, search)')
+        description: t$1('trakttv_source_ignore_watched_descr', 'Applies to all Trakt.TV source feeds (categories, recommendations, search)')
       }
     });
     Lampa.SettingsApi.addParam({
@@ -7036,7 +7052,7 @@
       },
       field: {
         name: t$1('trakttv_source_ignore_watchlisted', 'Source: ignore watchlisted'),
-        description: t$1('trakttv_source_ignore_watchlisted_descr', 'Applies to all TraktTV source feeds (categories, recommendations, search)')
+        description: t$1('trakttv_source_ignore_watchlisted_descr', 'Applies to all Trakt.TV source feeds (categories, recommendations, search)')
       }
     });
     Lampa.SettingsApi.addParam({
@@ -7071,7 +7087,7 @@
       param: {
         name: 'trakt_enable_watching',
         type: 'trigger',
-        "default": false
+        "default": true
       },
       field: {
         name: Lampa.Lang.translate('trakttv_enable_watching'),
