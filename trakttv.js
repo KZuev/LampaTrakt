@@ -2457,6 +2457,53 @@
       }
       return requestApi('POST', '/sync/history/remove', body);
     },
+    collection: function(params) {
+      var page = Math.max(1, parseInt(params && params.page, 10) || 1);
+      var limit = Math.max(1, parseInt(params && params.limit, 10) || 36);
+      return Promise.all([
+        requestApi('GET', '/sync/collection/movies?extended=full'),
+        requestApi('GET', '/sync/collection/shows?extended=full')
+      ]).then(function(results) {
+        var movies = Array.isArray(results[0]) ? results[0] : [];
+        var shows = Array.isArray(results[1]) ? results[1] : [];
+        var mapped = movies.map(function(item) {
+          if (!item || !item.movie || !item.movie.ids) return null;
+          return {
+            component: 'full',
+            id: item.movie.ids.tmdb || item.movie.ids.trakt,
+            ids: item.movie.ids,
+            title: item.movie.title,
+            original_title: item.movie.title,
+            release_date: item.movie.year ? String(item.movie.year) : '',
+            vote_average: Number(item.movie.rating || 0),
+            poster: getImageUrl(item.movie, 'poster'),
+            image: getImageUrl(item.movie, 'fanart'),
+            method: 'movie',
+            card_type: 'movie'
+          };
+        }).concat(shows.map(function(item) {
+          if (!item || !item.show || !item.show.ids) return null;
+          return {
+            component: 'full',
+            id: item.show.ids.tmdb || item.show.ids.trakt,
+            ids: item.show.ids,
+            title: item.show.title,
+            original_title: item.show.title,
+            release_date: item.show.year ? String(item.show.year) : '',
+            vote_average: Number(item.show.rating || 0),
+            poster: getImageUrl(item.show, 'poster'),
+            image: getImageUrl(item.show, 'fanart'),
+            method: 'tv',
+            card_type: 'tv'
+          };
+        })).filter(Boolean);
+        var start = (page - 1) * limit;
+        var pageItems = mapped.slice(start, start + limit);
+        var total_pages = Math.ceil(mapped.length / limit) || 1;
+        var base = { results: pageItems, total: mapped.length, total_pages: total_pages, page: page, limit: limit };
+        return enrichWithTmdbLocale(base);
+      });
+    },
     auth: {
       /**
        * Build Standard OAuth authorize URL
@@ -3902,12 +3949,23 @@
       }],
       onSelect: function onSelect(item) {
         if (item.action !== 'remove') return;
-        Api$2.removeFromHistory(element).then(function () {
-          invalidateWatchedCache();
-          notify$1(t$3('trakt_history_removed', 'Removed from history'));
-          refreshActivity(object, 'trakt_history');
-        })['catch'](function (error) {
-          return showApiError(error, 'trakt_history_remove_error');
+        Lampa.Select.show({
+          title: t$3('trakt_confirm_remove_history', 'Удалить из истории Trakt?'),
+          items: [{ title: t$3('trakt_confirm_remove', 'Удалить'), action: 'confirm' }],
+          onSelect: function onSelect2(item2) {
+            if (item2.action !== 'confirm') return;
+            Api$2.removeFromHistory(element).then(function () {
+              invalidateWatchedCache();
+              document.querySelectorAll('.trakt-watched-badge[data-tmdb="' + element.id + '"]').forEach(function(el) { el.remove(); });
+              notify$1(t$3('trakt_history_removed', 'Removed from history'));
+              refreshActivity(object, 'trakt_history');
+            })['catch'](function (error) {
+              return showApiError(error, 'trakt_history_remove_error');
+            });
+          },
+          onBack: function onBack() {
+            Lampa.Controller.toggle('content');
+          }
         });
       },
       onBack: function onBack() {
@@ -4588,6 +4646,10 @@
     if (!object.page) object.page = 1;
     return new baseComponent(object, 'history');
   }
+  function collection(object) {
+    if (!object.page) object.page = 1;
+    return new baseComponent(object, 'collection');
+  }
   var Catalog = {
     watchlist: watchlist$1,
     upnext: upnext,
@@ -4598,7 +4660,8 @@
     list_detail: list_detail,
     my_list_detail: my_list_detail,
     trakt_list_detail: trakt_list_detail,
-    history: history
+    history: history,
+    collection: collection
   };
 
   function Main() {
@@ -5085,6 +5148,9 @@
       },
       trakt_watch_history: {
         ru: "История просмотров",
+      },
+      trakt_collection: {
+        ru: "Избранное",
       },
       trakttv_topshelf: {
         ru: "Top Shelf (Apple TV)",
@@ -6174,6 +6240,7 @@
     var myListsTitle = t('trakt_my_lists', 'My Lists');
     var likedListsTitle = t('trakt_liked_lists', 'Liked Lists');
     var historyTitle = t('trakt_watch_history', 'История просмотров');
+    var collectionTitle = t('trakt_collection', 'Избранное');
     var watchlist = $("<li class=\"menu__item selector\">\n        <div class=\"menu__ico\">".concat(icons.TRAKT_ICON, " </div>\n        <div class=\"menu__text\">").concat(watchlistTitle, "</div>\n    </li>"));
     var upnext = $("<li class=\"menu__item selector\">\n        <div class=\"menu__ico\">".concat(icons.TRAKT_ICON, " </div>\n        <div class=\"menu__text\">").concat(upNextTitle, "</div>\n    </li>"));
     var timetable = $("<li class=\"menu__item selector\">\n    <div class=\"menu__ico\">\n         <div class=\"menu__ico\">".concat(icons.TRAKT_ICON, " </div>\n    </div>\n    <div class=\"menu__text\">").concat(calendarTitle, "</div>\n    </li>"));
@@ -6230,6 +6297,9 @@
     }, {
       title: historyTitle,
       component: 'trakt_history'
+    }, {
+      title: collectionTitle,
+      component: 'trakt_collection'
     }, {
       title: calendarTitle,
       component: 'trakt_timetable_all'
@@ -11701,6 +11771,9 @@
     });
     Lampa.Component.add('trakt_history', function (object) {
       return new Catalog.history(object);
+    });
+    Lampa.Component.add('trakt_collection', function (object) {
+      return new Catalog.collection(object);
     });
 
     // Додаємо нові компоненти
