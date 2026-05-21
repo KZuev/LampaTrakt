@@ -736,7 +736,7 @@
     var query = new URLSearchParams({
       extended: 'full,images',
       limit: String(Math.max(1, parseInt(limit, 10) || 36)),
-      ignore_watched: readBooleanStorage$2('trakt_source_ignore_watched', false) ? 'true' : 'false',
+      ignore_watched: (readBooleanStorage$2('trakt_source_ignore_watched', false) || readBooleanStorage$2('trakt_recommendations_ignore_watched', false)) ? 'true' : 'false',
       ignore_watchlisted: ignoreWatchlisted,
       ignore_collected: ignoreWatchlisted
     });
@@ -4832,6 +4832,12 @@
       trakttv_source_ignore_watched_descr: {
         ru: "Применяется ко всем лентам Trakt.TV (категории, рекомендации, поиск)",
       },
+      trakttv_recommendations_ignore_watched: {
+        ru: "Рекомендации: скрывать просмотренное",
+      },
+      trakttv_recommendations_ignore_watched_descr: {
+        ru: "Не показывать в рекомендациях фильмы и сериалы, которые уже отмечены как просмотренные",
+      },
       trakttv_source_ignore_watchlisted: {
         ru: "Источник: скрывать watchlist",
       },
@@ -7435,6 +7441,18 @@
       field: {
         name: t$1('trakttv_source_ignore_watchlisted', 'Source: ignore watchlisted'),
         description: t$1('trakttv_source_ignore_watchlisted_descr', 'Applies to all Trakt.TV source feeds (categories, recommendations, search)')
+      }
+    });
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: {
+        name: 'trakt_recommendations_ignore_watched',
+        type: 'trigger',
+        "default": false
+      },
+      field: {
+        name: t$1('trakttv_recommendations_ignore_watched', 'Recommendations: hide watched'),
+        description: t$1('trakttv_recommendations_ignore_watched_descr', 'Hide already watched movies and shows from recommendations')
       }
     });
     Lampa.SettingsApi.addParam({
