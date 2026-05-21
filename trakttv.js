@@ -2261,19 +2261,6 @@
     addToHistory: addToHistory$1,
     watchedMovies: function() { return requestApi('GET', '/sync/watched/movies'); },
     watchedShows: function() { return requestApi('GET', '/sync/watched/shows'); },
-    hideFromProgress: function(data) {
-      var ids = {};
-      if (data && data.id) ids.tmdb = data.id;
-      if (data && data.ids) Object.assign(ids, data.ids);
-      return requestApi('POST', '/users/me/hidden/progress_watched', { shows: [{ ids: ids }] });
-    },
-    unhideFromProgress: function(data) {
-      var ids = {};
-      if (data && data.id) ids.tmdb = data.id;
-      if (data && data.ids) Object.assign(ids, data.ids);
-      return requestApi('DELETE', '/users/me/hidden/progress_watched', { shows: [{ ids: ids }] });
-    },
-    hiddenShows: function() { return requestApi('GET', '/users/me/hidden/progress_watched?limit=100'); },
     showWatchedProgress: function(traktId) { return requestApi('GET', '/shows/' + traktId + '/progress/watched'); },
     watchlistSortFields: Array.from(WATCHLIST_SORT_FIELDS),
     watchlistVipSortFields: Array.from(WATCHLIST_VIP_SORT_FIELDS),
@@ -5225,14 +5212,8 @@
       trakt_show_in_progress: {
         ru: "В процессе",
       },
-      trakt_show_dropped: {
-        ru: "Заброшено",
-      },
       trakt_show_status_title: {
         ru: "Статус сериала",
-      },
-      trakt_show_hidden: {
-        ru: "Сериал скрыт из прогресса",
       },
       trakt_watched_title: {
         ru: "Отметить как просмотренное",
@@ -5876,8 +5857,6 @@
         var bodyHtml;
         if (labelType === 'completed') {
           bodyHtml = '<span>' + Lampa.Lang.translate('trakt_show_completed') + '</span>';
-        } else if (labelType === 'dropped' && season) {
-          bodyHtml = '<span>' + Lampa.Lang.translate('trakt_show_dropped') + ' ' + Lampa.Lang.translate('trakttv_na') + ': ' + Lampa.Lang.translate('full_season') + ' ' + season + ' · ' + Lampa.Lang.translate('full_episode') + ' ' + episodeNum + '</span>';
         } else if (labelType === 'movie' || labelType === 'not_watched') {
           bodyHtml = '<span>' + (watched ? Lampa.Lang.translate('trakt_watched_yes') : Lampa.Lang.translate('trakt_watched_no')) + '</span>';
         } else {
@@ -5892,24 +5871,15 @@
               title: Lampa.Lang.translate('trakt_show_status_title'),
               items: [
                 { title: Lampa.Lang.translate('trakt_show_completed'), action: 'completed' },
-                { title: Lampa.Lang.translate('trakt_show_in_progress'), action: 'in_progress' },
-                { title: Lampa.Lang.translate('trakt_show_dropped'), action: 'dropped' }
+                { title: Lampa.Lang.translate('trakt_show_in_progress'), action: 'in_progress' }
               ],
               onSelect: function(a) {
-                if (a.action === 'dropped' && _A) {
-                  Lampa.Storage.set('trakt_show_status_' + itemId, 'dropped');
-                  _A.hideFromProgress({ id: itemId }).catch(function() {});
-                  invalidateWatchedCache();
-                  TraktHistory.showWatchProgress(data, element);
-                } else if (a.action === 'completed' && _A) {
-                  Lampa.Storage.remove('trakt_show_status_' + itemId);
+                if (a.action === 'completed' && _A) {
                   _A.addToHistory({ method: 'show', id: itemId, ids: { tmdb: itemId } }, 'all').then(function() {
                     invalidateWatchedCache();
                     TraktHistory.showWatchProgress(data, element);
                   }).catch(function() {});
-                } else if (_A) {
-                  Lampa.Storage.remove('trakt_show_status_' + itemId);
-                  _A.unhideFromProgress({ id: itemId }).catch(function() {});
+                } else if (a.action === 'in_progress' && _A) {
                   TraktHistory.showWatchProgress(data, element);
                 }
               },
@@ -5984,14 +5954,10 @@
             return;
           }
 
-          var storedStatus = Lampa.Storage.get('trakt_show_status_' + itemId);
-          var isDropped = storedStatus === 'dropped';
           var isCompleted = aired > 0 && aired === watchedCount;
 
           var labelType;
-          if (isDropped) {
-            labelType = 'dropped';
-          } else if (isCompleted) {
+          if (isCompleted) {
             labelType = 'completed';
           } else if (watchedCount > 0 && season) {
             labelType = 'watching';
