@@ -731,7 +731,7 @@
     }
     return fallback;
   }
-  function buildRecommendationsUrl$1(type, limit) {
+  function buildRecommendationsUrl$1(type, limit, extraParams) {
     var ignoreWatchlisted = readBooleanStorage$2('trakt_source_ignore_watchlisted', false) ? 'true' : 'false';
     var query = new URLSearchParams({
       extended: 'full,images',
@@ -740,6 +740,11 @@
       ignore_watchlisted: ignoreWatchlisted,
       ignore_collected: ignoreWatchlisted
     });
+    if (extraParams) {
+      if (extraParams.genres) query.set('genres', extraParams.genres);
+      if (extraParams.years) query.set('years', extraParams.years);
+      if (extraParams.countries) query.set('countries', extraParams.countries);
+    }
     return "/recommendations/".concat(type, "?").concat(query.toString());
   }
   function getImageUrl(media) {
@@ -2293,8 +2298,13 @@
       var limit = options.limit || 36;
       var page = options.page || 1;
       var fetchLimit = limit * 5;
-      var moviesRequest = requestApi('GET', buildRecommendationsUrl$1('movies', fetchLimit));
-      var showsRequest = requestApi('GET', buildRecommendationsUrl$1('shows', fetchLimit));
+      var filterType = options.filterType || 'all';
+      var extraParams = {};
+      if (options.filterGenre) extraParams.genres = options.filterGenre;
+      if (options.filterYear) extraParams.years = options.filterYear;
+      if (options.filterCountry) extraParams.countries = options.filterCountry;
+      var moviesRequest = filterType === 'tv' ? Promise.resolve([]) : requestApi('GET', buildRecommendationsUrl$1('movies', fetchLimit, extraParams));
+      var showsRequest = filterType === 'movie' ? Promise.resolve([]) : requestApi('GET', buildRecommendationsUrl$1('shows', fetchLimit, extraParams));
       return Promise.allSettled([moviesRequest, showsRequest]).then(function (responses) {
         var moviesState = responses[0];
         var showsState = responses[1];
@@ -2362,12 +2372,12 @@
         var total_pages = Math.max(1, Math.ceil(total / limit));
         var offset = (page - 1) * limit;
         var paginatedResults = combinedResults.slice(offset, offset + limit);
-        return {
+        return enrichWithTmdbLocale({
           results: paginatedResults,
           total: total,
           total_pages: total_pages,
           page: page
-        };
+        });
       });
     },
     watchlist: function watchlist() {
@@ -4575,9 +4585,218 @@
     if (!object.page) object.page = 1;
     return new baseComponent(object, 'upnext');
   }
+  var TRAKT_RECS_COUNTRIES = [
+    { slug: 'us', ru: 'США' }, { slug: 'gb', ru: 'Великобритания' },
+    { slug: 'fr', ru: 'Франция' }, { slug: 'de', ru: 'Германия' },
+    { slug: 'it', ru: 'Италия' }, { slug: 'es', ru: 'Испания' },
+    { slug: 'ru', ru: 'Россия' }, { slug: 'jp', ru: 'Япония' },
+    { slug: 'kr', ru: 'Южная Корея' }, { slug: 'cn', ru: 'Китай' },
+    { slug: 'dk', ru: 'Дания' }, { slug: 'se', ru: 'Швеция' },
+    { slug: 'no', ru: 'Норвегия' }, { slug: 'au', ru: 'Австралия' },
+    { slug: 'ca', ru: 'Канада' }, { slug: 'in', ru: 'Индия' },
+    { slug: 'tr', ru: 'Турция' }, { slug: 'br', ru: 'Бразилия' },
+    { slug: 'nl', ru: 'Нидерланды' }, { slug: 'pl', ru: 'Польша' },
+    { slug: 'be', ru: 'Бельгия' }, { slug: 'mx', ru: 'Мексика' }
+  ];
+  var TRAKT_GENRE_NAMES_RU = {
+    'action': 'Боевик', 'adventure': 'Приключения', 'animation': 'Анимация',
+    'anime': 'Аниме', 'biography': 'Биография', 'children': 'Детский',
+    'comedy': 'Комедия', 'crime': 'Криминал', 'documentary': 'Документальный',
+    'donghua': 'Дунхуа', 'drama': 'Драма', 'family': 'Семейный',
+    'fantasy': 'Фэнтези', 'game-show': 'Игровое шоу', 'history': 'История',
+    'holiday': 'Праздничный', 'horror': 'Ужасы', 'music': 'Музыка',
+    'musical': 'Мюзикл', 'mystery': 'Мистика', 'reality': 'Реалити',
+    'romance': 'Романтика', 'science-fiction': 'Фантастика',
+    'soap': 'Мыльная опера', 'superhero': 'Супергерой', 'suspense': 'Саспенс',
+    'talk-show': 'Ток-шоу', 'thriller': 'Триллер', 'war': 'Война',
+    'western': 'Вестерн', 'mini-series': 'Мини-сериал'
+  };
+
+  function recommendationsHub(object) {
+    var REC_FILTER_CTRL = 'trakt_recs_filter_ctrl';
+    var activity, html, controls, filtersRow, body;
+    var currentView = null;
+    var lastFilterFocus = null;
+    var activeFilters = {
+      type: object.filterType || 'all',
+      year: object.filterYear || '',
+      genre: object.filterGenre || '',
+      country: object.filterCountry || ''
+    };
+    var typeBtn, yearBtn, genreBtn, countryBtn;
+
+    function tr(key, fallback) {
+      try { return Lampa.Lang.translate(key) || fallback || key; } catch(e) { return fallback || key; }
+    }
+    function getTypeLabel() {
+      if (activeFilters.type === 'movie') return tr('trakttv_watchlist_tab_movies', 'Фильмы');
+      if (activeFilters.type === 'tv') return tr('trakttv_watchlist_tab_shows', 'Сериалы');
+      return tr('trakttv_filter_all', 'Все');
+    }
+    function getYearLabel() { return activeFilters.year || tr('trakttv_filter_any_year', 'Год'); }
+    function getGenreLabel() {
+      if (!activeFilters.genre) return tr('trakttv_filter_any_genre', 'Жанр');
+      return TRAKT_GENRE_NAMES_RU[activeFilters.genre] || activeFilters.genre;
+    }
+    function getCountryLabel() {
+      if (!activeFilters.country) return tr('trakttv_filter_any_country', 'Страна');
+      var c = TRAKT_RECS_COUNTRIES.find(function(x) { return x.slug === activeFilters.country; });
+      return c ? c.ru : activeFilters.country;
+    }
+    function isActive(val) { return !!(val && val !== 'all'); }
+    function updateBtn(btn, label, active) {
+      btn.find('.trakt-watchlist__sort-label').text(label);
+      btn.toggleClass('trakt-watchlist__sort--active active', !!active);
+    }
+    function rebuildView() {
+      if (currentView && currentView.destroy) currentView.destroy();
+      body.empty();
+      var viewObject = Object.assign({}, object, {
+        page: 1,
+        filterType: activeFilters.type,
+        filterYear: activeFilters.year,
+        filterGenre: activeFilters.genre,
+        filterCountry: activeFilters.country,
+        onHead: function() { Lampa.Controller.toggle(REC_FILTER_CTRL); }
+      });
+      currentView = new baseRecommendations(viewObject);
+      currentView.activity = activity;
+      currentView.create();
+      body.append(currentView.render());
+      if (currentView.start) currentView.start();
+    }
+    function restoreFilters() { Lampa.Controller.toggle(REC_FILTER_CTRL); }
+    function makeBtn(label) {
+      return $('<div class="simple-button simple-button--filter simple-button--invisible selector trakt-watchlist__sort">' +
+        '<div class="trakt-watchlist__sort-label">' + label + '</div>' +
+        '<div class="trakt-watchlist__sort-state"></div></div>');
+    }
+    function openTypeFilter() {
+      Lampa.Select.show({
+        title: tr('trakttv_filter_type_title', 'Тип контента'),
+        items: [
+          { title: tr('trakttv_filter_all', 'Все'), value: 'all', selected: activeFilters.type === 'all' },
+          { title: tr('trakttv_watchlist_tab_movies', 'Фильмы'), value: 'movie', selected: activeFilters.type === 'movie' },
+          { title: tr('trakttv_watchlist_tab_shows', 'Сериалы'), value: 'tv', selected: activeFilters.type === 'tv' }
+        ],
+        onSelect: function(item) {
+          activeFilters.type = item.value || 'all';
+          updateBtn(typeBtn, getTypeLabel(), isActive(activeFilters.type));
+          rebuildView(); restoreFilters();
+        },
+        onBack: restoreFilters
+      });
+    }
+    function openYearFilter() {
+      var cur = new Date().getFullYear();
+      var items = [{ title: tr('trakttv_filter_all', 'Любой'), value: '', selected: !activeFilters.year }];
+      for (var y = cur; y >= 1990; y--) items.push({ title: String(y), value: String(y), selected: activeFilters.year === String(y) });
+      items.push({ title: '1980-е', value: '1980-1989', selected: activeFilters.year === '1980-1989' });
+      items.push({ title: '1970-е', value: '1970-1979', selected: activeFilters.year === '1970-1979' });
+      items.push({ title: 'до 1970', value: '1920-1969', selected: activeFilters.year === '1920-1969' });
+      Lampa.Select.show({
+        title: tr('trakttv_filter_year_title', 'Год выпуска'),
+        items: items,
+        onSelect: function(item) {
+          activeFilters.year = item.value;
+          updateBtn(yearBtn, getYearLabel(), !!activeFilters.year);
+          rebuildView(); restoreFilters();
+        },
+        onBack: restoreFilters
+      });
+    }
+    function openGenreFilter() {
+      var genres = typeof TRAKT_TRENDING_GENRES !== 'undefined' ? TRAKT_TRENDING_GENRES : [];
+      var items = [{ title: tr('trakttv_filter_all', 'Любой'), value: '', selected: !activeFilters.genre }];
+      genres.forEach(function(g) {
+        items.push({ title: TRAKT_GENRE_NAMES_RU[g.slug] || g.name, value: g.slug, selected: activeFilters.genre === g.slug });
+      });
+      Lampa.Select.show({
+        title: tr('trakttv_filter_genre_title', 'Жанр'),
+        items: items,
+        onSelect: function(item) {
+          activeFilters.genre = item.value;
+          updateBtn(genreBtn, getGenreLabel(), !!activeFilters.genre);
+          rebuildView(); restoreFilters();
+        },
+        onBack: restoreFilters
+      });
+    }
+    function openCountryFilter() {
+      var items = [{ title: tr('trakttv_filter_all', 'Любая'), value: '', selected: !activeFilters.country }];
+      TRAKT_RECS_COUNTRIES.forEach(function(c) {
+        items.push({ title: c.ru, value: c.slug, selected: activeFilters.country === c.slug });
+      });
+      Lampa.Select.show({
+        title: tr('trakttv_filter_country_title', 'Страна'),
+        items: items,
+        onSelect: function(item) {
+          activeFilters.country = item.value;
+          updateBtn(countryBtn, getCountryLabel(), !!activeFilters.country);
+          rebuildView(); restoreFilters();
+        },
+        onBack: restoreFilters
+      });
+    }
+    function buildFilters() {
+      filtersRow = $('<div class="trakt-watchlist-hub__sorts"></div>');
+      typeBtn = makeBtn(getTypeLabel());
+      typeBtn.on('hover:focus', function() { lastFilterFocus = typeBtn[0]; });
+      typeBtn.on('hover:enter', function() { lastFilterFocus = typeBtn[0]; openTypeFilter(); });
+      yearBtn = makeBtn(getYearLabel());
+      yearBtn.on('hover:focus', function() { lastFilterFocus = yearBtn[0]; });
+      yearBtn.on('hover:enter', function() { lastFilterFocus = yearBtn[0]; openYearFilter(); });
+      genreBtn = makeBtn(getGenreLabel());
+      genreBtn.on('hover:focus', function() { lastFilterFocus = genreBtn[0]; });
+      genreBtn.on('hover:enter', function() { lastFilterFocus = genreBtn[0]; openGenreFilter(); });
+      countryBtn = makeBtn(getCountryLabel());
+      countryBtn.on('hover:focus', function() { lastFilterFocus = countryBtn[0]; });
+      countryBtn.on('hover:enter', function() { lastFilterFocus = countryBtn[0]; openCountryFilter(); });
+      filtersRow.append(typeBtn, yearBtn, genreBtn, countryBtn);
+      updateBtn(typeBtn, getTypeLabel(), isActive(activeFilters.type));
+      updateBtn(yearBtn, getYearLabel(), !!activeFilters.year);
+      updateBtn(genreBtn, getGenreLabel(), !!activeFilters.genre);
+      updateBtn(countryBtn, getCountryLabel(), !!activeFilters.country);
+    }
+    function ensureFilterController() {
+      Lampa.Controller.add(REC_FILTER_CTRL, {
+        toggle: function() {
+          var focus = lastFilterFocus && document.body && document.body.contains(lastFilterFocus)
+            ? lastFilterFocus : (controls ? controls.find('.selector')[0] : false) || false;
+          Lampa.Controller.collectionSet(controls);
+          Lampa.Controller.collectionFocus(focus, controls);
+        },
+        right: function() { if (typeof Navigator !== 'undefined') Navigator.move('right'); },
+        left: function() { if (typeof Navigator !== 'undefined' && Navigator.canmove('left')) Navigator.move('left'); else Lampa.Controller.toggle('menu'); },
+        down: function() { if (typeof Navigator !== 'undefined' && Navigator.canmove('down')) Navigator.move('down'); else Lampa.Controller.toggle('content'); },
+        up: function() { if (typeof Navigator !== 'undefined' && Navigator.canmove('up')) Navigator.move('up'); else Lampa.Controller.toggle('head'); },
+        back: function() { Lampa.Activity.backward(); }
+      });
+    }
+    return {
+      create: function() {
+        activity = this.activity;
+        html = $('<div class="trakt-watchlist-hub"></div>');
+        controls = $('<div class="trakt-watchlist-hub__controls"></div>');
+        body = $('<div class="trakt-watchlist-hub__body"></div>');
+        buildFilters();
+        controls.append(filtersRow);
+        html.append(controls, body);
+        ensureFilterController();
+        rebuildView();
+        return this.render();
+      },
+      render: function(js) { return js ? html[0] : html; },
+      start: function() { if (currentView && currentView.start) currentView.start(); },
+      pause: function() { if (currentView && currentView.pause) currentView.pause(); },
+      stop: function() { if (currentView && currentView.stop) currentView.stop(); },
+      destroy: function() { if (currentView && currentView.destroy) currentView.destroy(); }
+    };
+  }
+
   function recommendations(object) {
     if (!object.page) object.page = 1;
-    return new baseRecommendations(object);
+    return new recommendationsHub(object);
   }
   function liked_lists(object) {
     if (!object.page) object.page = 1;
@@ -4844,6 +5063,15 @@
       trakttv_source_ignore_watchlisted_descr: {
         ru: "Применяется ко всем лентам Trakt.TV (категории, рекомендации, поиск)",
       },
+      trakttv_filter_all: { ru: "Все" },
+      trakttv_filter_type_title: { ru: "Тип контента" },
+      trakttv_filter_year_title: { ru: "Год выпуска" },
+      trakttv_filter_genre_title: { ru: "Жанр" },
+      trakttv_filter_country_title: { ru: "Страна" },
+      trakttv_filter_any_year: { ru: "Год" },
+      trakttv_filter_any_genre: { ru: "Жанр" },
+      trakttv_filter_any_country: { ru: "Страна" },
+      trakttv_filter_type: { ru: "Тип" },
       trakt_source_search_lists: {
         ru: "Списки",
       },
