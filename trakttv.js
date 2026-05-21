@@ -5842,13 +5842,11 @@
           bodyHtml = '<span>' + Lampa.Lang.translate('trakt_show_completed') + '</span>';
         } else if (labelType === 'dropped' && season) {
           bodyHtml = '<span>' + Lampa.Lang.translate('trakt_show_dropped') + ' ' + Lampa.Lang.translate('trakttv_na') + ':</span>' +
-                     '<span class="full-start-new__split">●</span>' +
                      '<span>' + Lampa.Lang.translate('full_season') + ' ' + season + ' · ' + Lampa.Lang.translate('full_episode') + ' ' + episodeNum + '</span>';
         } else if (labelType === 'movie') {
           bodyHtml = '<span>' + (watched ? Lampa.Lang.translate('trakt_watched_yes') : Lampa.Lang.translate('trakt_watched_no')) + '</span>';
         } else {
           bodyHtml = '<span>' + Lampa.Lang.translate('trakttv_watched_label') + ':</span>' +
-                     '<span class="full-start-new__split">●</span>' +
                      '<span>' + Lampa.Lang.translate('full_season') + ' ' + season + ' · ' + Lampa.Lang.translate('full_episode') + ' ' + episodeNum + '</span>';
         }
         var el = document.createElement('div');
