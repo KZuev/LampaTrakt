@@ -5207,7 +5207,7 @@
         ru: "Неизвестная дата",
       },
       trakt_show_completed: {
-        ru: "Завершено",
+        ru: "Просмотрено полностью",
       },
       trakt_show_in_progress: {
         ru: "В процессе",
