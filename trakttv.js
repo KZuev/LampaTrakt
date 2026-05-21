@@ -6545,11 +6545,10 @@
       onRender: function onRender(item) {
         item.empty();
         var token = Lampa.Storage.get('trakt_token');
-        if (!token) {
+        if (!token || !getClientId()) {
           item.append("<div>".concat(Lampa.Lang.translate('trakttvAuthMissed'), "</div>"));
           return;
         }
-        // Показати лоадер
         var loading = $("<div class=\"settings-param__value\">".concat(Lampa.Lang.translate('loading'), "</div>"));
         item.append(loading);
         if (!Api$1) {
@@ -6641,8 +6640,10 @@
         item.show();
       },
       onChange: function onChange() {
-
-        // Device OAuth only
+        if (!getClientId() || !getClientSecret()) {
+          Lampa.Noty.show('Сначала введите Client ID и Client Secret в настройках Trakt');
+          return;
+        }
         if (!Api$1) {
           logApiMissing();
           return;
