@@ -5902,7 +5902,7 @@
 
       function buildProgressElement(labelType, season, episodeNum, watched) {
         var iconColor = watched ? '#9b59d0' : 'rgba(255,255,255,0.38)';
-        var iconHtml = '<div class="trakt-icon" style="width:22px;height:22px;color:' + iconColor + '">' + icons.TRAKT_ICON + '</div>';
+        var iconHtml = '<div class="trakt-icon" style="width:1.5em;height:1.5em;color:' + iconColor + '">' + icons.TRAKT_ICON + '</div>';
         var bodyHtml;
         if (labelType === 'completed') {
           bodyHtml = '<span>' + Lampa.Lang.translate('trakt_show_completed') + '</span>';
