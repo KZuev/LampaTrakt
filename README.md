@@ -1,6 +1,6 @@
 # LampaTrakt
 
-Плагин [Trakt.tv](https://trakt.tv) для медиацентра [Lampa](https://lampa.mx). Форк с доработками для более удобной работы с историей просмотров и статусами сериалов.
+Форк плагина [Trakt.tv для Lampa](https://lampame.github.io/main/trakttv.js) от команды [LME](https://lme.isroot.in). Доработан для более удобной работы с историей просмотров и статусами сериалов.
 
 ## Возможности
 
