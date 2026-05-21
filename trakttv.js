@@ -5797,7 +5797,9 @@
         var hasApplecation = Array.isArray(window.Lampa && Lampa.Manifest && Lampa.Manifest.plugins) &&
           Lampa.Manifest.plugins.some(function(p) { return p && p.name === 'Applecation'; });
 
-        getShowProgressData(itemId).then(function(result) {
+        Promise.all([getShowProgressData(itemId), ensureHiddenShowsCache()]).then(function(results) {
+          var result = results[0];
+          var hiddenSet = results[1];
           var progress = result.progress || {};
           var aired = progress.aired || 0;
           var watchedCount = progress.completed || 0;
@@ -5831,7 +5833,7 @@
             return;
           }
 
-          var isDropped = _hiddenShowsCache && _hiddenShowsCache.has(String(itemId));
+          var isDropped = hiddenSet.has(String(itemId));
           var isCompleted = aired > 0 && aired === watchedCount;
 
           var labelType;
@@ -9214,25 +9216,32 @@
   function invalidateWatchedCache() { _watchedCache = null; }
 
   var _hiddenShowsCache = null;
-  var _hiddenShowsCacheLoading = false;
+  var _hiddenShowsCachePromise = null;
 
-  function loadHiddenShowsCache() {
-    if (_hiddenShowsCacheLoading || !Lampa.Storage.get('trakt_token')) return;
+  function ensureHiddenShowsCache() {
+    if (_hiddenShowsCache) return Promise.resolve(_hiddenShowsCache);
+    if (_hiddenShowsCachePromise) return _hiddenShowsCachePromise;
+    if (!Lampa.Storage.get('trakt_token')) return Promise.resolve(new Set());
     var _A = typeof api$1 !== 'undefined' && api$1 || null;
-    if (!_A || typeof _A.hiddenShows !== 'function') return;
-    _hiddenShowsCacheLoading = true;
-    _A.hiddenShows().catch(function() { return []; }).then(function(res) {
+    if (!_A || typeof _A.hiddenShows !== 'function') return Promise.resolve(new Set());
+    _hiddenShowsCachePromise = _A.hiddenShows().then(function(res) {
       var ids = new Set();
       (res || []).forEach(function(item) {
         var tmdb = item.show && item.show.ids && item.show.ids.tmdb;
         if (tmdb) ids.add(String(tmdb));
       });
       _hiddenShowsCache = ids;
-    }).catch(function() { _hiddenShowsCache = new Set(); })
-      .then(function() { _hiddenShowsCacheLoading = false; });
+      _hiddenShowsCachePromise = null;
+      return ids;
+    }).catch(function() {
+      _hiddenShowsCachePromise = null;
+      _hiddenShowsCache = new Set();
+      return _hiddenShowsCache;
+    });
+    return _hiddenShowsCachePromise;
   }
 
-  function invalidateHiddenShowsCache() { _hiddenShowsCache = null; }
+  function invalidateHiddenShowsCache() { _hiddenShowsCache = null; _hiddenShowsCachePromise = null; }
 
   function isWatchedFromCache(tmdbId, type) {
     if (!_watchedCache || !tmdbId) return false;
@@ -9378,7 +9387,7 @@
       addMenuItems();
       // Кеш просмотренных для бейджей
       loadWatchedCache();
-      loadHiddenShowsCache();
+      ensureHiddenShowsCache();
     },
     /**
      * Додає блок з пов'язаними списками в картку медіа
