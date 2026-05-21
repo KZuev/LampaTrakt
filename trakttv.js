@@ -1794,6 +1794,8 @@
     var unauthorized = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : false;
     var requestOptions = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : {};
     if (!window._traktRateLimitInfo) window._traktRateLimitInfo = {};
+    if (!window._traktRequestCount) window._traktRequestCount = 0;
+    window._traktRequestCount++;
     return new Promise(function (resolve, reject) {
       var headers = ensureHeaders({
         unauthorized: unauthorized
@@ -6823,17 +6825,21 @@
           item.append("<div class=\"settings-param__value trakt-userinfo-name\">".concat(Lampa.Lang.translate('trakttv_username'), ": ").concat((user === null || user === void 0 ? void 0 : user.username) || '-', "</div>"));
           item.append("\n                    <div class=\"settings-param__value trakt-userinfo-vip\">\n                        <span class=\"trakt-userinfo-vip__label\">".concat(Lampa.Lang.translate('trakttv_vip_status'), ":</span>\n                        <span class=\"trakt-vip-badge ").concat(vipClass, "\">").concat(Lampa.Lang.translate(vipStatusKey), "</span>\n                    </div>\n                "));
           var rl = window._traktRateLimitInfo || {};
-          if (rl.limit || rl.remaining) {
-            var rlUsed = rl.limit && rl.remaining ? (Number(rl.limit) - Number(rl.remaining)) : '';
-            var rlTotal = rl.limit || '';
-            var rlReset = '';
+          var rlHasHeaders = !!(rl.limit || rl.remaining);
+          var rlUsed, rlTotal, rlReset = '';
+          if (rlHasHeaders) {
+            rlUsed = rl.limit && rl.remaining ? (Number(rl.limit) - Number(rl.remaining)) : '?';
+            rlTotal = rl.limit || '?';
             if (rl.reset) {
               var resetTs = Number(rl.reset);
               var resetDate = resetTs > 1e9 ? new Date(resetTs * 1000) : new Date(resetTs);
               rlReset = ' · обновится в ' + resetDate.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
             }
-            item.append('<div class="settings-param__value trakt-ratelimit" style="opacity:.7;font-size:.88em;margin-top:.3em">Запросов API: ' + (rlUsed !== '' ? rlUsed : '?') + '/' + (rlTotal || '?') + rlReset + '</div>');
+          } else {
+            rlUsed = window._traktRequestCount || 0;
+            rlTotal = '1000';
           }
+          item.append('<div class="settings-param__value trakt-ratelimit" style="opacity:.7;font-size:.88em;margin-top:.3em">Запросов API: ' + rlUsed + '/' + rlTotal + rlReset + '</div>');
         })["catch"](function () {
           loading.remove();
           item.append("<div>".concat(Lampa.Lang.translate('trakttvAuthError'), "</div>"));
