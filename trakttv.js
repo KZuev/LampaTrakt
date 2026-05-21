@@ -1935,6 +1935,7 @@
     var media = isMovie ? item.movie : item.show;
     if (!media || !media.ids) return null;
     var card = {
+      component: 'full',
       id: media.ids.tmdb || media.ids.trakt,
       ids: media.ids,
       title: media.title,
@@ -1948,7 +1949,7 @@
       trakt_watched_at: item.watched_at || null
     };
     if (isEpisode && item.episode) {
-      card.trakt_history_episode = { season: item.episode.season, number: item.episode.number, title: item.episode.title };
+      card.trakt_history_episode = { season: item.episode.season, number: item.episode.number, title: item.episode.title, ids: item.episode.ids || {} };
     }
     return card;
   }
@@ -2453,6 +2454,18 @@
         var base = { results: mapped, total: pagination.total, total_pages: pagination.total_pages, page: pagination.page, limit: pagination.limit };
         return enrichWithTmdbLocale(base);
       });
+    },
+    removeFromHistory: function(element) {
+      if (!element) return Promise.reject(new Error('No element'));
+      var body;
+      if (element.method === 'movie') {
+        body = { movies: [{ ids: element.ids }] };
+      } else {
+        var ep = element.trakt_history_episode;
+        if (!ep) return Promise.reject(new Error('No episode info'));
+        body = { shows: [{ ids: element.ids, seasons: [{ number: ep.season, episodes: [{ number: ep.number }] }] }] };
+      }
+      return requestApi('POST', '/sync/history/remove', body);
     },
     auth: {
       /**
@@ -3348,6 +3361,8 @@
             onLong: function onLong() {
               if (type === 'myListItems' && object && object.can_manage && object.id) {
                 openMyListItemActions(object, element);
+              } else if (type === 'history') {
+                openHistoryItemActions(object, element);
               }
             }
           });
@@ -3422,9 +3437,13 @@
         if (type === 'history') {
           renderHistoryDateBadge(card, element);
         }
-        card.onMenu = type === 'myListItems' && object && object.can_manage && object.id ? function () {
-          return openMyListItemActions(object, element);
-        } : false;
+        if (type === 'myListItems' && object && object.can_manage && object.id) {
+          card.onMenu = function () { return openMyListItemActions(object, element); };
+        } else if (type === 'history') {
+          card.onMenu = function () { return openHistoryItemActions(object, element); };
+        } else {
+          card.onMenu = false;
+        }
         card.onEnter = function () {
           Lampa.Activity.push(card.data);
         };
@@ -3876,6 +3895,29 @@
           refreshActivity(object, 'trakt_my_list_detail');
         })["catch"](function (error) {
           return showApiError(error, 'trakt_remove_from_list_error');
+        });
+      },
+      onBack: function onBack() {
+        Lampa.Controller.toggle('content');
+      }
+    });
+  }
+  function openHistoryItemActions(object, element) {
+    if (!Api$2 || !element) return;
+    Lampa.Select.show({
+      title: t$3('trakt_history_title', 'History'),
+      items: [{
+        title: t$3('trakt_history_remove_action', 'Remove from history'),
+        action: 'remove'
+      }],
+      onSelect: function onSelect(item) {
+        if (item.action !== 'remove') return;
+        Api$2.removeFromHistory(element).then(function () {
+          invalidateWatchedCache();
+          notify$1(t$3('trakt_history_removed', 'Removed from history'));
+          refreshActivity(object, 'trakt_history');
+        })['catch'](function (error) {
+          return showApiError(error, 'trakt_history_remove_error');
         });
       },
       onBack: function onBack() {
@@ -4666,6 +4708,12 @@
       },
       trakt_history_removed: {
         ru: "Удалено из истории просмотров",
+      },
+      trakt_history_remove_action: {
+        ru: "Удалить из истории",
+      },
+      trakt_history_remove_error: {
+        ru: "Ошибка удаления из истории",
       },
       trakt_history_button: {
         ru: "Добавить в историю",
