@@ -4919,12 +4919,6 @@
       trakttv_check_now: {
         ru: "Проверить",
       },
-      trakttv_settings_thanks: {
-        ru: "Подяка",
-      },
-      trakttv_settings_thanks_description: {
-        ru: "Поддержка развития TraktTV-плагина добровольная. Спасибо за вклад.",
-      },
       trakt_client_id_label: {
         ru: "Client ID приложения Trakt",
       },
@@ -6507,37 +6501,6 @@
     supportedFavoriteTypes: SUPPORTED_FAVORITE_TYPES.slice()
   };
 
-  var UKRAINIAN_THANKS_URL = 'https://lampame.donatik.me/';
-  var DEFAULT_THANKS_URL = 'https://t.me/tribute/app?startapp=d5WS';
-  function getCurrentLanguage() {
-    return String(Lampa.Storage.get('language', 'ru') || 'ru').toLowerCase();
-  }
-  function getThanksUrlByLanguage() {
-    return getCurrentLanguage() === 'uk' ? UKRAINIAN_THANKS_URL : DEFAULT_THANKS_URL;
-  }
-  function openThanksModal() {
-    var thanksUrl = getThanksUrlByLanguage();
-    var html = Lampa.Template.get('modal_qr', {
-      title: Lampa.Lang.translate('trakttv_settings_thanks'),
-      text: Lampa.Lang.translate('trakttv_settings_thanks_description'),
-      qr_text: "<a href=\"".concat(thanksUrl, "\">").concat(thanksUrl, "</a>")
-    });
-    var qrElement = html.find('.account-modal-split__qr-code');
-    var enabledController = Lampa.Controller.enabled().name;
-    Lampa.Utils.qrcode(thanksUrl, qrElement, function (error) {
-      console.error('TraktTV', 'Unable to generate thanks QR code', error);
-      qrElement.text(thanksUrl);
-    });
-    Lampa.Modal.open({
-      title: '',
-      html: html,
-      size: 'medium',
-      onBack: function onBack() {
-        Lampa.Modal.close();
-        Lampa.Controller.toggle(enabledController);
-      }
-    });
-  }
 
   // Local safe resolver for Api to support runtime-scoped execution (e.g., dev/trakt.js)
   var Api$1 = typeof api$1 !== 'undefined' && api$1 || window.TraktTV && window.TraktTV.api || null;
@@ -6557,15 +6520,15 @@
     Lampa.SettingsApi.addParam({
       component: 'trakt',
       param: {
-        name: 'trakttv_thanks',
-        type: 'button'
+        name: 'trakttv_about',
+        type: 'static'
       },
       field: {
-        name: Lampa.Lang.translate('trakttv_settings_thanks'),
-        description: Lampa.Lang.translate('trakttv_settings_thanks_description')
+        name: ''
       },
-      onChange: function onChange() {
-        openThanksModal();
+      onRender: function onRender(item) {
+        item.empty();
+        item.append('<div class="settings-param__value" style="opacity:.6;font-size:.9em">Основан на плагине <a href="https://lampame.github.io/main/trakttv.js" style="color:inherit">lampame.github.io/main/trakttv.js</a></div>');
       }
     });
 
