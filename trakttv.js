@@ -2,8 +2,8 @@
   'use strict';
 
   function _arrayLikeToArray(r, a) {
-    (null == a || a &gt; r.length) &amp;&amp; (a = r.length);
-    for (var e = 0, n = Array(a); e &lt; a; e++) n[e] = r[e];
+    (null == a || a > r.length) && (a = r.length);
+    for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e];
     return n;
   }
   function _arrayWithHoles(r) {
@@ -38,16 +38,16 @@
     };
   }
   function _createForOfIteratorHelper(r, e) {
-    var t = "undefined" != typeof Symbol &amp;&amp; r[Symbol.iterator] || r["@@iterator"];
+    var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"];
     if (!t) {
-      if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e &amp;&amp; r &amp;&amp; "number" == typeof r.length) {
-        t &amp;&amp; (r = t);
+      if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) {
+        t && (r = t);
         var n = 0,
           F = function () {};
         return {
           s: F,
           n: function () {
-            return n &gt;= r.length ? {
+            return n >= r.length ? {
               done: !0
             } : {
               done: !1,
@@ -94,10 +94,10 @@
     }) : e[r] = t, e;
   }
   function _iterableToArray(r) {
-    if ("undefined" != typeof Symbol &amp;&amp; null != r[Symbol.iterator] || null != r["@@iterator"]) return Array.from(r);
+    if ("undefined" != typeof Symbol && null != r[Symbol.iterator] || null != r["@@iterator"]) return Array.from(r);
   }
   function _iterableToArrayLimit(r, l) {
-    var t = null == r ? null : "undefined" != typeof Symbol &amp;&amp; r[Symbol.iterator] || r["@@iterator"];
+    var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"];
     if (null != t) {
       var e,
         n,
@@ -110,12 +110,12 @@
         if (i = (t = t.call(r)).next, 0 === l) {
           if (Object(t) !== t) return;
           f = !1;
-        } else for (; !(f = (e = i.call(t)).done) &amp;&amp; (a.push(e.value), a.length !== l); f = !0);
+        } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0);
       } catch (r) {
         o = !0, n = r;
       } finally {
         try {
-          if (!f &amp;&amp; null != t.return &amp;&amp; (u = t.return(), Object(u) !== u)) return;
+          if (!f && null != t.return && (u = t.return(), Object(u) !== u)) return;
         } finally {
           if (o) throw n;
         }
@@ -133,14 +133,14 @@
     var t = Object.keys(e);
     if (Object.getOwnPropertySymbols) {
       var o = Object.getOwnPropertySymbols(e);
-      r &amp;&amp; (o = o.filter(function (r) {
+      r && (o = o.filter(function (r) {
         return Object.getOwnPropertyDescriptor(e, r).enumerable;
       })), t.push.apply(t, o);
     }
     return t;
   }
   function _objectSpread2(e) {
-    for (var r = 1; r &lt; arguments.length; r++) {
+    for (var r = 1; r < arguments.length; r++) {
       var t = null != arguments[r] ? arguments[r] : {};
       r % 2 ? ownKeys(Object(t), !0).forEach(function (r) {
         _defineProperty(e, r, t[r]);
@@ -158,7 +158,7 @@
       n = r.iterator || "@@iterator",
       o = r.toStringTag || "@@toStringTag";
     function i(r, n, o, i) {
-      var c = n &amp;&amp; n.prototype instanceof Generator ? n : Generator,
+      var c = n && n.prototype instanceof Generator ? n : Generator,
         u = Object.create(c.prototype);
       return _regeneratorDefine(u, "_invoke", function (r, n, o) {
         var i,
@@ -178,29 +178,29 @@
             }
           };
         function d(r, n) {
-          for (c = r, u = n, t = 0; !y &amp;&amp; f &amp;&amp; !o &amp;&amp; t &lt; p.length; t++) {
+          for (c = r, u = n, t = 0; !y && f && !o && t < p.length; t++) {
             var o,
               i = p[t],
               d = G.p,
               l = i[2];
-            r &gt; 3 ? (o = l === n) &amp;&amp; (u = i[(c = i[4]) ? 5 : (c = 3, 3)], i[4] = i[5] = e) : i[0] &lt;= d &amp;&amp; ((o = r &lt; 2 &amp;&amp; d &lt; i[1]) ? (c = 0, G.v = n, G.n = i[1]) : d &lt; l &amp;&amp; (o = r &lt; 3 || i[0] &gt; n || n &gt; l) &amp;&amp; (i[4] = r, i[5] = n, G.n = l, c = 0));
+            r > 3 ? (o = l === n) && (u = i[(c = i[4]) ? 5 : (c = 3, 3)], i[4] = i[5] = e) : i[0] <= d && ((o = r < 2 && d < i[1]) ? (c = 0, G.v = n, G.n = i[1]) : d < l && (o = r < 3 || i[0] > n || n > l) && (i[4] = r, i[5] = n, G.n = l, c = 0));
           }
-          if (o || r &gt; 1) return a;
+          if (o || r > 1) return a;
           throw y = !0, n;
         }
         return function (o, p, l) {
-          if (f &gt; 1) throw TypeError("Generator is already running");
-          for (y &amp;&amp; 1 === p &amp;&amp; d(p, l), c = p, u = l; (t = c &lt; 2 ? e : u) || !y;) {
-            i || (c ? c &lt; 3 ? (c &gt; 1 &amp;&amp; (G.n = -1), d(c, u)) : G.n = u : G.v = u);
+          if (f > 1) throw TypeError("Generator is already running");
+          for (y && 1 === p && d(p, l), c = p, u = l; (t = c < 2 ? e : u) || !y;) {
+            i || (c ? c < 3 ? (c > 1 && (G.n = -1), d(c, u)) : G.n = u : G.v = u);
             try {
               if (f = 2, i) {
                 if (c || (o = "next"), t = i[o]) {
                   if (!(t = t.call(i, u))) throw TypeError("iterator result is not an object");
                   if (!t.done) return t;
-                  u = t.value, c &lt; 2 &amp;&amp; (c = 0);
-                } else 1 === c &amp;&amp; (t = i.return) &amp;&amp; t.call(i), c &lt; 2 &amp;&amp; (u = TypeError("The iterator does not provide a '" + o + "' method"), c = 1);
+                  u = t.value, c < 2 && (c = 0);
+                } else 1 === c && (t = i.return) && t.call(i), c < 2 && (u = TypeError("The iterator does not provide a '" + o + "' method"), c = 1);
                 i = e;
-              } else if ((t = (y = G.n &lt; 0) ? u : r.call(n, G)) !== a) break;
+              } else if ((t = (y = G.n < 0) ? u : r.call(n, G)) !== a) break;
             } catch (t) {
               i = e, c = 1, u = t;
             } finally {
@@ -283,17 +283,17 @@
   function _typeof(o) {
     "@babel/helpers - typeof";
 
-    return _typeof = "function" == typeof Symbol &amp;&amp; "symbol" == typeof Symbol.iterator ? function (o) {
+    return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) {
       return typeof o;
     } : function (o) {
-      return o &amp;&amp; "function" == typeof Symbol &amp;&amp; o.constructor === Symbol &amp;&amp; o !== Symbol.prototype ? "symbol" : typeof o;
+      return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o;
     }, _typeof(o);
   }
   function _unsupportedIterableToArray(r, a) {
     if (r) {
       if ("string" == typeof r) return _arrayLikeToArray(r, a);
       var t = {}.toString.call(r).slice(8, -1);
-      return "Object" === t &amp;&amp; r.constructor &amp;&amp; (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0;
+      return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0;
     }
   }
 
@@ -324,12 +324,12 @@
     var words = text.split(' ');
     var lines = [];
     var currentLine = words[0] || '';
-    for (var i = 1; i &lt; words.length; i++) {
+    for (var i = 1; i < words.length; i++) {
       var word = words[i];
       var testLine = currentLine + ' ' + word;
       var metrics = context.measureText(testLine);
       var testWidth = metrics.width;
-      if (testWidth &gt; width - 40 &amp;&amp; currentLine !== '') {
+      if (testWidth > width - 40 && currentLine !== '') {
         lines.push(currentLine);
         currentLine = word;
       } else {
@@ -351,14 +351,14 @@
   var onceKeys = new Set();
   function isDebugEnabled() {
     try {
-      return !!(typeof Lampa !== 'undefined' &amp;&amp; Lampa &amp;&amp; Lampa.Storage &amp;&amp; typeof Lampa.Storage.field === 'function' &amp;&amp; Lampa.Storage.field('trakt_enable_logging'));
+      return !!(typeof Lampa !== 'undefined' && Lampa && Lampa.Storage && typeof Lampa.Storage.field === 'function' && Lampa.Storage.field('trakt_enable_logging'));
     } catch (e) {
       return false;
     }
   }
   function write(level, message, meta) {
     var targetLevel = level === 'error' || level === 'warn' || level === 'log' ? level : 'log';
-    var writer = typeof console !== 'undefined' &amp;&amp; typeof console[targetLevel] === 'function' ? console[targetLevel].bind(console) : typeof console !== 'undefined' &amp;&amp; typeof console.log === 'function' ? console.log.bind(console) : null;
+    var writer = typeof console !== 'undefined' && typeof console[targetLevel] === 'function' ? console[targetLevel].bind(console) : typeof console !== 'undefined' && typeof console.log === 'function' ? console.log.bind(console) : null;
     if (!writer) return;
     if (typeof meta === 'undefined') writer(PREFIX, message);else writer(PREFIX, message, meta);
   }
@@ -366,17 +366,17 @@
     return isDebugEnabled();
   }
   function logWarn(message, meta) {
-    var _ref2 = arguments.length &gt; 2 &amp;&amp; arguments[2] !== undefined ? arguments[2] : {},
+    var _ref2 = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {},
       _ref2$debugOnly = _ref2.debugOnly,
       debugOnly = _ref2$debugOnly === void 0 ? true : _ref2$debugOnly;
-    if (debugOnly &amp;&amp; !isDebugEnabled()) return;
+    if (debugOnly && !isDebugEnabled()) return;
     write('warn', message, meta);
   }
   function logError(message, meta) {
-    var _ref3 = arguments.length &gt; 2 &amp;&amp; arguments[2] !== undefined ? arguments[2] : {},
+    var _ref3 = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {},
       _ref3$debugOnly = _ref3.debugOnly,
       debugOnly = _ref3$debugOnly === void 0 ? false : _ref3$debugOnly;
-    if (debugOnly &amp;&amp; !isDebugEnabled()) return;
+    if (debugOnly && !isDebugEnabled()) return;
     write('error', message, meta);
   }
   function logDebug(message, meta) {
@@ -431,7 +431,7 @@
   }
   function rlIsOnCooldown() {
     var remaining = rlCooldownUntil - Date.now();
-    if (remaining &lt;= 0) {
+    if (remaining <= 0) {
       rlCooldownUntil = 0;
       return false;
     }
@@ -439,7 +439,7 @@
   }
   function rlEnterCooldown(retryAfterSeconds) {
     var durationMs = RL_DEFAULT_COOLDOWN_MS;
-    if (typeof retryAfterSeconds === 'number' &amp;&amp; Number.isFinite(retryAfterSeconds) &amp;&amp; retryAfterSeconds &gt; 0) {
+    if (typeof retryAfterSeconds === 'number' && Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0) {
       durationMs = retryAfterSeconds * 1000;
     }
     durationMs = Math.max(RL_MIN_COOLDOWN_MS, Math.min(RL_MAX_COOLDOWN_MS, durationMs));
@@ -447,14 +447,14 @@
   }
   function rlPruneLog(log) {
     var cutoff = Date.now() - RL_WINDOW_MS;
-    while (log.length &gt; 0 &amp;&amp; log[0].ts &lt; cutoff) log.shift();
+    while (log.length > 0 && log[0].ts < cutoff) log.shift();
   }
   function rlCanMakeRequest(url) {
     var isAuth = rlIsAuthEndpoint(url);
     var log = isAuth ? rlAuthRequestLog : rlRequestLog;
     var max = isAuth ? RL_MAX_AUTH_PER_WINDOW : RL_MAX_REQUESTS_PER_WINDOW;
     rlPruneLog(log);
-    return log.length &lt; max;
+    return log.length < max;
   }
   function rlRecordRequest(url, status) {
     var isAuth = rlIsAuthEndpoint(url);
@@ -482,7 +482,7 @@
             // Auth requests bypass cooldown but still respect sliding window
             isAuth = rlIsAuthEndpoint(url);
           case 1:
-            if (!(!isAuth &amp;&amp; rlIsOnCooldown())) {
+            if (!(!isAuth && rlIsOnCooldown())) {
               _context.n = 3;
               break;
             }
@@ -537,14 +537,14 @@
     Lampa.Storage.set('trakt_active_device_auth_started_at', null);
   }
   function setAuthBlocked() {
-    var reason = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : 'reauth_required';
+    var reason = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 'reauth_required';
     authBlocked = true;
     authBlockedReason = String(reason || 'reauth_required');
     authBlockedAt = Date.now();
     authBlockedNotified = false;
     authBlockedTokenFingerprint = getAccessTokenFingerprint();
     try {
-      if (Lampa &amp;&amp; Lampa.Storage &amp;&amp; typeof Lampa.Storage.set === 'function') {
+      if (Lampa && Lampa.Storage && typeof Lampa.Storage.set === 'function') {
         Lampa.Storage.set(AUTH_BLOCK_STORAGE_KEY, true);
       }
     } catch (error) {/* noop */}
@@ -556,7 +556,7 @@
     authBlockedNotified = false;
     authBlockedTokenFingerprint = '';
     try {
-      if (Lampa &amp;&amp; Lampa.Storage &amp;&amp; typeof Lampa.Storage.set === 'function') {
+      if (Lampa && Lampa.Storage && typeof Lampa.Storage.set === 'function') {
         Lampa.Storage.set(AUTH_BLOCK_STORAGE_KEY, false);
       }
     } catch (error) {/* noop */}
@@ -564,7 +564,7 @@
   function isAuthBlocked() {
     if (authBlocked) return true;
     try {
-      if (Lampa &amp;&amp; Lampa.Storage &amp;&amp; typeof Lampa.Storage.get === 'function') {
+      if (Lampa && Lampa.Storage && typeof Lampa.Storage.get === 'function') {
         return Lampa.Storage.get(AUTH_BLOCK_STORAGE_KEY) === true;
       }
     } catch (error) {
@@ -573,7 +573,7 @@
     return authBlocked;
   }
   function buildAuthBlockedError() {
-    var reason = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : 'reauth_required';
+    var reason = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 'reauth_required';
     return Object.assign(new Error('Trakt auth is blocked, reauthorization required'), {
       status: 401,
       code: 'reauth_required',
@@ -584,7 +584,7 @@
   }
   function clearAuthRateLimitCooldown() {
     try {
-      if (Lampa &amp;&amp; Lampa.Storage &amp;&amp; typeof Lampa.Storage.set === 'function') {
+      if (Lampa && Lampa.Storage && typeof Lampa.Storage.set === 'function') {
         Lampa.Storage.set(AUTH_RATE_LIMIT_STORAGE_KEY, null);
       }
     } catch (error) {/* noop */}
@@ -596,7 +596,7 @@
     } catch (error) {
       cooldownUntil = 0;
     }
-    if (!Number.isFinite(cooldownUntil) || cooldownUntil &lt;= Date.now()) {
+    if (!Number.isFinite(cooldownUntil) || cooldownUntil <= Date.now()) {
       clearAuthRateLimitCooldown();
       return 0;
     }
@@ -611,10 +611,10 @@
     });
   }
   function setAuthRateLimitCooldown(error) {
-    var retryAfterMs = parseRetryAfterMs$1(error &amp;&amp; error.headers ? error.headers : {});
+    var retryAfterMs = parseRetryAfterMs$1(error && error.headers ? error.headers : {});
     var cooldownMs = Math.min(AUTH_RATE_LIMIT_MAX_COOLDOWN_MS, Math.max(1000, retryAfterMs || AUTH_RATE_LIMIT_DEFAULT_COOLDOWN_MS));
     try {
-      if (Lampa &amp;&amp; Lampa.Storage &amp;&amp; typeof Lampa.Storage.set === 'function') {
+      if (Lampa && Lampa.Storage && typeof Lampa.Storage.set === 'function') {
         Lampa.Storage.set(AUTH_RATE_LIMIT_STORAGE_KEY, Date.now() + cooldownMs);
       }
     } catch (storageError) {/* noop */}
@@ -627,8 +627,8 @@
     if (authBlockedNotified) return;
     authBlockedNotified = true;
     try {
-      if (Lampa &amp;&amp; Lampa.Bell &amp;&amp; typeof Lampa.Bell.push === 'function') {
-        var text = Lampa.Lang &amp;&amp; typeof Lampa.Lang.translate === 'function' ? Lampa.Lang.translate('trakttvAuthMissed') || 'Trakt authorization required' : 'Trakt authorization required';
+      if (Lampa && Lampa.Bell && typeof Lampa.Bell.push === 'function') {
+        var text = Lampa.Lang && typeof Lampa.Lang.translate === 'function' ? Lampa.Lang.translate('trakttvAuthMissed') || 'Trakt authorization required' : 'Trakt authorization required';
         Lampa.Bell.push({
           text: text
         });
@@ -646,7 +646,7 @@
     return current !== authBlockedTokenFingerprint;
   }
   function saveTokens() {
-    var response = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {};
+    var response = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
     if (!response || _typeof(response) !== 'object') return;
     if (response.access_token) {
       Lampa.Storage.set('trakt_token', response.access_token);
@@ -656,7 +656,7 @@
     }
     var expiresIn = Number(response.expires_in);
     var createdAt = Number(response.created_at) || Math.floor(Date.now() / 1000);
-    if (Number.isFinite(expiresIn) &amp;&amp; expiresIn &gt; 0) {
+    if (Number.isFinite(expiresIn) && expiresIn > 0) {
       var expiresAt = createdAt * 1000 + expiresIn * 1000;
       Lampa.Storage.set('trakt_token_created_at', createdAt);
       Lampa.Storage.set('trakt_token_expires_in', expiresIn);
@@ -673,7 +673,7 @@
     var createdAt = getStorageNumber('trakt_token_created_at');
     var expiresIn = getStorageNumber('trakt_token_expires_in');
     var expiresAt = getStorageNumber('trakt_token_expires_at');
-    if (!expiresAt &amp;&amp; createdAt &amp;&amp; expiresIn) {
+    if (!expiresAt && createdAt && expiresIn) {
       expiresAt = createdAt * 1000 + expiresIn * 1000;
       Lampa.Storage.set('trakt_token_expires_at', expiresAt);
     }
@@ -684,13 +684,13 @@
     };
   }
   function isTokenExpiringSoon() {
-    var _ref = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {},
+    var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
       _ref$skewMs = _ref.skewMs,
       skewMs = _ref$skewMs === void 0 ? TOKEN_EXPIRY_SKEW_MS : _ref$skewMs;
     var _getTokenExpiryMeta = getTokenExpiryMeta(),
       expiresAt = _getTokenExpiryMeta.expiresAt;
-    if (!expiresAt || expiresAt &lt;= 0) return true;
-    return Date.now() + skewMs &gt;= expiresAt;
+    if (!expiresAt || expiresAt <= 0) return true;
+    return Date.now() + skewMs >= expiresAt;
   }
   function isDeviceAuthActive() {
     if (Lampa.Storage.get('trakt_active_device_auth') !== true) {
@@ -698,7 +698,7 @@
     }
     var startedAt = getStorageNumber('trakt_active_device_auth_started_at');
     var now = Date.now();
-    var isStale = !startedAt || now - startedAt &gt; DEVICE_AUTH_STALE_MS;
+    var isStale = !startedAt || now - startedAt > DEVICE_AUTH_STALE_MS;
     if (isStale) {
       Lampa.Storage.set('trakt_active_device_auth', false);
       Lampa.Storage.set('trakt_active_device_auth_started_at', null);
@@ -710,7 +710,7 @@
     return true;
   }
   function readBooleanStorage$2(name) {
-    var fallback = arguments.length &gt; 1 &amp;&amp; arguments[1] !== undefined ? arguments[1] : false;
+    var fallback = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : false;
     var parse = function parse(value) {
       if (typeof value === 'boolean') return value;
       if (value === 1 || value === '1' || value === 'true') return true;
@@ -718,11 +718,11 @@
       return null;
     };
     try {
-      if (Lampa &amp;&amp; Lampa.Storage &amp;&amp; typeof Lampa.Storage.get === 'function') {
+      if (Lampa && Lampa.Storage && typeof Lampa.Storage.get === 'function') {
         var direct = parse(Lampa.Storage.get(name));
         if (direct !== null) return direct;
       }
-      if (Lampa &amp;&amp; Lampa.Storage &amp;&amp; typeof Lampa.Storage.field === 'function') {
+      if (Lampa && Lampa.Storage && typeof Lampa.Storage.field === 'function') {
         var fromField = parse(Lampa.Storage.field(name));
         if (fromField !== null) return fromField;
       }
@@ -743,26 +743,26 @@
     return "/recommendations/".concat(type, "?").concat(query.toString());
   }
   function getImageUrl(media) {
-    var type = arguments.length &gt; 1 &amp;&amp; arguments[1] !== undefined ? arguments[1] : 'poster';
-    var imageSet = media.images &amp;&amp; media.images[type];
+    var type = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 'poster';
+    var imageSet = media.images && media.images[type];
     var imageUrl = '';
     if (imageSet) {
-      if (_typeof(imageSet) === 'object' &amp;&amp; !Array.isArray(imageSet)) {
+      if (_typeof(imageSet) === 'object' && !Array.isArray(imageSet)) {
         imageUrl = imageSet.medium || imageSet.thumb || imageSet.full || '';
-      } else if (Array.isArray(imageSet) &amp;&amp; imageSet.length &gt; 0) {
+      } else if (Array.isArray(imageSet) && imageSet.length > 0) {
         imageUrl = imageSet[0];
       } else if (typeof imageSet === 'string') {
         imageUrl = imageSet;
       }
     }
-    if (imageUrl &amp;&amp; !imageUrl.startsWith('http')) {
+    if (imageUrl && !imageUrl.startsWith('http')) {
       var finalUrl = 'https://' + imageUrl.replace(/^\/+/, '');
       return finalUrl;
     }
     return imageUrl;
   }
   function addToHistory$1(data) {
-    var mode = arguments.length &gt; 1 &amp;&amp; arguments[1] !== undefined ? arguments[1] : null;
+    var mode = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
     var body = {
       movies: [],
       shows: []
@@ -830,7 +830,7 @@
 
             // Отримуємо список всіх переглянутих епізодів
             var watchedEpisodes = {};
-            if (historyData &amp;&amp; historyData.length &gt; 0) {
+            if (historyData && historyData.length > 0) {
               historyData.forEach(function (item) {
                 if (item.episode) {
                   var s = item.episode.season;
@@ -846,11 +846,11 @@
             }
 
             // Отримуємо інформацію про останній сезон
-            var seasonUrl = Lampa.TMDB.api('tv/' + data.id + '/season/' + lastSeason + '?api_key=' + Lampa.TMDB.key() + '&amp;language=' + Lampa.Storage.get('language', 'ru'));
+            var seasonUrl = Lampa.TMDB.api('tv/' + data.id + '/season/' + lastSeason + '?api_key=' + Lampa.TMDB.key() + '&language=' + Lampa.Storage.get('language', 'ru'));
             return new Promise(function (resolve, reject) {
               var network = new Lampa.Reguest();
               network.silent(seasonUrl, function (seasonData) {
-                if (seasonData &amp;&amp; seasonData.episodes &amp;&amp; seasonData.episodes.length &gt; 0) {
+                if (seasonData && seasonData.episodes && seasonData.episodes.length > 0) {
                   // Знаходимо всі епізоди сезону
                   var allEpisodes = seasonData.episodes.map(function (e) {
                     return e.episode_number;
@@ -862,7 +862,7 @@
                   var unwatchedEpisodes = allEpisodes.filter(function (e) {
                     return !watchedEpisodes[lastSeason] || !watchedEpisodes[lastSeason].includes(e);
                   });
-                  if (mode === 'last_episode' &amp;&amp; unwatchedEpisodes.length &gt; 0) {
+                  if (mode === 'last_episode' && unwatchedEpisodes.length > 0) {
                     // Додаємо перший невідмічений епізод
                     var nextEpisode = unwatchedEpisodes[0];
                     body.shows.push({
@@ -877,7 +877,7 @@
                         }]
                       }]
                     });
-                  } else if (mode === 'last_season' &amp;&amp; unwatchedEpisodes.length &gt; 0) {
+                  } else if (mode === 'last_season' && unwatchedEpisodes.length > 0) {
                     // Додаємо всі невідмічені епізоди сезону
                     body.shows.push({
                       ids: data.ids || {
@@ -986,27 +986,27 @@
 
   // Функція для отримання інформації про серіал з TMDB або Trakt
   function getShowInfo(tmdbId) {
-    var traktId = arguments.length &gt; 1 &amp;&amp; arguments[1] !== undefined ? arguments[1] : null;
+    var traktId = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
     return new Promise(function (resolve, reject) {
       // Якщо переданий Trakt ID, отримуємо інформацію з Trakt
       if (traktId) {
         requestApi('GET', "/shows/".concat(traktId, "?extended=full")).then(function (showData) {
-          if (showData &amp;&amp; showData.seasons) {
+          if (showData && showData.seasons) {
             // Знаходимо останній сезон (виключаючи спеціальні сезони з номером 0)
             var regularSeasons = showData.seasons.filter(function (s) {
-              return s.number &gt; 0;
+              return s.number > 0;
             });
-            var lastSeasonData = regularSeasons.length &gt; 0 ? regularSeasons.reduce(function (prev, current) {
-              return prev.number &gt; current.number ? prev : current;
+            var lastSeasonData = regularSeasons.length > 0 ? regularSeasons.reduce(function (prev, current) {
+              return prev.number > current.number ? prev : current;
             }) : null;
 
             // Якщо знайдено останній сезон, отримуємо інформацію про його епізоди
             if (lastSeasonData) {
               requestApi('GET', "/shows/".concat(traktId, "/seasons/").concat(lastSeasonData.number, "?extended=full")).then(function (seasonData) {
-                if (seasonData &amp;&amp; seasonData.episodes &amp;&amp; seasonData.episodes.length &gt; 0) {
+                if (seasonData && seasonData.episodes && seasonData.episodes.length > 0) {
                   // Знаходимо останній епізод сезону
                   var lastEpisodeData = seasonData.episodes.reduce(function (prev, current) {
-                    return prev.number &gt; current.number ? prev : current;
+                    return prev.number > current.number ? prev : current;
                   });
                   resolve({
                     last_season: lastSeasonData.number,
@@ -1050,26 +1050,26 @@
       }
 
       // Використовуємо Lampa.TMDB для отримання інформації про серіал
-      var url = Lampa.TMDB.api('tv/' + tmdbId + '?api_key=' + Lampa.TMDB.key() + '&amp;language=' + Lampa.Storage.get('language', 'ru'));
+      var url = Lampa.TMDB.api('tv/' + tmdbId + '?api_key=' + Lampa.TMDB.key() + '&language=' + Lampa.Storage.get('language', 'ru'));
       var network = new Lampa.Reguest();
       network.silent(url, function (data) {
-        if (data &amp;&amp; data.seasons) {
+        if (data && data.seasons) {
           // Знаходимо останній сезон (виключаючи спеціальні сезони з номером 0)
           var regularSeasons = data.seasons.filter(function (s) {
-            return s.season_number &gt; 0;
+            return s.season_number > 0;
           });
-          var lastSeasonData = regularSeasons.length &gt; 0 ? regularSeasons.reduce(function (prev, current) {
-            return prev.season_number &gt; current.season_number ? prev : current;
+          var lastSeasonData = regularSeasons.length > 0 ? regularSeasons.reduce(function (prev, current) {
+            return prev.season_number > current.season_number ? prev : current;
           }) : null;
 
           // Якщо знайдено останній сезон, отримуємо інформацію про його епізоди
           if (lastSeasonData) {
-            var seasonUrl = Lampa.TMDB.api('tv/' + tmdbId + '/season/' + lastSeasonData.season_number + '?api_key=' + Lampa.TMDB.key() + '&amp;language=' + Lampa.Storage.get('language', 'ru'));
+            var seasonUrl = Lampa.TMDB.api('tv/' + tmdbId + '/season/' + lastSeasonData.season_number + '?api_key=' + Lampa.TMDB.key() + '&language=' + Lampa.Storage.get('language', 'ru'));
             network.silent(seasonUrl, function (seasonData) {
-              if (seasonData &amp;&amp; seasonData.episodes &amp;&amp; seasonData.episodes.length &gt; 0) {
+              if (seasonData && seasonData.episodes && seasonData.episodes.length > 0) {
                 // Знаходимо останній епізод сезону
                 var lastEpisodeData = seasonData.episodes.reduce(function (prev, current) {
-                  return prev.episode_number &gt; current.episode_number ? prev : current;
+                  return prev.episode_number > current.episode_number ? prev : current;
                 });
                 resolve({
                   last_season: lastSeasonData.season_number,
@@ -1132,7 +1132,7 @@
       return _regenerator().w(function (_context2) {
         while (1) switch (_context2.n) {
           case 0:
-            _ref16 = _args2.length &gt; 0 &amp;&amp; _args2[0] !== undefined ? _args2[0] : {}, redirect_uri = _ref16.redirect_uri, _ref16$reason = _ref16.reason, reason = _ref16$reason === void 0 ? 'manual' : _ref16$reason;
+            _ref16 = _args2.length > 0 && _args2[0] !== undefined ? _args2[0] : {}, redirect_uri = _ref16.redirect_uri, _ref16$reason = _ref16.reason, reason = _ref16$reason === void 0 ? 'manual' : _ref16$reason;
             refresh_token = Lampa.Storage.get('trakt_refresh_token');
             logging = Lampa.Storage.field('trakt_enable_logging');
             if (refresh_token) {
@@ -1168,15 +1168,15 @@
               }, true);
             }).then(function (res) {
               rlRecordRequest('/oauth/token', 200);
-              if (res &amp;&amp; res.access_token) {
+              if (res && res.access_token) {
                 saveTokens(res);
               }
               return res;
             })["catch"](function (error) {
-              var status = Number(error &amp;&amp; error.status) || 0;
+              var status = Number(error && error.status) || 0;
               rlRecordRequest('/oauth/token', status);
               if (status === 429) {
-                var retryAfterSec = parseRetryAfterMs$1(error &amp;&amp; error.headers ? error.headers : {});
+                var retryAfterSec = parseRetryAfterMs$1(error && error.headers ? error.headers : {});
                 rlEnterCooldown(retryAfterSec ? Math.round(retryAfterSec / 1000) : undefined);
                 logWarn('Trakt rate limit on token refresh, global cooldown entered', {
                   cooldownMs: rlGetCooldownRemainingMs()
@@ -1184,7 +1184,7 @@
                   debugOnly: true
                 });
               }
-              if (error &amp;&amp; (error.status === 400 || error.status === 401)) {
+              if (error && (error.status === 400 || error.status === 401)) {
                 setAuthBlocked("refresh_failed_".concat(error.status));
                 clearAuthStorage();
               }
@@ -1203,7 +1203,7 @@
   }
   var refreshPromise = null;
   function runRefreshFlow() {
-    var options = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {};
+    var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
     if (refreshPromise) {
       return refreshPromise;
     }
@@ -1232,7 +1232,7 @@
       return _regenerator().w(function (_context3) {
         while (1) switch (_context3.n) {
           case 0:
-            _ref17 = _args3.length &gt; 0 &amp;&amp; _args3[0] !== undefined ? _args3[0] : {}, _ref17$reason = _ref17.reason, reason = _ref17$reason === void 0 ? 'preflight' : _ref17$reason, _ref17$force = _ref17.force, force = _ref17$force === void 0 ? false : _ref17$force, _ref17$skewMs = _ref17.skewMs, skewMs = _ref17$skewMs === void 0 ? TOKEN_EXPIRY_SKEW_MS : _ref17$skewMs;
+            _ref17 = _args3.length > 0 && _args3[0] !== undefined ? _args3[0] : {}, _ref17$reason = _ref17.reason, reason = _ref17$reason === void 0 ? 'preflight' : _ref17$reason, _ref17$force = _ref17.force, force = _ref17$force === void 0 ? false : _ref17$force, _ref17$skewMs = _ref17.skewMs, skewMs = _ref17$skewMs === void 0 ? TOKEN_EXPIRY_SKEW_MS : _ref17$skewMs;
             token = Lampa.Storage.get('trakt_token');
             refreshToken = Lampa.Storage.get('trakt_refresh_token');
             if (refreshToken) {
@@ -1251,7 +1251,7 @@
             shouldRefreshByExpiry = force || isTokenExpiringSoon({
               skewMs: Number(skewMs) || TOKEN_EXPIRY_SKEW_MS
             });
-            if (!(!noAccessToken &amp;&amp; !shouldRefreshByExpiry)) {
+            if (!(!noAccessToken && !shouldRefreshByExpiry)) {
               _context3.n = 3;
               break;
             }
@@ -1274,7 +1274,7 @@
     if (Array.isArray(value)) {
       return value.map(sortForStableSerialize);
     }
-    if (value &amp;&amp; _typeof(value) === 'object') {
+    if (value && _typeof(value) === 'object') {
       var normalized = {};
       Object.keys(value).sort().forEach(function (key) {
         if (typeof value[key] === 'undefined') return;
@@ -1292,7 +1292,7 @@
     }
   }
   function normalizeQueryString() {
-    var query = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : '';
+    var query = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '';
     var source = String(query || '').replace(/^\?+/, '');
     if (!source) return '';
     try {
@@ -1305,9 +1305,9 @@
       entries.sort(function (left, right) {
         if (left[0] === right[0]) {
           if (left[1] === right[1]) return 0;
-          return left[1] &gt; right[1] ? 1 : -1;
+          return left[1] > right[1] ? 1 : -1;
         }
-        return left[0] &gt; right[0] ? 1 : -1;
+        return left[0] > right[0] ? 1 : -1;
       });
       var normalized = new URLSearchParams();
       entries.forEach(function (_ref2) {
@@ -1322,16 +1322,16 @@
     }
   }
   function normalizeRequestUrl() {
-    var url = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : '';
+    var url = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '';
     var source = String(url || '').trim();
     if (source.indexOf(API_URL) === 0) {
       source = source.slice(API_URL.length);
     }
     var queryIndex = source.indexOf('?');
-    var rawPath = queryIndex &gt;= 0 ? source.slice(0, queryIndex) : source;
-    var rawQuery = queryIndex &gt;= 0 ? source.slice(queryIndex + 1) : '';
+    var rawPath = queryIndex >= 0 ? source.slice(0, queryIndex) : source;
+    var rawQuery = queryIndex >= 0 ? source.slice(queryIndex + 1) : '';
     var path = "/".concat(String(rawPath || '').replace(/^\/+/, '')).replace(/\/{2,}/g, '/');
-    var normalizedPath = path.length &gt; 1 ? path.replace(/\/+$/, '') : path;
+    var normalizedPath = path.length > 1 ? path.replace(/\/+$/, '') : path;
     var query = normalizeQueryString(rawQuery);
     var full = query ? "".concat(normalizedPath, "?").concat(query) : normalizedPath;
     return {
@@ -1341,35 +1341,35 @@
     };
   }
   function buildAuthScope() {
-    var unauthorized = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : false;
+    var unauthorized = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : false;
     if (unauthorized) return 'unauthorized';
     var token = String(Lampa.Storage.get('trakt_token') || '');
     if (!token) return 'anon';
     return "token:".concat(token.length, ":").concat(token.slice(-8));
   }
   function buildRequestKey(method, url, params, unauthorized) {
-    var requestOptions = arguments.length &gt; 4 &amp;&amp; arguments[4] !== undefined ? arguments[4] : {};
+    var requestOptions = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : {};
     var normalizedMethod = String(method || 'GET').toUpperCase();
     var request = normalizeRequestUrl(url);
     var authScope = buildAuthScope(unauthorized);
-    var mode = requestOptions &amp;&amp; requestOptions.withMeta ? 'meta' : 'data';
+    var mode = requestOptions && requestOptions.withMeta ? 'meta' : 'data';
     var body = normalizedMethod === 'GET' ? '' : stableSerialize(params || {});
     return [normalizedMethod, request.path, request.query, authScope, mode, body].join('|');
   }
   function buildCacheKey(method, url, unauthorized) {
-    var requestOptions = arguments.length &gt; 3 &amp;&amp; arguments[3] !== undefined ? arguments[3] : {};
+    var requestOptions = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : {};
     var normalizedMethod = String(method || 'GET').toUpperCase();
     var request = normalizeRequestUrl(url);
     var authScope = buildAuthScope(unauthorized);
-    var mode = requestOptions &amp;&amp; requestOptions.withMeta ? 'meta' : 'data';
+    var mode = requestOptions && requestOptions.withMeta ? 'meta' : 'data';
     return [normalizedMethod, request.path, request.query, authScope, mode].join('|');
   }
   function parseRetryAfterMs$1() {
-    var headers = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {};
-    var value = headers &amp;&amp; headers['retry-after'];
+    var headers = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    var value = headers && headers['retry-after'];
     if (!value) return null;
     var numeric = Number(value);
-    if (Number.isFinite(numeric) &amp;&amp; numeric &gt;= 0) {
+    if (Number.isFinite(numeric) && numeric >= 0) {
       return numeric * 1000;
     }
     var dateMs = Date.parse(value);
@@ -1379,10 +1379,10 @@
     return null;
   }
   function isRetryableStatus(status) {
-    return status === 429 || status === 504 || status &gt;= 500 &amp;&amp; status &lt;= 599;
+    return status === 429 || status === 504 || status >= 500 && status <= 599;
   }
   function resolveRetryDelayMs(status, attempt) {
-    var headers = arguments.length &gt; 2 &amp;&amp; arguments[2] !== undefined ? arguments[2] : {};
+    var headers = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
     var step = Math.max(1, Number(attempt) || 1);
     var backoff = Math.min(RETRY_MAX_DELAY_MS, RETRY_BASE_DELAY_MS * Math.pow(2, step - 1));
     var jitter = Math.floor(Math.random() * 250);
@@ -1404,10 +1404,10 @@
     }
   }
   function getCacheTtlMs(method, url) {
-    var requestOptions = arguments.length &gt; 2 &amp;&amp; arguments[2] !== undefined ? arguments[2] : {};
+    var requestOptions = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
     var normalizedMethod = String(method || 'GET').toUpperCase();
     if (normalizedMethod !== 'GET') return 0;
-    if (requestOptions &amp;&amp; requestOptions.cache === false) return 0;
+    if (requestOptions && requestOptions.cache === false) return 0;
     var request = normalizeRequestUrl(url);
     var path = request.path || '';
     if (!path) return 0;
@@ -1428,7 +1428,7 @@
   function getCachedResponse(cacheKey) {
     var cached = responseCache.get(cacheKey);
     if (!cached) return null;
-    if ((Number(cached.expiresAt) || 0) &lt;= Date.now()) {
+    if ((Number(cached.expiresAt) || 0) <= Date.now()) {
       responseCache["delete"](cacheKey);
       return null;
     }
@@ -1465,11 +1465,11 @@
       return _regenerator().w(function (_context4) {
         while (1) switch (_context4.n) {
           case 0:
-            params = _args4.length &gt; 2 &amp;&amp; _args4[2] !== undefined ? _args4[2] : {};
-            unauthorized = _args4.length &gt; 3 &amp;&amp; _args4[3] !== undefined ? _args4[3] : false;
-            requestOptions = _args4.length &gt; 4 &amp;&amp; _args4[4] !== undefined ? _args4[4] : {};
+            params = _args4.length > 2 && _args4[2] !== undefined ? _args4[2] : {};
+            unauthorized = _args4.length > 3 && _args4[3] !== undefined ? _args4[3] : false;
+            requestOptions = _args4.length > 4 && _args4[4] !== undefined ? _args4[4] : {};
             logging = Lampa.Storage.field('trakt_enable_logging');
-            maxRetriesRaw = Number(requestOptions &amp;&amp; requestOptions.maxRetries);
+            maxRetriesRaw = Number(requestOptions && requestOptions.maxRetries);
             maxRetries = Number.isFinite(maxRetriesRaw) ? Math.max(0, Math.min(5, maxRetriesRaw)) : MAX_RETRY_ATTEMPTS;
             attempt = 0;
           case 1:
@@ -1487,10 +1487,10 @@
           case 4:
             _context4.p = 4;
             _t = _context4.v;
-            status = Number(_t &amp;&amp; _t.status) || 0; // Record failure in rate limiter; trigger cooldown on 429
+            status = Number(_t && _t.status) || 0; // Record failure in rate limiter; trigger cooldown on 429
             rlRecordRequest(url, status);
-            if (status === 429 &amp;&amp; !rlIsOnCooldown()) {
-              retryAfterSec = parseRetryAfterMs$1(_t &amp;&amp; _t.headers ? _t.headers : {});
+            if (status === 429 && !rlIsOnCooldown()) {
+              retryAfterSec = parseRetryAfterMs$1(_t && _t.headers ? _t.headers : {});
               rlEnterCooldown(retryAfterSec ? Math.round(retryAfterSec / 1000) : undefined);
               if (logging) {
                 logWarn('Trakt rate limit: global cooldown entered', {
@@ -1502,7 +1502,7 @@
                 });
               }
             }
-            if (!(!isRetryableStatus(status) || attempt &gt;= maxRetries)) {
+            if (!(!isRetryableStatus(status) || attempt >= maxRetries)) {
               _context4.n = 5;
               break;
             }
@@ -1518,7 +1518,7 @@
             throw _t;
           case 5:
             attempt += 1;
-            delay = resolveRetryDelayMs(status, attempt, _t &amp;&amp; _t.headers ? _t.headers : {});
+            delay = resolveRetryDelayMs(status, attempt, _t && _t.headers ? _t.headers : {});
             if (logging) {
               logWarn('Trakt request retry scheduled', {
                 endpoint: normalizeRequestUrl(url).full,
@@ -1564,13 +1564,13 @@
       return _regenerator().w(function (_context5) {
         while (1) switch (_context5.n) {
           case 0:
-            params = _args5.length &gt; 2 &amp;&amp; _args5[2] !== undefined ? _args5[2] : {};
-            unauthorized = _args5.length &gt; 3 &amp;&amp; _args5[3] !== undefined ? _args5[3] : false;
-            requestOptions = _args5.length &gt; 4 &amp;&amp; _args5[4] !== undefined ? _args5[4] : {};
+            params = _args5.length > 2 && _args5[2] !== undefined ? _args5[2] : {};
+            unauthorized = _args5.length > 3 && _args5[3] !== undefined ? _args5[3] : false;
+            requestOptions = _args5.length > 4 && _args5[4] !== undefined ? _args5[4] : {};
             normalizedMethod = String(method || 'GET').toUpperCase();
             ttlMs = getCacheTtlMs(normalizedMethod, url, requestOptions);
-            cacheKey = ttlMs &gt; 0 ? buildCacheKey(normalizedMethod, url, unauthorized, requestOptions) : '';
-            useCache = ttlMs &gt; 0 &amp;&amp; !(requestOptions &amp;&amp; requestOptions.forceFresh);
+            cacheKey = ttlMs > 0 ? buildCacheKey(normalizedMethod, url, unauthorized, requestOptions) : '';
+            useCache = ttlMs > 0 && !(requestOptions && requestOptions.forceFresh);
             if (!useCache) {
               _context5.n = 1;
               break;
@@ -1582,9 +1582,9 @@
             }
             return _context5.a(2, cached);
           case 1:
-            dedupEnabled = !(requestOptions &amp;&amp; requestOptions.dedup === false);
+            dedupEnabled = !(requestOptions && requestOptions.dedup === false);
             requestKey = dedupEnabled ? buildRequestKey(normalizedMethod, url, params, unauthorized, requestOptions) : '';
-            if (!(requestKey &amp;&amp; inFlightRequests.has(requestKey))) {
+            if (!(requestKey && inFlightRequests.has(requestKey))) {
               _context5.n = 2;
               break;
             }
@@ -1632,20 +1632,20 @@
       return _regenerator().w(function (_context6) {
         while (1) switch (_context6.n) {
           case 0:
-            params = _args6.length &gt; 2 &amp;&amp; _args6[2] !== undefined ? _args6[2] : {};
-            unauthorized = _args6.length &gt; 3 &amp;&amp; _args6[3] !== undefined ? _args6[3] : false;
-            requestOptions = _args6.length &gt; 5 &amp;&amp; _args6[5] !== undefined ? _args6[5] : {};
+            params = _args6.length > 2 && _args6[2] !== undefined ? _args6[2] : {};
+            unauthorized = _args6.length > 3 && _args6[3] !== undefined ? _args6[3] : false;
+            requestOptions = _args6.length > 5 && _args6[5] !== undefined ? _args6[5] : {};
             logging = Lampa.Storage.field('trakt_enable_logging');
             normalizedMethod = String(method || 'GET').toUpperCase();
             normalizedEndpoint = normalizeRequestUrl(url).full;
             didRefreshAfter401 = false;
 
             // If auth is blocked due to prior terminal auth failure, stop user-scoped traffic until new token appears.
-            if (!(!unauthorized &amp;&amp; isAuthBlocked())) {
+            if (!(!unauthorized && isAuthBlocked())) {
               _context6.n = 2;
               break;
             }
-            if (!(hasUsableAccessToken() &amp;&amp; hasNewAccessTokenSinceBlock())) {
+            if (!(hasUsableAccessToken() && hasNewAccessTokenSinceBlock())) {
               _context6.n = 1;
               break;
             }
@@ -1665,7 +1665,7 @@
             notifyAuthBlockedOnce();
             throw buildAuthBlockedError(authBlockedReason || 'reauth_required');
           case 2:
-            if (!(!unauthorized &amp;&amp; getAuthRateLimitRemainingMs() &gt; 0)) {
+            if (!(!unauthorized && getAuthRateLimitRemainingMs() > 0)) {
               _context6.n = 3;
               break;
             }
@@ -1680,7 +1680,7 @@
             }
             throw buildAuthRateLimitError();
           case 3:
-            if (!(!unauthorized &amp;&amp; Lampa.Storage.get('trakt_refresh_token'))) {
+            if (!(!unauthorized && Lampa.Storage.get('trakt_refresh_token'))) {
               _context6.n = 9;
               break;
             }
@@ -1695,7 +1695,7 @@
           case 6:
             _context6.p = 6;
             _t2 = _context6.v;
-            status = Number(_t2 &amp;&amp; _t2.status) || 0;
+            status = Number(_t2 && _t2.status) || 0;
             if (!isAuthRateLimitStatus(status)) {
               _context6.n = 7;
               break;
@@ -1713,7 +1713,7 @@
             }
             throw buildAuthRateLimitError(_t2);
           case 7:
-            if (!(_t2 &amp;&amp; (_t2.status === 400 || _t2.status === 401))) {
+            if (!(_t2 && (_t2.status === 400 || _t2.status === 401))) {
               _context6.n = 8;
               break;
             }
@@ -1725,7 +1725,7 @@
               logWarn('Preflight token refresh failed, using current token', {
                 endpoint: normalizedEndpoint,
                 method: normalizedMethod,
-                status: _t2 &amp;&amp; _t2.status
+                status: _t2 && _t2.status
               }, {
                 debugOnly: true
               });
@@ -1739,7 +1739,7 @@
           case 12:
             _context6.p = 12;
             _t3 = _context6.v;
-            if (!(!unauthorized &amp;&amp; _t3 &amp;&amp; _t3.status === 401 &amp;&amp; !didRefreshAfter401)) {
+            if (!(!unauthorized && _t3 && _t3.status === 401 && !didRefreshAfter401)) {
               _context6.n = 18;
               break;
             }
@@ -1761,7 +1761,7 @@
           case 15:
             _context6.p = 15;
             _t4 = _context6.v;
-            refreshStatus = Number(_t4 &amp;&amp; _t4.status) || 0;
+            refreshStatus = Number(_t4 && _t4.status) || 0;
             if (!isAuthRateLimitStatus(refreshStatus)) {
               _context6.n = 16;
               break;
@@ -1773,11 +1773,11 @@
           case 17:
             return _context6.a(3, 9);
           case 18:
-            if (!unauthorized &amp;&amp; _t3 &amp;&amp; _t3.status === 401) {
+            if (!unauthorized && _t3 && _t3.status === 401) {
               setAuthBlocked('unauthorized_after_refresh');
               notifyAuthBlockedOnce();
             }
-            if (!unauthorized &amp;&amp; _t3 &amp;&amp; _t3.status === 403 &amp;&amp; normalizedEndpoint === '/users/me') {
+            if (!unauthorized && _t3 && _t3.status === 403 && normalizedEndpoint === '/users/me') {
               setAuthBlocked('users_me_forbidden');
               notifyAuthBlockedOnce();
             }
@@ -1790,14 +1790,14 @@
     return _requestApi.apply(this, arguments);
   }
   function _performRequest(method, url) {
-    var params = arguments.length &gt; 2 &amp;&amp; arguments[2] !== undefined ? arguments[2] : {};
-    var unauthorized = arguments.length &gt; 3 &amp;&amp; arguments[3] !== undefined ? arguments[3] : false;
-    var requestOptions = arguments.length &gt; 4 &amp;&amp; arguments[4] !== undefined ? arguments[4] : {};
+    var params = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+    var unauthorized = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : false;
+    var requestOptions = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : {};
     return new Promise(function (resolve, reject) {
       var headers = ensureHeaders({
         unauthorized: unauthorized
       });
-      var withMeta = !!(requestOptions &amp;&amp; requestOptions.withMeta);
+      var withMeta = !!(requestOptions && requestOptions.withMeta);
       var reqUrl = API_URL + url;
       var ajaxParams = {
         url: reqUrl,
@@ -1813,7 +1813,7 @@
         ajaxParams.processData = false;
       }
       $.ajax(ajaxParams).done(function (data, _textStatus, jqXHR) {
-        var status = jqXHR &amp;&amp; typeof jqXHR.status === 'number' ? jqXHR.status : 200;
+        var status = jqXHR && typeof jqXHR.status === 'number' ? jqXHR.status : 200;
         var responseHeaders = parseResponseHeaders(jqXHR);
         if (withMeta) {
           resolve({
@@ -1825,12 +1825,12 @@
           resolve(data);
         }
       }).fail(function (jqXHR) {
-        var status = jqXHR &amp;&amp; jqXHR.status ? jqXHR.status : 0;
+        var status = jqXHR && jqXHR.status ? jqXHR.status : 0;
         var responseHeaders = parseResponseHeaders(jqXHR);
         reject(Object.assign(new Error('TraktTV API Error'), {
           status: status,
           headers: responseHeaders,
-          response: jqXHR &amp;&amp; (jqXHR.responseJSON || jqXHR.responseText || null),
+          response: jqXHR && (jqXHR.responseJSON || jqXHR.responseText || null),
           originalError: jqXHR || {}
         }));
       });
@@ -1848,7 +1848,7 @@
    * Signature: function ensureHeaders({ unauthorized } = { unauthorized: false })
    */
   function ensureHeaders() {
-    var _ref4 = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {
+    var _ref4 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {
         unauthorized: false
       },
       unauthorized = _ref4.unauthorized;
@@ -1864,7 +1864,7 @@
     return headers;
   }
   function formatTraktResults() {
-    var items = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : [];
+    var items = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : [];
     return {
       results: (Array.isArray(items) ? items : []).map(function (item) {
         var media = item.movie || item.show;
@@ -1886,7 +1886,7 @@
     };
   }
   function mapUpNextNitroItem() {
-    var item = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {};
+    var item = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
     var show = item.show || {};
     var ids = show.ids || {};
     var progress = item.progress || {};
@@ -1894,10 +1894,10 @@
     var lastEpisode = progress.last_episode || null;
     var id = ids.tmdb || ids.trakt;
     if (!id) return null;
-    var watched = toNonNegativeInt$1(progress.completed) !== null ? toNonNegativeInt$1(progress.completed) : toNonNegativeInt$1(progress &amp;&amp; progress.stats &amp;&amp; progress.stats.play_count) || 0;
+    var watched = toNonNegativeInt$1(progress.completed) !== null ? toNonNegativeInt$1(progress.completed) : toNonNegativeInt$1(progress && progress.stats && progress.stats.play_count) || 0;
     var aired = toNonNegativeInt$1(progress.aired) !== null ? toNonNegativeInt$1(progress.aired) : toNonNegativeInt$1(show.aired_episodes) !== null ? toNonNegativeInt$1(show.aired_episodes) : toNonNegativeInt$1(item.cached_aired_episode_count) || 0;
-    var progressTotal = aired &gt; 0 ? aired : watched;
-    var releaseDate = nextEpisode &amp;&amp; nextEpisode.first_aired ? nextEpisode.first_aired : show.first_aired || (show.year ? String(show.year) : '');
+    var progressTotal = aired > 0 ? aired : watched;
+    var releaseDate = nextEpisode && nextEpisode.first_aired ? nextEpisode.first_aired : show.first_aired || (show.year ? String(show.year) : '');
     return {
       component: 'full',
       id: id,
@@ -1928,7 +1928,7 @@
 
   // Функція для отримання історії серіалу за TMDB ID
   function getShowHistory(tmdbId) {
-    var traktId = arguments.length &gt; 1 &amp;&amp; arguments[1] !== undefined ? arguments[1] : null;
+    var traktId = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
     return new Promise(function (resolve, reject) {
       // Якщо переданий Trakt ID, отримуємо інформацію з Trakt
       if (traktId) {
@@ -1942,7 +1942,7 @@
 
       // Спочатку отримуємо Trakt ID за TMDB ID
       requestApi('GET', "/search/tmdb/".concat(tmdbId, "?type=show")).then(function (response) {
-        if (response &amp;&amp; response.length &gt; 0 &amp;&amp; response[0].show &amp;&amp; response[0].show.ids.trakt) {
+        if (response && response.length > 0 && response[0].show && response[0].show.ids.trakt) {
           var foundTraktId = response[0].show.ids.trakt;
 
           // Отримуємо історію серіалу за Trakt ID
@@ -1961,23 +1961,23 @@
   }
   function resolveTraktIds() {
     var _params$external_ids, _params$external_ids2, _params$external_ids3;
-    var params = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {};
-    var rawIds = params.ids &amp;&amp; Object.keys(params.ids).length ? _objectSpread2({}, params.ids) : {};
+    var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    var rawIds = params.ids && Object.keys(params.ids).length ? _objectSpread2({}, params.ids) : {};
     var tmdbId = params.id || params.tmdb || ((_params$external_ids = params.external_ids) === null || _params$external_ids === void 0 ? void 0 : _params$external_ids.tmdb_id);
     var traktId = (_params$external_ids2 = params.external_ids) === null || _params$external_ids2 === void 0 ? void 0 : _params$external_ids2.trakt_id;
     var imdbId = ((_params$external_ids3 = params.external_ids) === null || _params$external_ids3 === void 0 ? void 0 : _params$external_ids3.imdb_id) || params.imdb;
-    if (traktId &amp;&amp; !rawIds.trakt) rawIds.trakt = traktId;
-    if (tmdbId &amp;&amp; !rawIds.tmdb) rawIds.tmdb = tmdbId;
-    if (imdbId &amp;&amp; !rawIds.imdb) rawIds.imdb = imdbId;
+    if (traktId && !rawIds.trakt) rawIds.trakt = traktId;
+    if (tmdbId && !rawIds.tmdb) rawIds.tmdb = tmdbId;
+    if (imdbId && !rawIds.imdb) rawIds.imdb = imdbId;
     return rawIds;
   }
   function normalizeMediaType() {
-    var params = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {};
+    var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
     var method = (params.method || params.type || '').toString().toLowerCase();
     return method === 'movie' ? 'movie' : 'show';
   }
   function buildSyncPayload() {
-    var params = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {};
+    var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
     var ids = resolveTraktIds(params);
     if (!ids || !Object.keys(ids).length) {
       throw new Error('TraktTV media ids are missing');
@@ -1995,20 +1995,20 @@
     };
   }
   function sameAnyId() {
-    var left = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {};
-    var right = arguments.length &gt; 1 &amp;&amp; arguments[1] !== undefined ? arguments[1] : {};
+    var left = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    var right = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
     if (!left || !right) return false;
     var keys = ['trakt', 'tmdb', 'imdb'];
-    for (var i = 0; i &lt; keys.length; i++) {
+    for (var i = 0; i < keys.length; i++) {
       var key = keys[i];
-      if (left[key] &amp;&amp; right[key] &amp;&amp; String(left[key]) === String(right[key])) {
+      if (left[key] && right[key] && String(left[key]) === String(right[key])) {
         return true;
       }
     }
     return false;
   }
   function extractMediaFromSyncItem() {
-    var item = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {};
+    var item = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
     if (item.movie) return {
       media: item.movie,
       type: 'movie'
@@ -2023,14 +2023,14 @@
     };
   }
   function normalizeListCardData(item) {
-    var _ref5 = arguments.length &gt; 1 &amp;&amp; arguments[1] !== undefined ? arguments[1] : {},
+    var _ref5 = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
       _ref5$likedListIds = _ref5.likedListIds,
       likedListIds = _ref5$likedListIds === void 0 ? [] : _ref5$likedListIds,
       _ref5$wide = _ref5.wide,
       wide = _ref5$wide === void 0 ? false : _ref5$wide,
       _ref5$canManage = _ref5.canManage,
       canManage = _ref5$canManage === void 0 ? false : _ref5$canManage;
-    var list = item &amp;&amp; item.list ? item.list : item;
+    var list = item && item.list ? item.list : item;
     if (!list) return null;
     var ids = list.ids || {};
     var listId = ids.trakt || list.id;
@@ -2075,7 +2075,7 @@
     return card;
   }
   function formatListCards(items) {
-    var options = arguments.length &gt; 1 &amp;&amp; arguments[1] !== undefined ? arguments[1] : {};
+    var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
     var results = (Array.isArray(items) ? items : []).map(function (item) {
       return normalizeListCardData(item, options);
     }).filter(Boolean);
@@ -2084,7 +2084,7 @@
     };
   }
   function sanitizeListPayload() {
-    var payload = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {};
+    var payload = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
     var normalized = {};
     var name = (payload.name || payload.title || '').toString().trim();
     var description = (payload.description || '').toString().trim();
@@ -2094,8 +2094,8 @@
     if (privacy) normalized.privacy = privacy;
     if (typeof payload.display_numbers === 'boolean') normalized.display_numbers = payload.display_numbers;
     if (typeof payload.allow_comments === 'boolean') normalized.allow_comments = payload.allow_comments;
-    if (typeof payload.sort_by === 'string' &amp;&amp; payload.sort_by) normalized.sort_by = payload.sort_by;
-    if (typeof payload.sort_how === 'string' &amp;&amp; payload.sort_how) normalized.sort_how = payload.sort_how;
+    if (typeof payload.sort_by === 'string' && payload.sort_by) normalized.sort_by = payload.sort_by;
+    if (typeof payload.sort_how === 'string' && payload.sort_how) normalized.sort_how = payload.sort_how;
     return normalized;
   }
   function makePaginationMeta(items, page, limit) {
@@ -2117,7 +2117,7 @@
     if (!raw) return headers;
     raw.trim().split(/[\r\n]+/).forEach(function (line) {
       var separatorIndex = line.indexOf(':');
-      if (separatorIndex &lt;= 0) return;
+      if (separatorIndex <= 0) return;
       var key = line.slice(0, separatorIndex).trim().toLowerCase();
       var value = line.slice(separatorIndex + 1).trim();
       if (key) headers[key] = value;
@@ -2126,15 +2126,15 @@
   }
   function toPositiveInt$1(value) {
     var parsed = parseInt(value, 10);
-    return Number.isFinite(parsed) &amp;&amp; parsed &gt; 0 ? parsed : null;
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
   }
   function toNonNegativeInt$1(value) {
     var parsed = parseInt(value, 10);
-    return Number.isFinite(parsed) &amp;&amp; parsed &gt;= 0 ? parsed : null;
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
   }
   function resolvePaginationFromHeaders() {
-    var headers = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {};
-    var fallback = arguments.length &gt; 1 &amp;&amp; arguments[1] !== undefined ? arguments[1] : {};
+    var headers = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    var fallback = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
     var fallbackPage = toPositiveInt$1(fallback.page) || 1;
     var fallbackLimit = toPositiveInt$1(fallback.limit) || 1;
     var fallbackTotal = toNonNegativeInt$1(fallback.total) || 0;
@@ -2168,10 +2168,10 @@
     return 'movies,shows';
   }
   function resolveWatchlistPagination() {
-    var headers = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {};
-    var items = arguments.length &gt; 1 &amp;&amp; arguments[1] !== undefined ? arguments[1] : [];
-    var page = arguments.length &gt; 2 &amp;&amp; arguments[2] !== undefined ? arguments[2] : 1;
-    var limit = arguments.length &gt; 3 &amp;&amp; arguments[3] !== undefined ? arguments[3] : 36;
+    var headers = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    var items = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
+    var page = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 1;
+    var limit = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 36;
     var hasHeaderPagination = !!(toPositiveInt$1(headers['x-pagination-page']) || toPositiveInt$1(headers['x-pagination-limit']) || toPositiveInt$1(headers['x-pagination-page-count']) || toNonNegativeInt$1(headers['x-pagination-item-count']) !== null);
     if (hasHeaderPagination) {
       return resolvePaginationFromHeaders(headers, {
@@ -2189,7 +2189,7 @@
     };
   }
   function buildWatchlistUrl() {
-    var _ref6 = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {},
+    var _ref6 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
       _ref6$mediaType = _ref6.mediaType,
       mediaType = _ref6$mediaType === void 0 ? 'movies,shows' : _ref6$mediaType,
       _ref6$sort = _ref6.sort,
@@ -2204,7 +2204,7 @@
       page: String(page),
       limit: String(limit)
     });
-    if (typeof uncollected !== 'undefined' &amp;&amp; uncollected !== null) {
+    if (typeof uncollected !== 'undefined' && uncollected !== null) {
       var normalized = typeof uncollected === 'string' ? uncollected.toLowerCase().trim() : uncollected;
       if (normalized === true || normalized === 'true' || normalized === 1 || normalized === '1') {
         query.set('uncollected', 'true');
@@ -2223,12 +2223,12 @@
     watchlistVipSortFields: Array.from(WATCHLIST_VIP_SORT_FIELDS),
     normalizeWatchlistSort: normalizeWatchlistSort,
     isWatchlistVipSort: function isWatchlistVipSort() {
-      var field = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : '';
+      var field = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '';
       return WATCHLIST_VIP_SORT_FIELDS.has((field || '').toString().trim().toLowerCase());
     },
     formatListsResults: function formatListsResults(items) {
-      var likedListIds = arguments.length &gt; 1 &amp;&amp; arguments[1] !== undefined ? arguments[1] : [];
-      var options = arguments.length &gt; 2 &amp;&amp; arguments[2] !== undefined ? arguments[2] : {};
+      var likedListIds = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
+      var options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
       try {
         return formatListCards(items, _objectSpread2({
           likedListIds: likedListIds
@@ -2240,13 +2240,13 @@
       }
     },
     get: function get(url) {
-      var unauthorized = arguments.length &gt; 1 &amp;&amp; arguments[1] !== undefined ? arguments[1] : false;
+      var unauthorized = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : false;
       return requestApi('GET', url, {}, unauthorized);
     },
     // Normalize ids for watchlist/history operations.
     // Prefer params.ids when filled; fall back to tmdb_id/trakt_id when needed.
     recommendations: function recommendations() {
-      var options = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {};
+      var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       var limit = options.limit || 36;
       var page = options.page || 1;
       var fetchLimit = limit * 5;
@@ -2255,14 +2255,14 @@
       return Promise.allSettled([moviesRequest, showsRequest]).then(function (responses) {
         var moviesState = responses[0];
         var showsState = responses[1];
-        var moviesResponse = moviesState &amp;&amp; moviesState.status === 'fulfilled' &amp;&amp; Array.isArray(moviesState.value) ? moviesState.value : [];
-        var showsResponse = showsState &amp;&amp; showsState.status === 'fulfilled' &amp;&amp; Array.isArray(showsState.value) ? showsState.value : [];
-        if (moviesState &amp;&amp; moviesState.status === 'rejected') {
+        var moviesResponse = moviesState && moviesState.status === 'fulfilled' && Array.isArray(moviesState.value) ? moviesState.value : [];
+        var showsResponse = showsState && showsState.status === 'fulfilled' && Array.isArray(showsState.value) ? showsState.value : [];
+        if (moviesState && moviesState.status === 'rejected') {
           logWarn('recommendations: movies request failed', moviesState.reason, {
             debugOnly: true
           });
         }
-        if (showsState &amp;&amp; showsState.status === 'rejected') {
+        if (showsState && showsState.status === 'rejected') {
           logWarn('recommendations: shows request failed', showsState.reason, {
             debugOnly: true
           });
@@ -2299,7 +2299,7 @@
         });
         var combinedResults = [].concat(_toConsumableArray(formattedMovies), _toConsumableArray(formattedShows));
         if (!combinedResults.length) {
-          if (moviesState.status === 'rejected' &amp;&amp; showsState.status === 'rejected') {
+          if (moviesState.status === 'rejected' && showsState.status === 'rejected') {
             throw moviesState.reason || showsState.reason || new Error('Recommendations request failed');
           }
           return {
@@ -2309,7 +2309,7 @@
             page: page
           };
         }
-        for (var i = combinedResults.length - 1; i &gt; 0; i--) {
+        for (var i = combinedResults.length - 1; i > 0; i--) {
           var j = Math.floor(Math.random() * (i + 1));
           var _ref7 = [combinedResults[j], combinedResults[i]];
           combinedResults[i] = _ref7[0];
@@ -2328,7 +2328,7 @@
       });
     },
     watchlist: function watchlist() {
-      var params = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {};
+      var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       var page = Math.max(1, parseInt(params.page, 10) || 1);
       var limit = Math.max(1, parseInt(params.limit, 10) || 36);
       var sort = normalizeWatchlistSort(params.sort || params.watchlistSort);
@@ -2343,8 +2343,8 @@
       return requestApi('GET', url, {}, false, 0, {
         withMeta: true
       }).then(function (response) {
-        var payload = response &amp;&amp; Array.isArray(response.data) ? response.data : [];
-        var headers = response &amp;&amp; response.headers ? response.headers : {};
+        var payload = response && Array.isArray(response.data) ? response.data : [];
+        var headers = response && response.headers ? response.headers : {};
         var formatted = formatTraktResults(payload);
         var pagination = resolveWatchlistPagination(headers, payload, page, limit);
         return {
@@ -2357,8 +2357,8 @@
       });
     },
     upnext: function upnext(params) {
-      var requestedPage = Math.max(1, parseInt(params &amp;&amp; params.page, 10) || 1);
-      var requestedLimit = Math.max(1, parseInt(params &amp;&amp; params.limit, 10) || 36);
+      var requestedPage = Math.max(1, parseInt(params && params.page, 10) || 1);
+      var requestedLimit = Math.max(1, parseInt(params && params.limit, 10) || 36);
       var query = new URLSearchParams({
         page: String(requestedPage),
         limit: String(requestedLimit)
@@ -2367,10 +2367,10 @@
       return requestApi('GET', url, {}, false, 0, {
         withMeta: true
       }).then(function (response) {
-        var payload = response &amp;&amp; Array.isArray(response.data) ? response.data : [];
-        var headers = response &amp;&amp; response.headers ? response.headers : {};
+        var payload = response && Array.isArray(response.data) ? response.data : [];
+        var headers = response && response.headers ? response.headers : {};
         var mapped = payload.map(mapUpNextNitroItem).filter(Boolean);
-        var bodyTotal = toNonNegativeInt$1(payload &amp;&amp; payload[0] &amp;&amp; payload[0].total_count);
+        var bodyTotal = toNonNegativeInt$1(payload && payload[0] && payload[0].total_count);
         var fallbackTotal = bodyTotal !== null ? bodyTotal : (requestedPage - 1) * requestedLimit + mapped.length;
         var pagination = resolvePaginationFromHeaders(headers, {
           page: requestedPage,
@@ -2392,7 +2392,7 @@
        * params: { redirect_uri, state?, signup?, prompt? }
        */
       startStandardOAuth: function startStandardOAuth() {
-        var _ref8 = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {},
+        var _ref8 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
           redirect_uri = _ref8.redirect_uri,
           state = _ref8.state,
           signup = _ref8.signup,
@@ -2422,12 +2422,12 @@
           client_id: getClientId(),
           client_secret: getClientSecret()
         }, true).then(function (res) {
-          if (res &amp;&amp; res.access_token) {
+          if (res && res.access_token) {
             saveTokens(res);
           }
           return res;
         })["catch"](function (error) {
-          if (error &amp;&amp; error.status === 400) {
+          if (error && error.status === 400) {
             setAuthBlocked('oauth_exchange_failed_400');
           }
           throw error;
@@ -2438,17 +2438,17 @@
        * unauthorized = true
        */
       refresh: function refresh() {
-        var options = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {};
+        var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
         return runRefreshFlow(_objectSpread2({
           reason: 'manual-refresh'
         }, options));
       },
       ensureValid: function ensureValid() {
-        var options = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {};
+        var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
         return ensureValidAccessToken(options);
       },
       storeTokens: function storeTokens() {
-        var response = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {};
+        var response = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
         saveTokens(response);
         return response;
       },
@@ -2480,7 +2480,7 @@
             rlRecordRequest(url, 200);
             return res;
           })["catch"](function (error) {
-            rlRecordRequest(url, Number(error &amp;&amp; error.status) || 0);
+            rlRecordRequest(url, Number(error && error.status) || 0);
             throw error;
           });
         },
@@ -2498,15 +2498,15 @@
             }, true);
           }).then(function (response) {
             rlRecordRequest(url, 200);
-            if (response &amp;&amp; response.access_token) {
+            if (response && response.access_token) {
               saveTokens(response);
             }
             return response;
           })["catch"](function (error) {
-            var status = Number(error &amp;&amp; error.status) || 0;
+            var status = Number(error && error.status) || 0;
             rlRecordRequest(url, status);
             if (status === 429) {
-              var retryAfterSec = parseRetryAfterMs$1(error &amp;&amp; error.headers ? error.headers : {});
+              var retryAfterSec = parseRetryAfterMs$1(error && error.headers ? error.headers : {});
               rlEnterCooldown(retryAfterSec ? Math.round(retryAfterSec / 1000) : undefined);
               logWarn('Trakt rate limit on device auth, global cooldown entered', {
                 cooldownMs: rlGetCooldownRemainingMs()
@@ -2514,10 +2514,10 @@
                 debugOnly: true
               });
             }
-            if (error &amp;&amp; status === 400) {
-              var payload = error &amp;&amp; error.response;
-              var code = payload &amp;&amp; _typeof(payload) === 'object' ? String(payload.error || payload.error_code || '').toLowerCase() : '';
-              if (code &amp;&amp; code !== 'authorization_pending') {
+            if (error && status === 400) {
+              var payload = error && error.response;
+              var code = payload && _typeof(payload) === 'object' ? String(payload.error || payload.error_code || '').toLowerCase() : '';
+              if (code && code !== 'authorization_pending') {
                 setAuthBlocked("device_poll_failed_".concat(code));
               }
             }
@@ -2542,7 +2542,7 @@
       return requestApi('GET', "/sync/watchlist/".concat(type, "?extended=full")).then(function (response) {
         var found = (Array.isArray(response) ? response : []).find(function (item) {
           var entity = extractMediaFromSyncItem(item);
-          return entity.media &amp;&amp; sameAnyId(entity.media.ids || {}, ids);
+          return entity.media && sameAnyId(entity.media.ids || {}, ids);
         });
         return !!found;
       });
@@ -2553,7 +2553,7 @@
       return requestApi('GET', "/sync/history/".concat(type, "?extended=full")).then(function (response) {
         var found = (Array.isArray(response) ? response : []).find(function (item) {
           var entity = extractMediaFromSyncItem(item);
-          return entity.media &amp;&amp; sameAnyId(entity.media.ids || {}, ids);
+          return entity.media && sameAnyId(entity.media.ids || {}, ids);
         });
         return !!found;
       });
@@ -2561,10 +2561,10 @@
     // liked lists (read-only)
     likesLists: function likesLists() {
       var _this = this;
-      var params = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {};
+      var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       var page = params.page || 1;
       var limit = params.limit || 36;
-      return requestApi('GET', "/users/me/likes/lists?limit=".concat(limit, "&amp;page=").concat(page, "&amp;extended=images")).then(function (response) {
+      return requestApi('GET', "/users/me/likes/lists?limit=".concat(limit, "&page=").concat(page, "&extended=images")).then(function (response) {
         var raw = Array.isArray(response) ? response : [];
         var likedListIds = raw.map(function (item) {
           var _item$list;
@@ -2583,16 +2583,16 @@
     },
     // alias for backward compatibility
     lists: function lists() {
-      var params = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {};
+      var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       return this.likesLists(params);
     },
     // personal lists (CRUD enabled)
     myLists: function myLists() {
       var _this2 = this;
-      var params = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {};
+      var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       var page = params.page || 1;
       var limit = params.limit || 36;
-      return requestApi('GET', "/users/me/lists?limit=".concat(limit, "&amp;page=").concat(page, "&amp;extended=images")).then(function (response) {
+      return requestApi('GET', "/users/me/lists?limit=".concat(limit, "&page=").concat(page, "&extended=images")).then(function (response) {
         var raw = Array.isArray(response) ? response : [];
         var formatted = _this2.formatListsResults(raw, [], {
           wide: true,
@@ -2606,7 +2606,7 @@
       });
     },
     myList: function myList() {
-      var params = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {};
+      var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       var listId = params.listId || params.id;
       if (!listId) return Promise.reject(new Error('List ID is missing'));
       return requestApi('GET', "/users/me/lists/".concat(encodeURIComponent(listId), "?extended=images")).then(function (response) {
@@ -2617,14 +2617,14 @@
       });
     },
     createList: function createList() {
-      var payload = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {};
+      var payload = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       var body = sanitizeListPayload(payload);
       if (!body.name) return Promise.reject(new Error('List name is missing'));
       if (!body.privacy) body.privacy = 'private';
       return requestApi('POST', '/users/me/lists', body);
     },
     updateList: function updateList() {
-      var _ref1 = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {},
+      var _ref1 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
         listId = _ref1.listId,
         payload = _ref1.payload;
       if (!listId) return Promise.reject(new Error('List ID is missing'));
@@ -2633,32 +2633,32 @@
       return requestApi('PUT', "/users/me/lists/".concat(encodeURIComponent(listId)), body);
     },
     deleteList: function deleteList() {
-      var _ref10 = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {},
+      var _ref10 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
         listId = _ref10.listId;
       if (!listId) return Promise.reject(new Error('List ID is missing'));
       return requestApi('DELETE', "/users/me/lists/".concat(encodeURIComponent(listId)));
     },
     addToList: function addToList() {
-      var _ref11 = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {},
+      var _ref11 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
         listId = _ref11.listId,
         item = _ref11.item;
       if (!listId) return Promise.reject(new Error('List ID is missing'));
       return requestApi('POST', "/users/me/lists/".concat(encodeURIComponent(listId), "/items"), buildSyncPayload(item || {}));
     },
     removeFromList: function removeFromList() {
-      var _ref12 = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {},
+      var _ref12 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
         listId = _ref12.listId,
         item = _ref12.item;
       if (!listId) return Promise.reject(new Error('List ID is missing'));
       return requestApi('POST', "/users/me/lists/".concat(encodeURIComponent(listId), "/items/remove"), buildSyncPayload(item || {}));
     },
     myListItems: function myListItems() {
-      var params = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {};
+      var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       var listId = params.listId || params.id;
       var page = params.page || 1;
       var limit = params.limit || 36;
       if (!listId) return Promise.reject(new Error('List ID is missing'));
-      var url = "/users/me/lists/".concat(encodeURIComponent(listId), "/items?extended=full,images&amp;page=").concat(page, "&amp;limit=").concat(limit);
+      var url = "/users/me/lists/".concat(encodeURIComponent(listId), "/items?extended=full,images&page=").concat(page, "&limit=").concat(limit);
       return requestApi('GET', url).then(function (response) {
         var raw = Array.isArray(response) ? response : [];
         var formatted = formatTraktResults(raw);
@@ -2670,7 +2670,7 @@
       });
     },
     inList: function inList() {
-      var _ref13 = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {},
+      var _ref13 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
         listId = _ref13.listId,
         item = _ref13.item,
         _ref13$limit = _ref13.limit,
@@ -2682,15 +2682,15 @@
       if (!Object.keys(ids).length) return Promise.resolve(false);
       var page = 1;
       var _checkPage = function checkPage() {
-        var url = "/users/me/lists/".concat(encodeURIComponent(listId), "/items?extended=images&amp;page=").concat(page, "&amp;limit=").concat(limit);
+        var url = "/users/me/lists/".concat(encodeURIComponent(listId), "/items?extended=images&page=").concat(page, "&limit=").concat(limit);
         return requestApi('GET', url).then(function (response) {
           var raw = Array.isArray(response) ? response : [];
           var found = raw.some(function (entry) {
             var entity = extractMediaFromSyncItem(entry);
-            return entity.media &amp;&amp; sameAnyId(entity.media.ids || {}, ids);
+            return entity.media && sameAnyId(entity.media.ids || {}, ids);
           });
           if (found) return true;
-          if (!raw.length || raw.length &lt; limit || page &gt;= maxPages) return false;
+          if (!raw.length || raw.length < limit || page >= maxPages) return false;
           page += 1;
           return _checkPage();
         });
@@ -2699,14 +2699,14 @@
     },
     // public list detail (liked/shared)
     list: function list() {
-      var params = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {};
+      var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       var listId = params.id || params.list_id || params.listId;
       var page = params.page || 1;
       var limit = params.limit || 36;
       if (!listId) {
         return Promise.reject(new Error('List ID is missing'));
       }
-      var url = "/lists/".concat(encodeURIComponent(listId), "/items?extended=full,images&amp;page=").concat(page, "&amp;limit=").concat(limit);
+      var url = "/lists/".concat(encodeURIComponent(listId), "/items?extended=full,images&page=").concat(page, "&limit=").concat(limit);
       return requestApi('GET', url).then(function (response) {
         var raw = Array.isArray(response) ? response : [];
         var formatted = formatTraktResults(raw);
@@ -2731,10 +2731,10 @@
         // Спочатку отримуємо Trakt ID за TMDB ID
         requestApi('GET', "/search/tmdb/".concat(tmdbId, "?type=").concat(mediaType)).then(function (searchResponse) {
           var traktId = null;
-          if (searchResponse &amp;&amp; searchResponse.length &gt; 0) {
-            if (mediaType === 'movie' &amp;&amp; searchResponse[0].movie) {
+          if (searchResponse && searchResponse.length > 0) {
+            if (mediaType === 'movie' && searchResponse[0].movie) {
               traktId = searchResponse[0].movie.ids.trakt;
-            } else if (mediaType === 'show' &amp;&amp; searchResponse[0].show) {
+            } else if (mediaType === 'show' && searchResponse[0].show) {
               traktId = searchResponse[0].show.ids.trakt;
             }
           }
@@ -2760,7 +2760,7 @@
       });
     },
     dvdCalendar: function dvdCalendar() {
-      var params = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {};
+      var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       var limit = Math.max(1, parseInt(params.limit, 10) || 36);
       var page = Math.max(1, parseInt(params.page, 10) || 1);
       var now = new Date();
@@ -2785,7 +2785,7 @@
       });
     },
     calendar: function calendar() {
-      var params = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {};
+      var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       var limit = Math.max(1, parseInt(params.limit, 10) || 36);
       var page = Math.max(1, parseInt(params.page, 10) || 1);
 
@@ -2805,8 +2805,8 @@
         // Group by show TMDB ID to deduplicate
         var showMap = {};
         raw.forEach(function (item) {
-          var show = item &amp;&amp; item.show;
-          var episode = item &amp;&amp; item.episode;
+          var show = item && item.show;
+          var episode = item && item.episode;
           if (!show || !show.ids) return;
           var tmdbId = show.ids.tmdb;
           if (!tmdbId) return;
@@ -2821,7 +2821,7 @@
         var shows = Object.values(showMap);
 
         // Shuffle for variety
-        for (var i = shows.length - 1; i &gt; 0; i--) {
+        for (var i = shows.length - 1; i > 0; i--) {
           var j = Math.floor(Math.random() * (i + 1));
           var _ref14 = [shows[j], shows[i]];
           shows[i] = _ref14[0];
@@ -2868,14 +2868,14 @@
   };
 
   // Local safe resolver for Api to support runtime-scoped execution (e.g., dev/trakt.js)
-  var Api$2 = typeof api$1 !== 'undefined' &amp;&amp; api$1 || window.TraktTV &amp;&amp; window.TraktTV.api || null;
+  var Api$2 = typeof api$1 !== 'undefined' && api$1 || window.TraktTV && window.TraktTV.api || null;
   var API_MISSING_LOG_KEY$2 = 'component-main:api-missing';
   function logApiMissing$1() {
     logDebugOnce(API_MISSING_LOG_KEY$2, 'API bridge is unavailable in component/main');
   }
 
   // Version check for Lampa 3.0+ modular system
-  var isLampa3 = window.Lampa &amp;&amp; window.Lampa.Manifest &amp;&amp; window.Lampa.Manifest.app_digital &gt;= 300;
+  var isLampa3 = window.Lampa && window.Lampa.Manifest && window.Lampa.Manifest.app_digital >= 300;
   var DEFAULT_WATCHLIST_SORT = 'added/desc';
   var DEFAULT_WATCHLIST_SORT_FIELDS = ['rank', 'added', 'title', 'released', 'runtime', 'popularity', 'random', 'percentage', 'imdb_rating', 'tmdb_rating', 'rt_tomatometer', 'rt_audience', 'metascore', 'votes', 'imdb_votes', 'tmdb_votes', 'my_rating', 'watched', 'collected'];
   var DEFAULT_WATCHLIST_QUICK_SORT_FIELDS = ['added', 'rank', 'released'];
@@ -2961,24 +2961,24 @@
   var traktVipStatusCache = null;
   var traktVipStatusPromise = null;
   function resolveUpnextProgress$1() {
-    var element = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {};
+    var element = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
     var watched = Number(element.trakt_upnext_watched);
     var total = Number(element.trakt_upnext_total);
     var text = (element.trakt_upnext_progress || '').toString().trim();
     var safeWatched = Number.isFinite(watched) ? watched : 0;
     var safeTotal = Number.isFinite(total) ? total : 0;
-    if (!text &amp;&amp; safeTotal &gt; 0) {
+    if (!text && safeTotal > 0) {
       text = "".concat(safeWatched, "/").concat(safeTotal);
     }
-    if ((!safeWatched || !safeTotal) &amp;&amp; text.indexOf('/') &gt; -1) {
+    if ((!safeWatched || !safeTotal) && text.indexOf('/') > -1) {
       var parts = text.split('/');
       var parsedWatched = Number(parts[0]);
       var parsedTotal = Number(parts[1]);
-      if (Number.isFinite(parsedWatched) &amp;&amp; parsedWatched &gt;= 0) safeWatched = parsedWatched;
-      if (Number.isFinite(parsedTotal) &amp;&amp; parsedTotal &gt; 0) safeTotal = parsedTotal;
+      if (Number.isFinite(parsedWatched) && parsedWatched >= 0) safeWatched = parsedWatched;
+      if (Number.isFinite(parsedTotal) && parsedTotal > 0) safeTotal = parsedTotal;
     }
     if (!text) return null;
-    var percent = safeTotal &gt; 0 ? Math.max(0, Math.min(100, Math.round(safeWatched / safeTotal * 100))) : null;
+    var percent = safeTotal > 0 ? Math.max(0, Math.min(100, Math.round(safeWatched / safeTotal * 100))) : null;
     return {
       text: text,
       percent: percent
@@ -2987,14 +2987,14 @@
   function renderUpnextCardWatched(card, element) {
     var progress = resolveUpnextProgress$1(element || {});
     if (!progress) return;
-    var cardNode = card &amp;&amp; typeof card.render === 'function' ? card.render(true) : null;
-    var cardView = cardNode &amp;&amp; cardNode.querySelector ? cardNode.querySelector('.card__view') : null;
+    var cardNode = card && typeof card.render === 'function' ? card.render(true) : null;
+    var cardView = cardNode && cardNode.querySelector ? cardNode.querySelector('.card__view') : null;
     if (!cardView) return;
     var wrap = cardView.querySelector('.card-watched.trakt-upnext-watched');
     if (!wrap) {
       wrap = document.createElement('div');
       wrap.className = 'card-watched trakt-upnext-watched';
-      wrap.innerHTML = '&lt;div class="card-watched__inner"&gt;&lt;div class="card-watched__body"&gt;&lt;/div&gt;&lt;/div&gt;';
+      wrap.innerHTML = '<div class="card-watched__inner"><div class="card-watched__body"></div></div>';
       cardView.insertBefore(wrap, cardView.firstChild);
     }
     var body = wrap.querySelector('.card-watched__body');
@@ -3003,19 +3003,19 @@
     if (!row) {
       row = document.createElement('div');
       row.className = 'card-watched__item trakt-upnext-watched__item';
-      row.innerHTML = '&lt;span&gt;&lt;/span&gt;&lt;div class="time-line"&gt;&lt;div&gt;&lt;/div&gt;&lt;/div&gt;';
+      row.innerHTML = '<span></span><div class="time-line"><div></div></div>';
       body.innerHTML = '';
       body.appendChild(row);
     }
     var title = row.querySelector('span');
     if (title) title.textContent = progress.text;
-    var bar = row.querySelector('.time-line &gt; div');
+    var bar = row.querySelector('.time-line > div');
     if (bar) bar.style.width = "".concat(progress.percent || 0, "%");
   }
   function renderTvTypeBadge(card, element) {
-    if (!element || element.method !== 'tv' &amp;&amp; element.type !== 'show') return;
-    var cardNode = card &amp;&amp; typeof card.render === 'function' ? card.render(true) : null;
-    var cardView = cardNode &amp;&amp; cardNode.querySelector ? cardNode.querySelector('.card__view') : null;
+    if (!element || element.method !== 'tv' && element.type !== 'show') return;
+    var cardNode = card && typeof card.render === 'function' ? card.render(true) : null;
+    var cardView = cardNode && cardNode.querySelector ? cardNode.querySelector('.card__view') : null;
     if (!cardNode || !cardView) return;
     cardNode.classList.add('card--tv');
     if (!cardView.querySelector('.card__type')) {
@@ -3031,15 +3031,15 @@
     var waitload = false;
 
     // Use modular system for Lampa 3.0+, fallback to old system for compatibility
-    if (isLampa3 &amp;&amp; Lampa.Maker) {
+    if (isLampa3 && Lampa.Maker) {
       comp = Lampa.Maker.make('Category', object);
       comp.use({
         onCreate: function onCreate() {
           var _this = this;
           var params = _objectSpread2({}, object);
-          if ((type === 'list' || type === 'myListItems') &amp;&amp; object.id) {
+          if ((type === 'list' || type === 'myListItems') && object.id) {
             params.id = object.id;
-          } else if ((type === 'list' || type === 'myListItems') &amp;&amp; object.list_id) {
+          } else if ((type === 'list' || type === 'myListItems') && object.list_id) {
             params.id = object.list_id;
           }
           params.limit = 36;
@@ -3050,10 +3050,10 @@
             return;
           }
           Api$2[type](params).then(function (data) {
-            if (data &amp;&amp; data.total_pages) {
+            if (data && data.total_pages) {
               total_pages = data.total_pages;
             }
-            _this.build(data &amp;&amp; _typeof(data) === 'object' &amp;&amp; Array.isArray(data.results) ? data : {
+            _this.build(data && _typeof(data) === 'object' && Array.isArray(data.results) ? data : {
               results: []
             });
           })["catch"](function () {
@@ -3066,12 +3066,12 @@
             reject.call(this);
             return;
           }
-          if (object.page &lt;= total_pages) {
+          if (object.page <= total_pages) {
             waitload = true;
             var params = _objectSpread2({}, object);
-            if ((type === 'list' || type === 'myListItems') &amp;&amp; object.id) {
+            if ((type === 'list' || type === 'myListItems') && object.id) {
               params.id = object.id;
-            } else if ((type === 'list' || type === 'myListItems') &amp;&amp; object.list_id) {
+            } else if ((type === 'list' || type === 'myListItems') && object.list_id) {
               params.id = object.list_id;
             }
             params.limit = 36;
@@ -3081,11 +3081,11 @@
               return;
             }
             Api$2[type](params).then(function (data) {
-              if (data &amp;&amp; data.total_pages) {
+              if (data && data.total_pages) {
                 total_pages = data.total_pages;
                 _this2.total_pages = data.total_pages;
               }
-              resolve.call(_this2, data &amp;&amp; _typeof(data) === 'object' &amp;&amp; Array.isArray(data.results) ? data : {
+              resolve.call(_this2, data && _typeof(data) === 'object' && Array.isArray(data.results) ? data : {
                 results: []
               });
               waitload = false;
@@ -3098,7 +3098,7 @@
           }
         },
         onController: function onController(controller) {
-          if (type === 'watchlist' &amp;&amp; object &amp;&amp; typeof object.onHead === 'function') {
+          if (type === 'watchlist' && object && typeof object.onHead === 'function') {
             controller.up = function () {
               if (Navigator.canmove('up')) Navigator.move('up');else object.onHead();
             };
@@ -3130,7 +3130,7 @@
               Lampa.Activity.push(this.data);
             },
             onLong: function onLong() {
-              if (type === 'myListItems' &amp;&amp; object &amp;&amp; object.can_manage &amp;&amp; object.id) {
+              if (type === 'myListItems' && object && object.can_manage && object.id) {
                 openMyListItemActions(object, element);
               }
             }
@@ -3138,14 +3138,14 @@
         }
       });
     } else {
-      // Backward compatibility for Lampa &lt; 3.0
+      // Backward compatibility for Lampa < 3.0
       comp = new Lampa.InteractionCategory(object);
       comp.create = function () {
         var _this3 = this;
         var params = _objectSpread2({}, object);
-        if ((type === 'list' || type === 'myListItems') &amp;&amp; object.id) {
+        if ((type === 'list' || type === 'myListItems') && object.id) {
           params.id = object.id;
-        } else if ((type === 'list' || type === 'myListItems') &amp;&amp; object.list_id) {
+        } else if ((type === 'list' || type === 'myListItems') && object.list_id) {
           params.id = object.list_id;
         }
         params.limit = 36;
@@ -3155,10 +3155,10 @@
           return;
         }
         Api$2[type](params).then(function (data) {
-          if (data &amp;&amp; data.total_pages) {
+          if (data && data.total_pages) {
             total_pages = data.total_pages;
           }
-          _this3.build(data &amp;&amp; _typeof(data) === 'object' &amp;&amp; Array.isArray(data.results) ? data : {
+          _this3.build(data && _typeof(data) === 'object' && Array.isArray(data.results) ? data : {
             results: []
           });
           if (_this3.activity.scroll) {
@@ -3171,13 +3171,13 @@
       comp.next = function () {
         var _this4 = this;
         if (waitload) return;
-        if (object.page &lt; total_pages) {
+        if (object.page < total_pages) {
           waitload = true;
           object.page++;
           var params = _objectSpread2({}, object);
-          if ((type === 'list' || type === 'myListItems') &amp;&amp; object.id) {
+          if ((type === 'list' || type === 'myListItems') && object.id) {
             params.id = object.id;
-          } else if ((type === 'list' || type === 'myListItems') &amp;&amp; object.list_id) {
+          } else if ((type === 'list' || type === 'myListItems') && object.list_id) {
             params.id = object.list_id;
           }
           params.limit = 36;
@@ -3186,10 +3186,10 @@
             return;
           }
           Api$2[type](params).then(function (data) {
-            if (data &amp;&amp; data.total_pages) {
+            if (data && data.total_pages) {
               total_pages = data.total_pages;
             }
-            _this4.append(data &amp;&amp; _typeof(data) === 'object' &amp;&amp; Array.isArray(data.results) ? data : {
+            _this4.append(data && _typeof(data) === 'object' && Array.isArray(data.results) ? data : {
               results: []
             });
             waitload = false;
@@ -3203,7 +3203,7 @@
         if (type === 'upnext') {
           renderUpnextCardWatched(card, element);
         }
-        card.onMenu = type === 'myListItems' &amp;&amp; object &amp;&amp; object.can_manage &amp;&amp; object.id ? function () {
+        card.onMenu = type === 'myListItems' && object && object.can_manage && object.id ? function () {
           return openMyListItemActions(object, element);
         } : false;
         card.onEnter = function () {
@@ -3219,7 +3219,7 @@
     var waitload = false;
 
     // Use modular system for Lampa 3.0+, fallback to old system for compatibility
-    if (isLampa3 &amp;&amp; Lampa.Maker) {
+    if (isLampa3 && Lampa.Maker) {
       comp = Lampa.Maker.make('Category', object);
       comp.use({
         onCreate: function onCreate() {
@@ -3233,10 +3233,10 @@
             return;
           }
           Api$2.recommendations(params).then(function (recommendations) {
-            _this5.build(recommendations &amp;&amp; _typeof(recommendations) === 'object' &amp;&amp; Array.isArray(recommendations.results) ? recommendations : {
+            _this5.build(recommendations && _typeof(recommendations) === 'object' && Array.isArray(recommendations.results) ? recommendations : {
               results: []
             });
-            if (recommendations &amp;&amp; recommendations.total_pages) {
+            if (recommendations && recommendations.total_pages) {
               total_pages = recommendations.total_pages;
             }
           })["catch"](function () {
@@ -3249,7 +3249,7 @@
             reject.call(this);
             return;
           }
-          if (object.page &lt;= total_pages) {
+          if (object.page <= total_pages) {
             waitload = true;
             var params = _objectSpread2({}, object);
             params.limit = 36;
@@ -3259,11 +3259,11 @@
               return;
             }
             Api$2.recommendations(params).then(function (data) {
-              if (data &amp;&amp; data.total_pages) {
+              if (data && data.total_pages) {
                 total_pages = data.total_pages;
                 _this6.total_pages = data.total_pages;
               }
-              resolve.call(_this6, data &amp;&amp; _typeof(data) === 'object' &amp;&amp; Array.isArray(data.results) ? data : {
+              resolve.call(_this6, data && _typeof(data) === 'object' && Array.isArray(data.results) ? data : {
                 results: []
               });
               waitload = false;
@@ -3293,7 +3293,7 @@
         }
       });
     } else {
-      // Backward compatibility for Lampa &lt; 3.0
+      // Backward compatibility for Lampa < 3.0
       comp = new Lampa.InteractionCategory(object);
       comp.create = function () {
         var _this7 = this;
@@ -3305,10 +3305,10 @@
           return;
         }
         Api$2.recommendations(params).then(function (recommendations) {
-          _this7.build(recommendations &amp;&amp; _typeof(recommendations) === 'object' &amp;&amp; Array.isArray(recommendations.results) ? recommendations : {
+          _this7.build(recommendations && _typeof(recommendations) === 'object' && Array.isArray(recommendations.results) ? recommendations : {
             results: []
           });
-          if (recommendations &amp;&amp; recommendations.total_pages) {
+          if (recommendations && recommendations.total_pages) {
             total_pages = recommendations.total_pages;
           }
           if (_this7.activity.scroll) {
@@ -3321,7 +3321,7 @@
       comp.next = function () {
         var _this8 = this;
         if (waitload) return;
-        if (object.page &lt; total_pages) {
+        if (object.page < total_pages) {
           waitload = true;
           object.page++;
           var params = _objectSpread2({}, object);
@@ -3331,10 +3331,10 @@
             return;
           }
           Api$2.recommendations(params).then(function (data) {
-            if (data &amp;&amp; data.total_pages) {
+            if (data && data.total_pages) {
               total_pages = data.total_pages;
             }
-            _this8.append(data &amp;&amp; _typeof(data) === 'object' &amp;&amp; Array.isArray(data.results) ? data : {
+            _this8.append(data && _typeof(data) === 'object' && Array.isArray(data.results) ? data : {
               results: []
             });
             waitload = false;
@@ -3361,7 +3361,7 @@
     return comp;
   }
   function t$3(key) {
-    var fallback = arguments.length &gt; 1 &amp;&amp; arguments[1] !== undefined ? arguments[1] : '';
+    var fallback = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
     try {
       var translated = Lampa.Lang.translate(key);
       return translated || fallback || key;
@@ -3375,18 +3375,18 @@
     });
   }
   function getListName() {
-    var element = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {};
+    var element = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
     return (element.list_title || element.title || element.name || '').trim();
   }
   function restoreContentController() {
     setTimeout(function () {
-      if (Lampa &amp;&amp; Lampa.Controller) Lampa.Controller.toggle('content');
+      if (Lampa && Lampa.Controller) Lampa.Controller.toggle('content');
     }, 0);
   }
   function formatNamedListTitle(name, itemCount) {
     var safeName = (name || '').trim();
-    var hasCount = typeof itemCount === 'number' &amp;&amp; itemCount &gt;= 0;
-    if (safeName &amp;&amp; hasCount) return "".concat(safeName, " (").concat(itemCount, ")");
+    var hasCount = typeof itemCount === 'number' && itemCount >= 0;
+    if (safeName && hasCount) return "".concat(safeName, " (").concat(itemCount, ")");
     if (safeName) return safeName;
     return t$3('trakt_list_detail', 'List Content');
   }
@@ -3400,7 +3400,7 @@
     Lampa.Activity.replace(next);
   }
   function refreshMyListsAfterCreate(activityObject, createdList) {
-    var listId = createdList &amp;&amp; createdList.ids ? createdList.ids.trakt || createdList.id : createdList &amp;&amp; createdList.id;
+    var listId = createdList && createdList.ids ? createdList.ids.trakt || createdList.id : createdList && createdList.id;
     var maxAttempts = 8;
     var delayMs = 900;
     if (!Api$2 || !listId) {
@@ -3412,11 +3412,11 @@
         page: 1,
         limit: 100
       }).then(function (data) {
-        var results = data &amp;&amp; Array.isArray(data.results) ? data.results : [];
+        var results = data && Array.isArray(data.results) ? data.results : [];
         var found = results.some(function (item) {
           return String(item.id) === String(listId);
         });
-        if (found || index &gt;= maxAttempts) {
+        if (found || index >= maxAttempts) {
           refreshActivity(activityObject, 'trakt_my_lists');
           return;
         }
@@ -3424,7 +3424,7 @@
           return _attempt(index + 1);
         }, delayMs);
       })["catch"](function () {
-        if (index &gt;= maxAttempts) {
+        if (index >= maxAttempts) {
           refreshActivity(activityObject, 'trakt_my_lists');
           return;
         }
@@ -3448,11 +3448,11 @@
         page: 1,
         limit: 100
       }).then(function (data) {
-        var results = data &amp;&amp; Array.isArray(data.results) ? data.results : [];
+        var results = data && Array.isArray(data.results) ? data.results : [];
         var stillExists = results.some(function (item) {
           return String(item.id) === String(listId);
         });
-        if (!stillExists || index &gt;= maxAttempts) {
+        if (!stillExists || index >= maxAttempts) {
           refreshActivity(activityObject, 'trakt_my_lists');
           return;
         }
@@ -3460,7 +3460,7 @@
           return _attempt2(index + 1);
         }, delayMs);
       })["catch"](function () {
-        if (index &gt;= maxAttempts) {
+        if (index >= maxAttempts) {
           refreshActivity(activityObject, 'trakt_my_lists');
           return;
         }
@@ -3472,8 +3472,8 @@
     _attempt2(1);
   }
   function showApiError(error) {
-    var fallbackKey = arguments.length &gt; 1 &amp;&amp; arguments[1] !== undefined ? arguments[1] : 'trakt_list_action_error';
-    var status = error &amp;&amp; error.status;
+    var fallbackKey = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 'trakt_list_action_error';
+    var status = error && error.status;
     var message = t$3(fallbackKey, 'Trakt request failed');
     if (status === 420) message = t$3('trakt_list_limit_reached', 'List limit reached');else if (status === 409) message = t$3('trakt_list_conflict', 'Conflict while updating list');else if (status === 401 || status === 403) message = t$3('trakttvAuthMissed', 'Not logged');
     notify$1(message);
@@ -3504,7 +3504,7 @@
   }
   function withCreateListAction(data, page) {
     if (page !== 1) return data;
-    var normalized = data &amp;&amp; _typeof(data) === 'object' &amp;&amp; Array.isArray(data.results) ? _objectSpread2(_objectSpread2({}, data), {}, {
+    var normalized = data && _typeof(data) === 'object' && Array.isArray(data.results) ? _objectSpread2(_objectSpread2({}, data), {}, {
       results: data.results.slice()
     }) : {
       results: []
@@ -3513,7 +3513,7 @@
     return normalized;
   }
   function openListDetail(element) {
-    var componentName = arguments.length &gt; 1 &amp;&amp; arguments[1] !== undefined ? arguments[1] : 'trakt_list_detail';
+    var componentName = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 'trakt_list_detail';
     var listName = getListName(element);
     Lampa.Activity.push({
       url: '',
@@ -3677,7 +3677,7 @@
     }
   }
   function listCatalog(object, apiMethod) {
-    var options = arguments.length &gt; 2 &amp;&amp; arguments[2] !== undefined ? arguments[2] : {};
+    var options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
     var config = _objectSpread2({
       detailComponent: 'trakt_list_detail',
       manage: false,
@@ -3689,7 +3689,7 @@
     var withActions = function withActions(data, page) {
       return config.addCreateAction ? withCreateListAction(data, page) : data;
     };
-    if (isLampa3 &amp;&amp; Lampa.Maker) {
+    if (isLampa3 && Lampa.Maker) {
       comp = Lampa.Maker.make('Category', object);
       comp.use({
         onCreate: function onCreate() {
@@ -3702,7 +3702,7 @@
             return;
           }
           Api$2[apiMethod](params).then(function (data) {
-            total_pages = data &amp;&amp; data.total_pages ? data.total_pages : 0;
+            total_pages = data && data.total_pages ? data.total_pages : 0;
             _this9.build(withActions(data, params.page));
           })["catch"](function () {
             return _this9.empty();
@@ -3714,7 +3714,7 @@
             reject.call(this);
             return;
           }
-          if (object.page &lt;= total_pages) {
+          if (object.page <= total_pages) {
             waitload = true;
             var params = _objectSpread2({}, object);
             params.limit = 36;
@@ -3724,7 +3724,7 @@
               return;
             }
             Api$2[apiMethod](params).then(function (data) {
-              if (data &amp;&amp; data.total_pages) {
+              if (data && data.total_pages) {
                 total_pages = data.total_pages;
                 _this0.total_pages = data.total_pages;
               }
@@ -3764,7 +3764,7 @@
         params.page = params.page || 1;
         if (!Api$2 || !Api$2[apiMethod]) return;
         Api$2[apiMethod](params).then(function (data) {
-          total_pages = data &amp;&amp; data.total_pages ? data.total_pages : 0;
+          total_pages = data && data.total_pages ? data.total_pages : 0;
           _this1.build(withActions(data, params.page));
           if (_this1.activity.scroll) _this1.activity.scroll.onEnd = _this1.next.bind(_this1);
         })["catch"](function () {
@@ -3774,14 +3774,14 @@
       comp.next = function () {
         var _this10 = this;
         if (waitload) return;
-        if (object.page &lt; total_pages) {
+        if (object.page < total_pages) {
           waitload = true;
           object.page++;
           var params = _objectSpread2({}, object);
           params.limit = 36;
           if (!Api$2 || !Api$2[apiMethod]) return;
           Api$2[apiMethod](params).then(function (data) {
-            if (data &amp;&amp; data.total_pages) {
+            if (data && data.total_pages) {
               total_pages = data.total_pages;
             }
             _this10.append(withActions(data, params.page));
@@ -3808,11 +3808,11 @@
     return comp;
   }
   function getWatchlistSortFields() {
-    var fields = Api$2 &amp;&amp; Array.isArray(Api$2.watchlistSortFields) &amp;&amp; Api$2.watchlistSortFields.length ? Api$2.watchlistSortFields : DEFAULT_WATCHLIST_SORT_FIELDS;
+    var fields = Api$2 && Array.isArray(Api$2.watchlistSortFields) && Api$2.watchlistSortFields.length ? Api$2.watchlistSortFields : DEFAULT_WATCHLIST_SORT_FIELDS;
     return fields.slice();
   }
   function getQuickWatchlistSortFields() {
-    var fields = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : getWatchlistSortFields();
+    var fields = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : getWatchlistSortFields();
     var available = new Set((fields || []).map(function (field) {
       return String(field).trim().toLowerCase();
     }));
@@ -3821,25 +3821,25 @@
     });
   }
   function getHiddenWatchlistSortFields() {
-    var fields = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : getWatchlistSortFields();
+    var fields = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : getWatchlistSortFields();
     var quickSet = new Set(getQuickWatchlistSortFields(fields));
     return (fields || []).filter(function (field) {
       return !quickSet.has(String(field).trim().toLowerCase());
     });
   }
   function getWatchlistVipSortFieldSet() {
-    var fields = Api$2 &amp;&amp; Array.isArray(Api$2.watchlistVipSortFields) &amp;&amp; Api$2.watchlistVipSortFields.length ? Api$2.watchlistVipSortFields : DEFAULT_WATCHLIST_VIP_SORT_FIELDS;
+    var fields = Api$2 && Array.isArray(Api$2.watchlistVipSortFields) && Api$2.watchlistVipSortFields.length ? Api$2.watchlistVipSortFields : DEFAULT_WATCHLIST_VIP_SORT_FIELDS;
     return new Set(fields.map(function (field) {
       return String(field).trim().toLowerCase();
     }));
   }
   function normalizeWatchlistSortValue(rawSort) {
-    if (Api$2 &amp;&amp; typeof Api$2.normalizeWatchlistSort === 'function') {
+    if (Api$2 && typeof Api$2.normalizeWatchlistSort === 'function') {
       return Api$2.normalizeWatchlistSort(rawSort || DEFAULT_WATCHLIST_SORT);
     }
     var normalized = (rawSort || DEFAULT_WATCHLIST_SORT).toString().trim().toLowerCase().replace(/^\/+/, '');
     var parts = normalized.split('/').filter(Boolean);
-    var field = getWatchlistSortFields().indexOf(parts[0]) &gt; -1 ? parts[0] : 'added';
+    var field = getWatchlistSortFields().indexOf(parts[0]) > -1 ? parts[0] : 'added';
     var order = parts[1] === 'asc' ? 'asc' : 'desc';
     return "".concat(field, "/").concat(order);
   }
@@ -3852,12 +3852,12 @@
     };
   }
   function buildWatchlistSortValue() {
-    var field = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : 'added';
-    var order = arguments.length &gt; 1 &amp;&amp; arguments[1] !== undefined ? arguments[1] : 'desc';
+    var field = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 'added';
+    var order = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 'desc';
     return normalizeWatchlistSortValue("".concat(field, "/").concat(order === 'asc' ? 'asc' : 'desc'));
   }
   function isWatchlistVipSortField() {
-    var field = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : '';
+    var field = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '';
     return getWatchlistVipSortFieldSet().has((field || '').toString().trim().toLowerCase());
   }
   function readStoredTraktVipStatus() {
@@ -3869,7 +3869,7 @@
   }
   function writeStoredTraktVipStatus(value) {
     traktVipStatusCache = !!value;
-    if (Lampa &amp;&amp; Lampa.Storage &amp;&amp; typeof Lampa.Storage.set === 'function') {
+    if (Lampa && Lampa.Storage && typeof Lampa.Storage.set === 'function') {
       Lampa.Storage.set('trakt_user_vip', !!value);
     }
   }
@@ -3883,10 +3883,10 @@
     return false;
   }
   function loadTraktVipStatus() {
-    var _ref = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {},
+    var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
       _ref$force = _ref.force,
       force = _ref$force === void 0 ? false : _ref$force;
-    if (!force &amp;&amp; typeof traktVipStatusCache === 'boolean') {
+    if (!force && typeof traktVipStatusCache === 'boolean') {
       return Promise.resolve(traktVipStatusCache);
     }
     if (!Api$2 || !Lampa || !Lampa.Storage || !Lampa.Storage.get('trakt_token')) {
@@ -3894,7 +3894,7 @@
     }
     if (traktVipStatusPromise) return traktVipStatusPromise;
     traktVipStatusPromise = Api$2.get('/users/me').then(function (user) {
-      var vipEnabled = !!(user &amp;&amp; user.vip);
+      var vipEnabled = !!(user && user.vip);
       writeStoredTraktVipStatus(vipEnabled);
       return vipEnabled;
     })["catch"](function () {
@@ -3905,15 +3905,15 @@
     return traktVipStatusPromise;
   }
   function sanitizeWatchlistSortForVip(rawSort) {
-    var vipEnabled = arguments.length &gt; 1 &amp;&amp; arguments[1] !== undefined ? arguments[1] : false;
+    var vipEnabled = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : false;
     var parsed = parseWatchlistSortValue(rawSort);
-    if (!vipEnabled &amp;&amp; isWatchlistVipSortField(parsed.field)) {
+    if (!vipEnabled && isWatchlistVipSortField(parsed.field)) {
       return parseWatchlistSortValue(DEFAULT_WATCHLIST_SORT);
     }
     return parsed;
   }
   function formatWatchlistSortLabel() {
-    var field = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : '';
+    var field = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '';
     var key = (field || '').toString().trim().toLowerCase();
     var known = WATCHLIST_SORT_LABELS[key];
     if (known) return t$3(known.key, known.fallback);
@@ -3922,7 +3922,7 @@
     }).join(' ');
   }
   function formatWatchlistSortArrow() {
-    var order = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : 'desc';
+    var order = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 'desc';
     return order === 'asc' ? '↑' : '↓';
   }
   function normalizeWatchlistTab(rawType) {
@@ -3937,7 +3937,7 @@
     return t$3('trakttv_watchlist_tab_movies', 'Movies');
   }
   function watchlistHub() {
-    var object = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {};
+    var object = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
     var activity;
     var html;
     var controls;
@@ -3948,7 +3948,7 @@
     var views = {};
     var lastControlsFocus = null;
     var activeTab = normalizeWatchlistTab(object.watchlistType || object.mediaType || object.type);
-    var vipEnabled = Lampa &amp;&amp; Lampa.Storage &amp;&amp; Lampa.Storage.get('trakt_token') ? getTraktVipStatusCached() : false;
+    var vipEnabled = Lampa && Lampa.Storage && Lampa.Storage.get('trakt_token') ? getTraktVipStatusCached() : false;
     var activeSort = sanitizeWatchlistSortForVip(object.watchlistSort || object.sort, vipEnabled);
     var activeSortField = activeSort.field;
     var activeSortOrder = activeSort.order;
@@ -3962,16 +3962,16 @@
     var hiddenSortFields = getHiddenWatchlistSortFields(sortFields);
     function rememberControlsFocus(element) {
       if (!element) return;
-      lastControlsFocus = element &amp;&amp; element.jquery ? element[0] : element;
+      lastControlsFocus = element && element.jquery ? element[0] : element;
     }
     function getCurrentSortValue() {
       return buildWatchlistSortValue(activeSortField, activeSortOrder);
     }
     function isHiddenSortField(field) {
-      return hiddenSortFields.indexOf((field || '').toString().trim().toLowerCase()) &gt; -1;
+      return hiddenSortFields.indexOf((field || '').toString().trim().toLowerCase()) > -1;
     }
     function restoreControls() {
-      var delay = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : 0;
+      var delay = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 0;
       setTimeout(function () {
         Lampa.Controller.toggle('trakt_watchlist_controls');
       }, delay);
@@ -3984,9 +3984,9 @@
       object.sort = object.watchlistSort;
     }
     function buildTabs() {
-      navigation = $('&lt;div class="trakt-watchlist-hub__tabs"&gt;&lt;/div&gt;');
+      navigation = $('<div class="trakt-watchlist-hub__tabs"></div>');
       tabs.forEach(function (tab) {
-        var button = $("&lt;div class=\"simple-button simple-button--filter simple-button--invisible selector trakt-watchlist__tab\" data-tab=\"".concat(tab.id, "\"&gt;") + "&lt;div&gt;".concat(buildWatchlistTabTitle(tab.id), "&lt;/div&gt;") + "&lt;/div&gt;");
+        var button = $("<div class=\"simple-button simple-button--filter simple-button--invisible selector trakt-watchlist__tab\" data-tab=\"".concat(tab.id, "\">") + "<div>".concat(buildWatchlistTabTitle(tab.id), "</div>") + "</div>");
         if (tab.id === activeTab) button.addClass('active');
         button.on('hover:focus', function () {
           rememberControlsFocus(button);
@@ -4004,9 +4004,9 @@
       if (activeButton.length) activeButton.addClass('active');
     }
     function buildSorts() {
-      sortNavigation = $('&lt;div class="trakt-watchlist-hub__sorts"&gt;&lt;/div&gt;');
+      sortNavigation = $('<div class="trakt-watchlist-hub__sorts"></div>');
       quickSortFields.forEach(function (field) {
-        var button = $("&lt;div class=\"simple-button simple-button--filter simple-button--invisible selector trakt-watchlist__sort\" data-sort-field=\"".concat(field, "\"&gt;") + "&lt;div class=\"trakt-watchlist__sort-label\"&gt;".concat(formatWatchlistSortLabel(field), "&lt;/div&gt;") + "&lt;div class=\"trakt-watchlist__sort-state\"&gt;&lt;/div&gt;" + "&lt;/div&gt;");
+        var button = $("<div class=\"simple-button simple-button--filter simple-button--invisible selector trakt-watchlist__sort\" data-sort-field=\"".concat(field, "\">") + "<div class=\"trakt-watchlist__sort-label\">".concat(formatWatchlistSortLabel(field), "</div>") + "<div class=\"trakt-watchlist__sort-state\"></div>" + "</div>");
         button.on('hover:focus', function () {
           rememberControlsFocus(button);
         });
@@ -4017,7 +4017,7 @@
         sortNavigation.append(button);
       });
       if (hiddenSortFields.length) {
-        moreSortButton = $("&lt;div class=\"simple-button simple-button--filter simple-button--invisible selector trakt-watchlist__sort trakt-watchlist__sort--more\" data-sort-field=\"__more__\"&gt;" + "&lt;div class=\"trakt-watchlist__sort-label\"&gt;".concat(t$3('trakttv_watchlist_sort_more', 'More'), "&lt;/div&gt;") + "&lt;div class=\"trakt-watchlist__sort-state\"&gt;&lt;/div&gt;" + "&lt;/div&gt;");
+        moreSortButton = $("<div class=\"simple-button simple-button--filter simple-button--invisible selector trakt-watchlist__sort trakt-watchlist__sort--more\" data-sort-field=\"__more__\">" + "<div class=\"trakt-watchlist__sort-label\">".concat(t$3('trakttv_watchlist_sort_more', 'More'), "</div>") + "<div class=\"trakt-watchlist__sort-state\"></div>" + "</div>");
         moreSortButton.on('hover:focus', function () {
           rememberControlsFocus(moreSortButton);
         });
@@ -4041,7 +4041,7 @@
         button.removeClass('active trakt-watchlist__sort--active trakt-watchlist__sort--asc trakt-watchlist__sort--desc trakt-watchlist__sort--vip trakt-watchlist__sort--locked');
         if (isMoreButton) {
           var hiddenActive = isHiddenSortField(activeSortField);
-          var activeHiddenVip = hiddenActive &amp;&amp; isWatchlistVipSortField(activeSortField);
+          var activeHiddenVip = hiddenActive && isWatchlistVipSortField(activeSortField);
           label.text(hiddenActive ? formatWatchlistSortLabel(activeSortField) : t$3('trakttv_watchlist_sort_more', 'More'));
           if (activeHiddenVip) button.addClass('trakt-watchlist__sort--vip');
           if (hiddenActive) {
@@ -4072,7 +4072,7 @@
           title: "".concat(formatWatchlistSortLabel(field)).concat(arrow),
           subtitle: vipOnly ? t$3('trakttv_vip_status', 'VIP') : '',
           selected: isActive,
-          ghost: vipOnly &amp;&amp; !vipEnabled,
+          ghost: vipOnly && !vipEnabled,
           field: field
         };
       });
@@ -4197,7 +4197,7 @@
       });
     }
     function getControlsFocusTarget() {
-      if (lastControlsFocus &amp;&amp; typeof document !== 'undefined' &amp;&amp; document.body &amp;&amp; document.body.contains(lastControlsFocus)) {
+      if (lastControlsFocus && typeof document !== 'undefined' && document.body && document.body.contains(lastControlsFocus)) {
         return lastControlsFocus;
       }
       var activeSortButton = sortNavigation ? sortNavigation.find(".trakt-watchlist__sort[data-sort-field=\"".concat(activeSortField, "\"]"))[0] : null;
@@ -4216,13 +4216,13 @@
           if (typeof Navigator !== 'undefined') Navigator.move('right');
         },
         left: function left() {
-          if (typeof Navigator !== 'undefined' &amp;&amp; Navigator.canmove('left')) Navigator.move('left');else Lampa.Controller.toggle('menu');
+          if (typeof Navigator !== 'undefined' && Navigator.canmove('left')) Navigator.move('left');else Lampa.Controller.toggle('menu');
         },
         down: function down() {
-          if (typeof Navigator !== 'undefined' &amp;&amp; Navigator.canmove('down')) Navigator.move('down');else Lampa.Controller.toggle('content');
+          if (typeof Navigator !== 'undefined' && Navigator.canmove('down')) Navigator.move('down');else Lampa.Controller.toggle('content');
         },
         up: function up() {
-          if (typeof Navigator !== 'undefined' &amp;&amp; Navigator.canmove('up')) Navigator.move('up');else Lampa.Controller.toggle('head');
+          if (typeof Navigator !== 'undefined' && Navigator.canmove('up')) Navigator.move('up');else Lampa.Controller.toggle('head');
         },
         back: function back() {
           Lampa.Activity.backward();
@@ -4233,9 +4233,9 @@
       create: function create() {
         activity = this.activity;
         activity.render().addClass('trakt-watchlist-activity');
-        html = $('&lt;div class="trakt-watchlist-hub"&gt;&lt;/div&gt;');
-        controls = $('&lt;div class="trakt-watchlist-hub__controls"&gt;&lt;/div&gt;');
-        body = $('&lt;div class="trakt-watchlist-hub__body"&gt;&lt;/div&gt;');
+        html = $('<div class="trakt-watchlist-hub"></div>');
+        controls = $('<div class="trakt-watchlist-hub__controls"></div>');
+        body = $('<div class="trakt-watchlist-hub__body"></div>');
         buildTabs();
         buildSorts();
         controls.append(navigation, sortNavigation);
@@ -4267,11 +4267,11 @@
       },
       start: function start() {
         var current = getView(activeTab);
-        if (current &amp;&amp; current.start) current.start();
+        if (current && current.start) current.start();
       },
       pause: function pause() {
         var current = views[activeTab];
-        if (current &amp;&amp; current.pause) current.pause();
+        if (current && current.pause) current.pause();
       },
       destroy: function destroy() {
         Object.keys(views).forEach(function (tabId) {
@@ -4960,7 +4960,7 @@
 
   /**
    * Нормалізує URL постера
-   * @param {Array&lt;string&gt;} posterArr
+   * @param {Array<string>} posterArr
    * @returns {string}
    */
   function normalizePoster(posterArr) {
@@ -4985,8 +4985,8 @@
       over: true,
       step: 300
     });
-    var html = $('&lt;div&gt;&lt;/div&gt;');
-    var body = $('&lt;div class="timetable"&gt;&lt;/div&gt;');
+    var html = $('<div></div>');
+    var body = $('<div class="timetable"></div>');
     var last;
     var DAYS = 31;
     var episodeTypes = [{
@@ -5037,7 +5037,7 @@
         var tmdbId = item.show.ids.tmdb;
         if (!tmdbId) return;
         var posterUrl = '';
-        if (item.show.images &amp;&amp; Array.isArray(item.show.images.poster)) {
+        if (item.show.images && Array.isArray(item.show.images.poster)) {
           posterUrl = normalizePoster(item.show.images.poster);
         }
         if (!shows[tmdbId]) {
@@ -5113,7 +5113,7 @@
             groupedByDate = groupEpisodesByDate(episodes);
             startDate = new Date();
             dates = [];
-            for (i = 0; i &lt; DAYS; i++) {
+            for (i = 0; i < DAYS; i++) {
               d = new Date(startDate);
               d.setDate(startDate.getDate() + i);
               y = d.getFullYear();
@@ -5139,7 +5139,7 @@
             this.html = html;
 
             // Відразу активуємо фокус
-            if (this.activity &amp;&amp; typeof this.activity.toggle === 'function') {
+            if (this.activity && typeof this.activity.toggle === 'function') {
               this.activity.toggle();
             }
             return _context.a(2, this.render());
@@ -5155,7 +5155,7 @@
       if (_this2.activity) _this2.activity.loader(false);
     };
     this.append = function (date, eps) {
-      var item = $("\n            &lt;div class=\"timetable__item selector\"&gt;\n                &lt;div class=\"timetable__inner\"&gt;\n                    &lt;div class=\"timetable__date\"&gt;".concat(date, "&lt;/div&gt;\n                    &lt;div class=\"timetable__body\"&gt;&lt;/div&gt;\n                &lt;/div&gt;\n            &lt;/div&gt;\n        "));
+      var item = $("\n            <div class=\"timetable__item selector\">\n                <div class=\"timetable__inner\">\n                    <div class=\"timetable__date\">".concat(date, "</div>\n                    <div class=\"timetable__body\"></div>\n                </div>\n            </div>\n        "));
       if (eps.length) {
         var byShow = groupEpisodesByShow(eps);
         Object.values(byShow).forEach(function (show) {
@@ -5168,11 +5168,11 @@
           }) || episodeTypes[episodeTypes.length - 1];
           var mainTypeKey = foundType.key;
           var mainTypeColor = foundType.color;
-          item.find('.timetable__body').append("\n                    &lt;div&gt;\n                        &lt;span title=\"".concat(mainTypeKey, "\" style=\"display:inline-block;width:0.9em;height:0.9em;border-radius:0.2em;margin-right:0.3em;background:").concat(mainTypeColor, ";vertical-align:middle\"&gt;&lt;/span&gt;\n                        ").concat(card.name || '', "\n                    &lt;/div&gt;\n                "));
+          item.find('.timetable__body').append("\n                    <div>\n                        <span title=\"".concat(mainTypeKey, "\" style=\"display:inline-block;width:0.9em;height:0.9em;border-radius:0.2em;margin-right:0.3em;background:").concat(mainTypeColor, ";vertical-align:middle\"></span>\n                        ").concat(card.name || '', "\n                    </div>\n                "));
         });
         item.addClass('timetable__item--any');
       } else {
-        item.find('.timetable__body').append("&lt;div class=\"timetable__empty\"&gt;".concat(Lampa.Lang.translate('trakttv_no_series'), "&lt;/div&gt;"));
+        item.find('.timetable__body').append("<div class=\"timetable__empty\">".concat(Lampa.Lang.translate('trakttv_no_series'), "</div>"));
       }
       item.on('hover:focus', function () {
         last = $(this)[0];
@@ -5183,20 +5183,20 @@
         last = $(this)[0];
         if (eps.length) {
           var _byShow = groupEpisodesByShow(eps);
-          var modal = $('&lt;div&gt;&lt;/div&gt;');
+          var modal = $('<div></div>');
           Object.values(_byShow).forEach(function (show) {
             var card = show.card;
             var noty = Template.get('notice_card', {
               time: date,
               title: card.name,
               descr: show.episodes.map(function (ep) {
-                return "S: &lt;b&gt;".concat(ep.season_number, "&lt;/b&gt; E: &lt;b&gt;").concat(ep.episode_number, "&lt;/b&gt; \u2014 ").concat(ep.name);
-              }).join('&lt;br&gt;')
+                return "S: <b>".concat(ep.season_number, "</b> E: <b>").concat(ep.episode_number, "</b> \u2014 ").concat(ep.name);
+              }).join('<br>')
             });
             noty.find('.notice__img').remove();
             if (card.poster) {
               noty.find('.notice__left').css('margin-right', '5em');
-              noty.find('.notice__left').prepend("&lt;img src=\"".concat(card.poster, "\" style=\"max-width:120px;max-height:170px;display:block;margin-bottom:1em;\"&gt;"));
+              noty.find('.notice__left').prepend("<img src=\"".concat(card.poster, "\" style=\"max-width:120px;max-height:170px;display:block;margin-bottom:1em;\">"));
             }
             noty.on('hover:enter', function () {
               Modal.close();
@@ -5239,16 +5239,16 @@
           Lampa.Controller.collectionFocus(last || false, scroll.render());
         },
         left: function left() {
-          if (typeof Navigator !== 'undefined' &amp;&amp; Navigator.canmove('left')) Navigator.move('left');else Lampa.Controller.toggle('menu');
+          if (typeof Navigator !== 'undefined' && Navigator.canmove('left')) Navigator.move('left');else Lampa.Controller.toggle('menu');
         },
         right: function right() {
-          if (typeof Navigator !== 'undefined' &amp;&amp; Navigator.canmove('right')) Navigator.move('right');else Navigator.move('right');
+          if (typeof Navigator !== 'undefined' && Navigator.canmove('right')) Navigator.move('right');else Navigator.move('right');
         },
         up: function up() {
-          if (typeof Navigator !== 'undefined' &amp;&amp; Navigator.canmove('up')) Navigator.move('up');else Lampa.Controller.toggle('head');
+          if (typeof Navigator !== 'undefined' && Navigator.canmove('up')) Navigator.move('up');else Lampa.Controller.toggle('head');
         },
         down: function down() {
-          if (typeof Navigator !== 'undefined' &amp;&amp; Navigator.canmove('down')) Navigator.move('down');
+          if (typeof Navigator !== 'undefined' && Navigator.canmove('down')) Navigator.move('down');
         },
         back: this.back
       });
@@ -5278,20 +5278,20 @@
   var TRAKT_ICON_CLASS = 'trakt-brand-icon';
 
   // Основна іконка Trakt.TV
-  var TRAKT_ICON = "&lt;svg class=\"".concat(TRAKT_ICON_CLASS, "\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 48 48\" fill=\"none\" aria-hidden=\"true\" focusable=\"false\"&gt;\n  &lt;path fill=\"currentColor\" d=\"M47.87,9.58c-.05-.39-.13-.77-.23-1.15-.19-.74-.46-1.45-.79-2.14-.15-.3-.31-.6-.5-.88-.36-.6-.77-1.16-1.24-1.69C43.03,1.43,40.05,0,36.73,0H11.26C5.04,0,0,5.05,0,11.27v25.48C0,42.96,5.04,48,11.26,48h25.47c6.22,0,11.27-5.04,11.27-11.26V11.27c0-.57-.04-1.13-.13-1.69ZM47,36.74c0,5.66-4.61,10.25-10.26,10.25H11.26c-5.66,0-10.25-4.6-10.25-10.25V11.27C1,5.61,5.6,1,11.26,1h25.47c3.04,0,5.77,1.33,7.66,3.43l-22.85,22.86-8.62-8.62-1.46,1.46,14.4,14.4,1.46-1.47-4.31-4.31L45.61,6.14c.18.29.33.6.47.91l-21.69,21.7,3.62,3.62,1.46-1.46-2.16-2.16,19.47-19.48c.08.4.14.8.17,1.21l-18.26,18.27,1.46,1.46,16.83-16.84v23.36ZM15.77,15.82l7.93,7.93,1.46-1.48-7.93-7.92-1.46,1.46ZM13.62,17.98l7.92,7.93,1.47-1.48-7.93-7.92-1.46,1.47ZM6.67,35.12V12.88c0-3.42,2.78-6.2,6.2-6.2h20.79v-2.08H12.87c-4.56,0-8.28,3.71-8.28,8.28v22.23c0,4.57,3.72,8.29,8.28,8.29h22.24c4.57,0,8.28-3.72,8.28-8.29v-3.51h-2.08v3.51c0,3.42-2.78,6.21-6.2,6.21H12.87c-3.42,0-6.2-2.79-6.2-6.21Z\"/&gt;\n&lt;/svg&gt;");
+  var TRAKT_ICON = "<svg class=\"".concat(TRAKT_ICON_CLASS, "\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 48 48\" fill=\"none\" aria-hidden=\"true\" focusable=\"false\">\n  <path fill=\"currentColor\" d=\"M47.87,9.58c-.05-.39-.13-.77-.23-1.15-.19-.74-.46-1.45-.79-2.14-.15-.3-.31-.6-.5-.88-.36-.6-.77-1.16-1.24-1.69C43.03,1.43,40.05,0,36.73,0H11.26C5.04,0,0,5.05,0,11.27v25.48C0,42.96,5.04,48,11.26,48h25.47c6.22,0,11.27-5.04,11.27-11.26V11.27c0-.57-.04-1.13-.13-1.69ZM47,36.74c0,5.66-4.61,10.25-10.26,10.25H11.26c-5.66,0-10.25-4.6-10.25-10.25V11.27C1,5.61,5.6,1,11.26,1h25.47c3.04,0,5.77,1.33,7.66,3.43l-22.85,22.86-8.62-8.62-1.46,1.46,14.4,14.4,1.46-1.47-4.31-4.31L45.61,6.14c.18.29.33.6.47.91l-21.69,21.7,3.62,3.62,1.46-1.46-2.16-2.16,19.47-19.48c.08.4.14.8.17,1.21l-18.26,18.27,1.46,1.46,16.83-16.84v23.36ZM15.77,15.82l7.93,7.93,1.46-1.48-7.93-7.92-1.46,1.46ZM13.62,17.98l7.92,7.93,1.47-1.48-7.93-7.92-1.46,1.47ZM6.67,35.12V12.88c0-3.42,2.78-6.2,6.2-6.2h20.79v-2.08H12.87c-4.56,0-8.28,3.71-8.28,8.28v22.23c0,4.57,3.72,8.29,8.28,8.29h22.24c4.57,0,8.28-3.72,8.28-8.29v-3.51h-2.08v3.51c0,3.42-2.78,6.21-6.2,6.21H12.87c-3.42,0-6.2-2.79-6.2-6.21Z\"/>\n</svg>");
 
   // Іконка для watchlist
-  var WATCHLIST_ICON = "&lt;svg fill=\"currentColor\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 512 512\"&gt;&lt;!--!Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.--&gt;&lt;path d=\"M152.1 38.2c9.9 8.9 10.7 24 1.8 33.9l-72 80c-4.4 4.9-10.6 7.8-17.2 7.9s-12.9-2.4-17.6-7L7 113C-2.3 103.6-2.3 88.4 7 79s24.6-9.4 33.9 0l22.1 22.1 55.1-61.2c8.9-9.9 24-10.7 33.9-1.8zm0 160c9.9 8.9 10.7 24 1.8 33.9l-72 80c-4.4 4.9-10.6 7.8-17.2 7.9s-12.9-2.4-17.6-7L7 273c-9.4-9.4-9.4-24.6 0-33.9s24.6-9.4 33.9 0l22.1 22.1 55.1-61.2c8.9-9.9 24-10.7 33.9-1.8zM224 96c0-17.7 14.3-32 32-32l224 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-224 0c-17.7 0-32-14.3-32-32zm0 160c0-17.7 14.3-32 32-32l224 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-224 0c-17.7 0-32-14.3-32-32zM160 416c0-17.7 14.3-32 32-32l288 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-288 0c-17.7 0-32-14.3-32-32zM48 368a48 48 0 1 1 0 96 48 48 0 1 1 0-96z\"/&gt;&lt;/svg&gt;";
+  var WATCHLIST_ICON = "<svg fill=\"currentColor\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 512 512\"><!--!Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.--><path d=\"M152.1 38.2c9.9 8.9 10.7 24 1.8 33.9l-72 80c-4.4 4.9-10.6 7.8-17.2 7.9s-12.9-2.4-17.6-7L7 113C-2.3 103.6-2.3 88.4 7 79s24.6-9.4 33.9 0l22.1 22.1 55.1-61.2c8.9-9.9 24-10.7 33.9-1.8zm0 160c9.9 8.9 10.7 24 1.8 33.9l-72 80c-4.4 4.9-10.6 7.8-17.2 7.9s-12.9-2.4-17.6-7L7 273c-9.4-9.4-9.4-24.6 0-33.9s24.6-9.4 33.9 0l22.1 22.1 55.1-61.2c8.9-9.9 24-10.7 33.9-1.8zM224 96c0-17.7 14.3-32 32-32l224 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-224 0c-17.7 0-32-14.3-32-32zm0 160c0-17.7 14.3-32 32-32l224 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-224 0c-17.7 0-32-14.3-32-32zM160 416c0-17.7 14.3-32 32-32l288 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-288 0c-17.7 0-32-14.3-32-32zM48 368a48 48 0 1 1 0 96 48 48 0 1 1 0-96z\"/></svg>";
 
   // Іконка для історії (галочка)
-  var HISTORY_ICON = "&lt;svg fill=\"currentColor\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 448 512\"&gt;&lt;!--!Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.--&gt;&lt;path d=\"M438.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7 393.4 105.4c12.5-12.5 32.8-12.5 45.3 0z\"/&gt;&lt;/svg&gt;";
+  var HISTORY_ICON = "<svg fill=\"currentColor\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 448 512\"><!--!Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.--><path d=\"M438.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7 393.4 105.4c12.5-12.5 32.8-12.5 45.3 0z\"/></svg>";
 
   // Функція для створення заголовка з іконкою
   function createHeaderWithIcon(icon, text) {
-    return "&lt;div class=\"trakt-header\" style=\"".concat(HEADER_STYLE, "\"&gt;&lt;div class=\"trakt-icon\" style=\"").concat(ICON_STYLE, "\"&gt;").concat(icon, "&lt;/div&gt;&lt;div class=\"trakt-title\"&gt;").concat(text, "&lt;/div&gt;&lt;/div&gt;");
+    return "<div class=\"trakt-header\" style=\"".concat(HEADER_STYLE, "\"><div class=\"trakt-icon\" style=\"").concat(ICON_STYLE, "\">").concat(icon, "</div><div class=\"trakt-title\">").concat(text, "</div></div>");
   }
   function createLineTitle(text) {
-    var sizedIcon = TRAKT_ICON.replace('&lt;svg ', "&lt;svg style=\"width:100%; height:100%; display:block;\" ");
+    var sizedIcon = TRAKT_ICON.replace('<svg ', "<svg style=\"width:100%; height:100%; display:block;\" ");
     var root = document.createElement('span');
     root.className = 'trakt-line-title';
     root.setAttribute('style', LINE_TITLE_STYLE);
@@ -5318,7 +5318,7 @@
   };
 
   function t$2(key) {
-    var fallback = arguments.length &gt; 1 &amp;&amp; arguments[1] !== undefined ? arguments[1] : '';
+    var fallback = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
     try {
       var translated = Lampa.Lang.translate(key);
       return translated || fallback || key;
@@ -5338,10 +5338,10 @@
     var externalIds = (cardData === null || cardData === void 0 ? void 0 : cardData.external_ids) || source.external_ids || {};
     var ids = _objectSpread2(_objectSpread2({}, source.ids || {}), (cardData === null || cardData === void 0 ? void 0 : cardData.ids) || {});
     var rawId = source.id || (cardData === null || cardData === void 0 ? void 0 : cardData.id) || (cardData === null || cardData === void 0 || (_cardData$movie = cardData.movie) === null || _cardData$movie === void 0 ? void 0 : _cardData$movie.id) || (cardData === null || cardData === void 0 || (_cardData$data = cardData.data) === null || _cardData$data === void 0 ? void 0 : _cardData$data.id) || externalIds.tmdb_id;
-    if (!ids.tmdb &amp;&amp; externalIds.tmdb_id) ids.tmdb = externalIds.tmdb_id;
-    if (!ids.trakt &amp;&amp; externalIds.trakt_id) ids.trakt = externalIds.trakt_id;
-    if (!ids.imdb &amp;&amp; externalIds.imdb_id) ids.imdb = externalIds.imdb_id;
-    if (!ids.tmdb &amp;&amp; rawId) ids.tmdb = rawId;
+    if (!ids.tmdb && externalIds.tmdb_id) ids.tmdb = externalIds.tmdb_id;
+    if (!ids.trakt && externalIds.trakt_id) ids.trakt = externalIds.trakt_id;
+    if (!ids.imdb && externalIds.imdb_id) ids.imdb = externalIds.imdb_id;
+    if (!ids.tmdb && rawId) ids.tmdb = rawId;
     return _objectSpread2(_objectSpread2({}, source), {}, {
       method: method,
       ids: ids,
@@ -5418,7 +5418,7 @@
       });
       return;
     }
-    if (item.target === 'list' &amp;&amp; item.listId) {
+    if (item.target === 'list' && item.listId) {
       var _request = item.inList ? api$1.removeFromList({
         listId: item.listId,
         item: params
@@ -5430,7 +5430,7 @@
         notify(item.inList ? t$2('trakt_item_removed_from_list', 'Item removed from list') : t$2('trakt_item_added_to_list', 'Item added to list'));
         if (onDone) onDone();
       })["catch"](function (error) {
-        if (error &amp;&amp; error.status === 409) {
+        if (error && error.status === 409) {
           notify(t$2('trakt_list_conflict', 'Item is already in this list'));
           return;
         }
@@ -5439,7 +5439,7 @@
     }
   }
   function openListManager(params, button, textNode) {
-    var options = arguments.length &gt; 3 &amp;&amp; arguments[3] !== undefined ? arguments[3] : {};
+    var options = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : {};
     var onBack = typeof options.onBack === 'function' ? options.onBack : function () {
       Lampa.Controller.toggle('content');
     };
@@ -5456,7 +5456,7 @@
       var _ref2 = _slicedToArray(_ref, 2),
         watchlistState = _ref2[0],
         myListsResponse = _ref2[1];
-      var lists = myListsResponse &amp;&amp; Array.isArray(myListsResponse.results) ? myListsResponse.results : [];
+      var lists = myListsResponse && Array.isArray(myListsResponse.results) ? myListsResponse.results : [];
       loadMyListsMembership(params, lists).then(function (withMembership) {
         Lampa.Select.show({
           title: t$2('trakt_manage_lists_title', 'Manage lists'),
@@ -5475,13 +5475,13 @@
   }
   function openManagerByCard(cardData) {
     var _params$ids, _params$ids2, _params$ids3;
-    var options = arguments.length &gt; 1 &amp;&amp; arguments[1] !== undefined ? arguments[1] : {};
+    var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
     if (!Lampa.Storage.get('trakt_token')) {
       notify(t$2('trakt_login', 'Login to Trakt.TV'));
       return false;
     }
     var params = normalizeCardParams(cardData);
-    if (!params || !params.id &amp;&amp; !(params !== null &amp;&amp; params !== void 0 &amp;&amp; (_params$ids = params.ids) !== null &amp;&amp; _params$ids !== void 0 &amp;&amp; _params$ids.tmdb) &amp;&amp; !(params !== null &amp;&amp; params !== void 0 &amp;&amp; (_params$ids2 = params.ids) !== null &amp;&amp; _params$ids2 !== void 0 &amp;&amp; _params$ids2.trakt) &amp;&amp; !(params !== null &amp;&amp; params !== void 0 &amp;&amp; (_params$ids3 = params.ids) !== null &amp;&amp; _params$ids3 !== void 0 &amp;&amp; _params$ids3.imdb)) {
+    if (!params || !params.id && !(params !== null && params !== void 0 && (_params$ids = params.ids) !== null && _params$ids !== void 0 && _params$ids.tmdb) && !(params !== null && params !== void 0 && (_params$ids2 = params.ids) !== null && _params$ids2 !== void 0 && _params$ids2.trakt) && !(params !== null && params !== void 0 && (_params$ids3 = params.ids) !== null && _params$ids3 !== void 0 && _params$ids3.imdb)) {
       notify(t$2('trakt_list_action_error', 'List action failed'));
       return false;
     }
@@ -5491,7 +5491,7 @@
   function addWatchlistButton(card) {
     var button = document.createElement('div');
     button.className = 'full-start__button selector watchlist-button trakt-list-manager-button';
-    button.innerHTML = "\n        ".concat(icons.WATCHLIST_ICON, "\n        &lt;span&gt;").concat(t$2('trakt_lists_button', 'Manage lists'), "&lt;/span&gt;\n    ");
+    button.innerHTML = "\n        ".concat(icons.WATCHLIST_ICON, "\n        <span>").concat(t$2('trakt_lists_button', 'Manage lists'), "</span>\n    ");
     var textNode = button.querySelector('span');
     var params = normalizeCardParams(card);
     refreshButtonState(button, textNode, params);
@@ -5509,18 +5509,18 @@
     // Функція для відображення прогресу перегляду серіалу
     showWatchProgress: function showWatchProgress(data, element) {
       // Перевіряємо чи це серіал
-      if (data.movie &amp;&amp; data.movie.first_air_date &amp;&amp; element.object.method === 'tv') {
+      if (data.movie && data.movie.first_air_date && element.object.method === 'tv') {
         // Отримуємо історію серіалу
         getShowHistory(data.movie.id).then(function (historyData) {
-          if (historyData &amp;&amp; historyData.length &gt; 0) {
+          if (historyData && historyData.length > 0) {
             // Отримуємо останній переглянутий епізод
             var lastWatched = historyData[0];
-            if (lastWatched &amp;&amp; lastWatched.episode) {
+            if (lastWatched && lastWatched.episode) {
               var _Lampa;
               var season = lastWatched.episode.season;
               var episode = lastWatched.episode.number;
-              var hasApplecation = Array.isArray((_Lampa = Lampa) === null || _Lampa === void 0 || (_Lampa = _Lampa.Manifest) === null || _Lampa === void 0 ? void 0 : _Lampa.plugins) &amp;&amp; Lampa.Manifest.plugins.some(function (plugin) {
-                return plugin &amp;&amp; plugin.name === 'Applecation';
+              var hasApplecation = Array.isArray((_Lampa = Lampa) === null || _Lampa === void 0 || (_Lampa = _Lampa.Manifest) === null || _Lampa === void 0 ? void 0 : _Lampa.plugins) && Lampa.Manifest.plugins.some(function (plugin) {
+                return plugin && plugin.name === 'Applecation';
               });
               var renderRoot = element.object.activity.render();
 
@@ -5528,7 +5528,7 @@
               if (hasApplecation) {
                 var tryInsertApplecation = function tryInsertApplecation() {
                   var _rootNode$querySelect, _cardRoot$querySelect;
-                  var rootNode = renderRoot &amp;&amp; renderRoot.get ? renderRoot.get(0) : null;
+                  var rootNode = renderRoot && renderRoot.get ? renderRoot.get(0) : null;
                   var cardRoot = (rootNode === null || rootNode === void 0 || (_rootNode$querySelect = rootNode.querySelector) === null || _rootNode$querySelect === void 0 ? void 0 : _rootNode$querySelect.call(rootNode, '.full-start-new.applecation')) || document.querySelector('.full-start-new.applecation');
                   var applecationInfo = cardRoot === null || cardRoot === void 0 || (_cardRoot$querySelect = cardRoot.querySelector) === null || _cardRoot$querySelect === void 0 ? void 0 : _cardRoot$querySelect.call(cardRoot, '.applecation__info');
                   if (!applecationInfo) return false;
@@ -5538,7 +5538,7 @@
                   if (existingApplecation) existingApplecation.remove();
                   var applecationProgress = document.createElement('span');
                   applecationProgress.className = 'trakt-applecation-progress';
-                  applecationProgress.innerHTML = "\n                                        &lt;span class=\"trakt-icon\"&gt;".concat(icons.TRAKT_ICON, "&lt;/span&gt;\n                                        &lt;span class=\"trakt-applecation-progress__text\"&gt;S").concat(season, " \xB7 E").concat(episode, "&lt;/span&gt;\n                                    ");
+                  applecationProgress.innerHTML = "\n                                        <span class=\"trakt-icon\">".concat(icons.TRAKT_ICON, "</span>\n                                        <span class=\"trakt-applecation-progress__text\">S").concat(season, " \xB7 E").concat(episode, "</span>\n                                    ");
                   var badges = applecationInfo.querySelector('.applecation__quality-badges');
                   if (badges) {
                     badges.before(applecationProgress);
@@ -5552,7 +5552,7 @@
                 var _retryInsert = function retryInsert() {
                   if (tryInsertApplecation()) return;
                   attempts += 1;
-                  if (attempts &lt; 10) setTimeout(_retryInsert, 200);
+                  if (attempts < 10) setTimeout(_retryInsert, 200);
                 };
                 _retryInsert();
                 return;
@@ -5561,7 +5561,7 @@
               // Створюємо елемент для відображення прогресу
               var progressElement = document.createElement('div');
               progressElement.className = 'full-start-new__details trakt';
-              progressElement.innerHTML = "\n                                &lt;div class=\"trakt-icon\" style=\"width:48px; height:48px;\"&gt;".concat(icons.TRAKT_ICON, "&lt;/div&gt;\n                                &lt;span&gt;").concat(Lampa.Lang.translate('full_season'), ": ").concat(season, "&lt;/span&gt;&lt;span class=\"full-start-new__split\"&gt;\u25CF&lt;/span&gt;\n                                &lt;span&gt;").concat(Lampa.Lang.translate('full_episode'), ": ").concat(episode, "&lt;/span&gt;\n                            ");
+              progressElement.innerHTML = "\n                                <div class=\"trakt-icon\" style=\"width:48px; height:48px;\">".concat(icons.TRAKT_ICON, "</div>\n                                <span>").concat(Lampa.Lang.translate('full_season'), ": ").concat(season, "</span><span class=\"full-start-new__split\">\u25CF</span>\n                                <span>").concat(Lampa.Lang.translate('full_episode'), ": ").concat(episode, "</span>\n                            ");
 
               // Знаходимо елемент після якого вставити прогрес
               var taglineElement = renderRoot.find('.full-start-new__rate-line');
@@ -5585,7 +5585,7 @@
     addHistoryButton: function addHistoryButton(data) {
       var button = document.createElement('div');
       button.className = 'full-start__button selector trakt_history-button';
-      button.innerHTML = "\n               ".concat(icons.HISTORY_ICON, " \n                &lt;span&gt;").concat(Lampa.Lang.translate('trakt_history_not_in'), "&lt;/span&gt;\n");
+      button.innerHTML = "\n               ".concat(icons.HISTORY_ICON, " \n                <span>").concat(Lampa.Lang.translate('trakt_history_not_in'), "</span>\n");
 
       // Перевіряємо чи є в історії
       inHistory(data.movie, function (isInHistory) {
@@ -5730,7 +5730,7 @@
    */
   function addMenuItems() {
     var t = function t(key) {
-      var fallback = arguments.length &gt; 1 &amp;&amp; arguments[1] !== undefined ? arguments[1] : '';
+      var fallback = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
       try {
         return Lampa.Lang.translate(key) || fallback || key;
       } catch (e) {
@@ -5744,11 +5744,11 @@
     var menuTitle = t('trakttv_menu_title', 'TraktTV');
     var myListsTitle = t('trakt_my_lists', 'My Lists');
     var likedListsTitle = t('trakt_liked_lists', 'Liked Lists');
-    var watchlist = $("&lt;li class=\"menu__item selector\"&gt;\n        &lt;div class=\"menu__ico\"&gt;".concat(icons.TRAKT_ICON, " &lt;/div&gt;\n        &lt;div class=\"menu__text\"&gt;").concat(watchlistTitle, "&lt;/div&gt;\n    &lt;/li&gt;"));
-    var upnext = $("&lt;li class=\"menu__item selector\"&gt;\n        &lt;div class=\"menu__ico\"&gt;".concat(icons.TRAKT_ICON, " &lt;/div&gt;\n        &lt;div class=\"menu__text\"&gt;").concat(upNextTitle, "&lt;/div&gt;\n    &lt;/li&gt;"));
-    var timetable = $("&lt;li class=\"menu__item selector\"&gt;\n    &lt;div class=\"menu__ico\"&gt;\n         &lt;div class=\"menu__ico\"&gt;".concat(icons.TRAKT_ICON, " &lt;/div&gt;\n    &lt;/div&gt;\n    &lt;div class=\"menu__text\"&gt;").concat(calendarTitle, "&lt;/div&gt;\n    &lt;/li&gt;"));
-    var myLists = $("&lt;li class=\"menu__item selector\"&gt;\n        &lt;div class=\"menu__ico\"&gt;".concat(icons.TRAKT_ICON, " &lt;/div&gt;\n        &lt;div class=\"menu__text\"&gt;").concat(myListsTitle, "&lt;/div&gt;\n    &lt;/li&gt;"));
-    var likedLists = $("&lt;li class=\"menu__item selector\"&gt;\n        &lt;div class=\"menu__ico\"&gt;".concat(icons.TRAKT_ICON, " &lt;/div&gt;\n        &lt;div class=\"menu__text\"&gt;").concat(likedListsTitle, "&lt;/div&gt;\n    &lt;/li&gt;"));
+    var watchlist = $("<li class=\"menu__item selector\">\n        <div class=\"menu__ico\">".concat(icons.TRAKT_ICON, " </div>\n        <div class=\"menu__text\">").concat(watchlistTitle, "</div>\n    </li>"));
+    var upnext = $("<li class=\"menu__item selector\">\n        <div class=\"menu__ico\">".concat(icons.TRAKT_ICON, " </div>\n        <div class=\"menu__text\">").concat(upNextTitle, "</div>\n    </li>"));
+    var timetable = $("<li class=\"menu__item selector\">\n    <div class=\"menu__ico\">\n         <div class=\"menu__ico\">".concat(icons.TRAKT_ICON, " </div>\n    </div>\n    <div class=\"menu__text\">").concat(calendarTitle, "</div>\n    </li>"));
+    var myLists = $("<li class=\"menu__item selector\">\n        <div class=\"menu__ico\">".concat(icons.TRAKT_ICON, " </div>\n        <div class=\"menu__text\">").concat(myListsTitle, "</div>\n    </li>"));
+    var likedLists = $("<li class=\"menu__item selector\">\n        <div class=\"menu__ico\">".concat(icons.TRAKT_ICON, " </div>\n        <div class=\"menu__text\">").concat(likedListsTitle, "</div>\n    </li>"));
     timetable.on('hover:enter', function () {
       Lampa.Activity.push({
         url: '',
@@ -5827,11 +5827,11 @@
       var menuItem = sideMenuMap[key];
       if (!menuItem) return;
       var shouldShow = Lampa.Storage.get(key) === true;
-      var alreadyAdded = menuItem.parent().length &gt; 0;
-      if (shouldShow &amp;&amp; !alreadyAdded) menuList.append(menuItem);
-      if (!shouldShow &amp;&amp; alreadyAdded) menuItem.remove();
+      var alreadyAdded = menuItem.parent().length > 0;
+      if (shouldShow && !alreadyAdded) menuList.append(menuItem);
+      if (!shouldShow && alreadyAdded) menuItem.remove();
     }
-    var combineButton = $("&lt;li class=\"menu__item selector\"&gt;\n    &lt;div class=\"menu__ico\"&gt;".concat(icons.TRAKT_ICON, " &lt;/div&gt;\n        &lt;div class=\"menu__text\"&gt;").concat(menuTitle, "&lt;/div&gt;\n    &lt;/li&gt;"));
+    var combineButton = $("<li class=\"menu__item selector\">\n    <div class=\"menu__ico\">".concat(icons.TRAKT_ICON, " </div>\n        <div class=\"menu__text\">").concat(menuTitle, "</div>\n    </li>"));
     combineButton.on('hover:enter', function () {
       Lampa.Select.show({
         title: menuTitle,
@@ -5885,15 +5885,15 @@
   var MARK_FAVORITE_TYPES = ['look', 'viewed', 'scheduled', 'continued', 'thrown'];
   function toNumericId(value) {
     var numeric = Number(value);
-    if (!Number.isFinite(numeric) || numeric &lt;= 0) return 0;
+    if (!Number.isFinite(numeric) || numeric <= 0) return 0;
     return numeric;
   }
   function normalizeFavoriteType(value) {
     var type = (value || 'book').toString().trim().toLowerCase();
-    return SUPPORTED_FAVORITE_TYPES.indexOf(type) &gt; -1 ? type : 'book';
+    return SUPPORTED_FAVORITE_TYPES.indexOf(type) > -1 ? type : 'book';
   }
   function isMarkFavoriteType(type) {
-    return MARK_FAVORITE_TYPES.indexOf(type) &gt; -1;
+    return MARK_FAVORITE_TYPES.indexOf(type) > -1;
   }
   function cancelError() {
     var error = new Error('Operation canceled');
@@ -5901,18 +5901,18 @@
     return error;
   }
   function isCanceled(checkCancel) {
-    return typeof checkCancel === 'function' &amp;&amp; checkCancel() === true;
+    return typeof checkCancel === 'function' && checkCancel() === true;
   }
   function normalizeResults(response) {
-    return response &amp;&amp; Array.isArray(response.results) ? response.results : [];
+    return response && Array.isArray(response.results) ? response.results : [];
   }
   function detectTraktType() {
-    var item = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {};
+    var item = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
     var method = (item.method || item.type || '').toString().toLowerCase();
     return method === 'movie' ? 'movie' : 'show';
   }
   function detectLampaType() {
-    var card = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {};
+    var card = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
     var method = (card.method || card.type || '').toString().toLowerCase();
     if (method === 'movie') return 'movie';
     if (method === 'tv' || method === 'show') return 'show';
@@ -5922,12 +5922,12 @@
     return 'movie';
   }
   function buildLocalDuplicateKey() {
-    var card = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {};
+    var card = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
     if (!card || typeof card.id === 'undefined' || card.id === null) return '';
     return "".concat(detectLampaType(card), ":").concat(String(card.id));
   }
   function getComparableKeys(type) {
-    var ids = arguments.length &gt; 1 &amp;&amp; arguments[1] !== undefined ? arguments[1] : {};
+    var ids = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
     var keys = [];
     if (!ids || _typeof(ids) !== 'object') return keys;
     if (ids.tmdb) keys.push("".concat(type, ":tmdb:").concat(String(ids.tmdb)));
@@ -5936,8 +5936,8 @@
     return keys;
   }
   function extractIdsFromLocalCard() {
-    var card = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {};
-    var sourceIds = card &amp;&amp; card.ids &amp;&amp; _typeof(card.ids) === 'object' ? card.ids : {};
+    var card = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    var sourceIds = card && card.ids && _typeof(card.ids) === 'object' ? card.ids : {};
     var ids = {};
     if (sourceIds.tmdb) ids.tmdb = sourceIds.tmdb;
     if (sourceIds.trakt) ids.trakt = sourceIds.trakt;
@@ -5949,7 +5949,7 @@
     return ids;
   }
   function addLocalCardToTargetSet(targetSet) {
-    var card = arguments.length &gt; 1 &amp;&amp; arguments[1] !== undefined ? arguments[1] : {};
+    var card = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
     if (!targetSet || !card) return;
     var type = detectLampaType(card);
     var ids = extractIdsFromLocalCard(card);
@@ -5960,7 +5960,7 @@
     if (duplicateKey) targetSet.add("local:".concat(duplicateKey));
   }
   function buildLocalTargetSet() {
-    var cards = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : [];
+    var cards = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : [];
     var targetSet = new Set();
     (Array.isArray(cards) ? cards : []).forEach(function (card) {
       addLocalCardToTargetSet(targetSet, card);
@@ -5968,7 +5968,7 @@
     return targetSet;
   }
   function isLocalDuplicate(targetSet) {
-    var card = arguments.length &gt; 1 &amp;&amp; arguments[1] !== undefined ? arguments[1] : {};
+    var card = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
     if (!targetSet) return false;
     var type = detectLampaType(card);
     var ids = extractIdsFromLocalCard(card);
@@ -5979,7 +5979,7 @@
     })) {
       return true;
     }
-    return Boolean(duplicateKey &amp;&amp; targetSet.has("local:".concat(duplicateKey)));
+    return Boolean(duplicateKey && targetSet.has("local:".concat(duplicateKey)));
   }
   function removeConflictingMarks(_ref) {
     var favorite = _ref.favorite,
@@ -5997,8 +5997,8 @@
     });
   }
   function mapTraktToLampaCard() {
-    var item = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {};
-    var ids = item &amp;&amp; item.ids &amp;&amp; _typeof(item.ids) === 'object' ? item.ids : {};
+    var item = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    var ids = item && item.ids && _typeof(item.ids) === 'object' ? item.ids : {};
     var tmdbId = toNumericId(ids.tmdb);
     if (!tmdbId) return null;
     var type = detectTraktType(item);
@@ -6053,7 +6053,7 @@
     };
   }
   function mapLampaToTraktItem() {
-    var card = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {};
+    var card = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
     var type = detectLampaType(card);
     var ids = extractIdsFromLocalCard(card);
     if (!Object.keys(ids).length) return null;
@@ -6065,13 +6065,13 @@
   }
   function parseWriteStatus(response, type) {
     var section = type === 'movie' ? 'movies' : 'shows';
-    var added = Number(response &amp;&amp; response.added &amp;&amp; response.added[section]) || 0;
-    var existing = Number(response &amp;&amp; response.existing &amp;&amp; response.existing[section]) || 0;
-    var notFoundRaw = response &amp;&amp; response.not_found ? response.not_found[section] : null;
+    var added = Number(response && response.added && response.added[section]) || 0;
+    var existing = Number(response && response.existing && response.existing[section]) || 0;
+    var notFoundRaw = response && response.not_found ? response.not_found[section] : null;
     var notFound = Array.isArray(notFoundRaw) ? notFoundRaw.length : Number(notFoundRaw || 0);
-    if (notFound &gt; 0) return 'failed';
-    if (added &gt; 0) return 'added';
-    if (existing &gt; 0) return 'duplicate';
+    if (notFound > 0) return 'failed';
+    if (added > 0) return 'added';
+    if (existing > 0) return 'duplicate';
     return 'added';
   }
   function loadSourceItems(_x) {
@@ -6087,7 +6087,7 @@
             items = [];
             page = 1;
           case 1:
-            if (!(page &lt;= MAX_PAGES)) {
+            if (!(page <= MAX_PAGES)) {
               _context.n = 9;
               break;
             }
@@ -6097,7 +6097,7 @@
             }
             throw cancelError();
           case 2:
-            onProgress &amp;&amp; onProgress({
+            onProgress && onProgress({
               phase: 'loading_source',
               page: page,
               processed: items.length,
@@ -6136,7 +6136,7 @@
             return _context.a(3, 9);
           case 7:
             items.push.apply(items, _toConsumableArray(chunk));
-            if (!(chunk.length &lt; PAGE_LIMIT)) {
+            if (!(chunk.length < PAGE_LIMIT)) {
               _context.n = 8;
               break;
             }
@@ -6165,7 +6165,7 @@
             items = [];
             page = 1;
           case 1:
-            if (!(page &lt;= MAX_PAGES)) {
+            if (!(page <= MAX_PAGES)) {
               _context2.n = 9;
               break;
             }
@@ -6175,7 +6175,7 @@
             }
             throw cancelError();
           case 2:
-            onProgress &amp;&amp; onProgress({
+            onProgress && onProgress({
               phase: 'loading_target',
               page: page,
               processed: items.length,
@@ -6214,7 +6214,7 @@
             return _context2.a(3, 9);
           case 7:
             items.push.apply(items, _toConsumableArray(chunk));
-            if (!(chunk.length &lt; PAGE_LIMIT)) {
+            if (!(chunk.length < PAGE_LIMIT)) {
               _context2.n = 8;
               break;
             }
@@ -6278,7 +6278,7 @@
             };
             index = 0;
           case 4:
-            if (!(index &lt; items.length)) {
+            if (!(index < items.length)) {
               _context3.n = 7;
               break;
             }
@@ -6314,7 +6314,7 @@
                 summary.failed += 1;
               }
             }
-            onProgress &amp;&amp; onProgress({
+            onProgress && onProgress({
               phase: 'processing_import',
               processed: summary.processed,
               total: summary.total,
@@ -6378,7 +6378,7 @@
             targetSet = new Set();
             targetItems.forEach(function (item) {
               var type = detectTraktType(item);
-              var ids = item &amp;&amp; item.ids &amp;&amp; _typeof(item.ids) === 'object' ? item.ids : {};
+              var ids = item && item.ids && _typeof(item.ids) === 'object' ? item.ids : {};
               getComparableKeys(type, ids).forEach(function (key) {
                 return targetSet.add(key);
               });
@@ -6394,7 +6394,7 @@
             };
             index = 0;
           case 4:
-            if (!(index &lt; bookmarks.length)) {
+            if (!(index < bookmarks.length)) {
               _context4.n = 15;
               break;
             }
@@ -6475,7 +6475,7 @@
             _context4.v;
             summary.failed += 1;
           case 13:
-            onProgress &amp;&amp; onProgress({
+            onProgress && onProgress({
               phase: 'processing_export',
               processed: summary.processed,
               total: summary.total,
@@ -6520,7 +6520,7 @@
     var html = Lampa.Template.get('modal_qr', {
       title: Lampa.Lang.translate('trakttv_settings_thanks'),
       text: Lampa.Lang.translate('trakttv_settings_thanks_description'),
-      qr_text: "&lt;a href=\"".concat(thanksUrl, "\"&gt;").concat(thanksUrl, "&lt;/a&gt;")
+      qr_text: "<a href=\"".concat(thanksUrl, "\">").concat(thanksUrl, "</a>")
     });
     var qrElement = html.find('.account-modal-split__qr-code');
     var enabledController = Lampa.Controller.enabled().name;
@@ -6540,7 +6540,7 @@
   }
 
   // Local safe resolver for Api to support runtime-scoped execution (e.g., dev/trakt.js)
-  var Api$1 = typeof api$1 !== 'undefined' &amp;&amp; api$1 || window.TraktTV &amp;&amp; window.TraktTV.api || null;
+  var Api$1 = typeof api$1 !== 'undefined' && api$1 || window.TraktTV && window.TraktTV.api || null;
   var isBookmarksSyncRunning = false;
   var DEFAULT_BOOKMARKS_SYNC_TYPES = ['book', 'like', 'wath', 'look', 'viewed', 'scheduled', 'continued', 'thrown'];
   var API_MISSING_LOG_KEY$1 = 'config:api-missing';
@@ -6583,11 +6583,11 @@
         item.empty();
         var token = Lampa.Storage.get('trakt_token');
         if (!token) {
-          item.append("&lt;div&gt;".concat(Lampa.Lang.translate('trakttvAuthMissed'), "&lt;/div&gt;"));
+          item.append("<div>".concat(Lampa.Lang.translate('trakttvAuthMissed'), "</div>"));
           return;
         }
         // Показати лоадер
-        var loading = $("&lt;div class=\"settings-param__value\"&gt;".concat(Lampa.Lang.translate('loading'), "&lt;/div&gt;"));
+        var loading = $("<div class=\"settings-param__value\">".concat(Lampa.Lang.translate('loading'), "</div>"));
         item.append(loading);
         if (!Api$1) {
           logApiMissing();
@@ -6595,15 +6595,15 @@
         }
         Api$1.get('/users/me').then(function (user) {
           loading.remove();
-          var vipEnabled = !!(user &amp;&amp; user.vip);
+          var vipEnabled = !!(user && user.vip);
           var vipStatusKey = vipEnabled ? 'trakttv_vip_enabled' : 'trakttv_vip_disabled';
           var vipClass = vipEnabled ? 'trakt-vip-badge--enabled' : 'trakt-vip-badge--disabled';
-          item.append("&lt;div class=\"settings-param__name\"&gt;&lt;b&gt;".concat(Lampa.Lang.translate('trakttv_user_info'), "&lt;/b&gt;&lt;/div&gt;"));
-          item.append("&lt;div class=\"settings-param__value trakt-userinfo-name\"&gt;".concat(Lampa.Lang.translate('trakttv_username'), ": ").concat((user === null || user === void 0 ? void 0 : user.username) || '-', "&lt;/div&gt;"));
-          item.append("\n                    &lt;div class=\"settings-param__value trakt-userinfo-vip\"&gt;\n                        &lt;span class=\"trakt-userinfo-vip__label\"&gt;".concat(Lampa.Lang.translate('trakttv_vip_status'), ":&lt;/span&gt;\n                        &lt;span class=\"trakt-vip-badge ").concat(vipClass, "\"&gt;").concat(Lampa.Lang.translate(vipStatusKey), "&lt;/span&gt;\n                    &lt;/div&gt;\n                "));
+          item.append("<div class=\"settings-param__name\"><b>".concat(Lampa.Lang.translate('trakttv_user_info'), "</b></div>"));
+          item.append("<div class=\"settings-param__value trakt-userinfo-name\">".concat(Lampa.Lang.translate('trakttv_username'), ": ").concat((user === null || user === void 0 ? void 0 : user.username) || '-', "</div>"));
+          item.append("\n                    <div class=\"settings-param__value trakt-userinfo-vip\">\n                        <span class=\"trakt-userinfo-vip__label\">".concat(Lampa.Lang.translate('trakttv_vip_status'), ":</span>\n                        <span class=\"trakt-vip-badge ").concat(vipClass, "\">").concat(Lampa.Lang.translate(vipStatusKey), "</span>\n                    </div>\n                "));
         })["catch"](function () {
           loading.remove();
-          item.append("&lt;div&gt;".concat(Lampa.Lang.translate('trakttvAuthError'), "&lt;/div&gt;"));
+          item.append("<div>".concat(Lampa.Lang.translate('trakttvAuthError'), "</div>"));
         });
       }
     });
@@ -6675,7 +6675,7 @@
         name: Lampa.Lang.translate('trakttvLogin')
       },
       onRender: function onRender(item) {
-        var status = $('&lt;div class="settings-param__status"&gt;&lt;/div&gt;');
+        var status = $('<div class="settings-param__status"></div>');
         item.find('.settings-param__value').append(status);
         if (!Lampa.Storage.get('trakt_token')) {
           item.show();
@@ -6692,7 +6692,7 @@
           logApiMissing();
           return;
         }
-        (Api$1 &amp;&amp; Api$1.auth.device.login()).then(function (data) {
+        (Api$1 && Api$1.auth.device.login()).then(function (data) {
           // Expect raw body: { device_code, user_code, verification_url, interval, expires_in }
           if (!data || !data.user_code || !data.verification_url) {
             Lampa.Bell.push({
@@ -6703,8 +6703,8 @@
           var safeVerification = String(data.verification_url || '');
           var safeUserCode = String(data.user_code || '');
           var activateUrl = "https://trakt.tv/activate/".concat(safeUserCode);
-          var qrCodeUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=420x420&amp;data=' + encodeURIComponent(activateUrl);
-          var modal = $("\n                        &lt;div class=\"about trakt-device-auth\"&gt;\n                            &lt;div class=\"trakt-device-auth__inner\"&gt;\n                                &lt;div class=\"trakt-device-auth__qr-col\"&gt;\n                                    &lt;div class=\"trakt-device-auth__qr-container\"&gt;\n                                        &lt;a href=\"".concat(activateUrl, "\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"trakt-device-auth__qr-link\"&gt;\n                                            &lt;img src=\"").concat(qrCodeUrl, "\" alt=\"Trakt.TV QR Code\" class=\"trakt-device-auth__qr-image\"&gt;\n                                        &lt;/a&gt;\n                                        &lt;div class=\"trakt-device-auth__qr-caption\"&gt;").concat(Lampa.Lang.translate('trakttv_scan_qr_code'), "&lt;/div&gt;\n                                    &lt;/div&gt;\n                                &lt;/div&gt;\n                                &lt;div class=\"trakt-device-auth__info-col\"&gt;\n                                    &lt;div class=\"about__text trakt-device-auth__verification\"&gt;").concat(safeVerification, "&lt;/div&gt;\n                                    &lt;div class=\"about__text trakt-device-auth__code\"&gt;").concat(Lampa.Lang.translate('trakttv_code'), ": &lt;strong&gt;").concat(safeUserCode, "&lt;/strong&gt;&lt;/div&gt;\n                                    &lt;div class=\"modal__button selector trakt-check-btn\"&gt;").concat(Lampa.Lang.translate('trakttv_check_now'), "&lt;/div&gt;\n                                &lt;/div&gt;\n                            &lt;/div&gt;\n                        &lt;/div&gt;\n                    "));
+          var qrCodeUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=420x420&data=' + encodeURIComponent(activateUrl);
+          var modal = $("\n                        <div class=\"about trakt-device-auth\">\n                            <div class=\"trakt-device-auth__inner\">\n                                <div class=\"trakt-device-auth__qr-col\">\n                                    <div class=\"trakt-device-auth__qr-container\">\n                                        <a href=\"".concat(activateUrl, "\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"trakt-device-auth__qr-link\">\n                                            <img src=\"").concat(qrCodeUrl, "\" alt=\"Trakt.TV QR Code\" class=\"trakt-device-auth__qr-image\">\n                                        </a>\n                                        <div class=\"trakt-device-auth__qr-caption\">").concat(Lampa.Lang.translate('trakttv_scan_qr_code'), "</div>\n                                    </div>\n                                </div>\n                                <div class=\"trakt-device-auth__info-col\">\n                                    <div class=\"about__text trakt-device-auth__verification\">").concat(safeVerification, "</div>\n                                    <div class=\"about__text trakt-device-auth__code\">").concat(Lampa.Lang.translate('trakttv_code'), ": <strong>").concat(safeUserCode, "</strong></div>\n                                    <div class=\"modal__button selector trakt-check-btn\">").concat(Lampa.Lang.translate('trakttv_check_now'), "</div>\n                                </div>\n                            </div>\n                        </div>\n                    "));
           modal.find('.trakt-device-auth__qr-image').on('error', function () {
             modal.find('.trakt-device-auth__qr-container').addClass('trakt-device-auth__qr-container--hidden');
           });
@@ -6735,7 +6735,7 @@
           // This check is crucial to prevent multiple polling loops
           if (Lampa.Storage.get('trakt_active_device_auth') === true) {
             var startedAt = Number(Lampa.Storage.get('trakt_active_device_auth_started_at') || 0);
-            var isStale = !startedAt || Date.now() - startedAt &gt; 20 * 60 * 1000;
+            var isStale = !startedAt || Date.now() - startedAt > 20 * 60 * 1000;
             if (isStale) {
               Lampa.Storage.set('trakt_active_device_auth', false);
               Lampa.Storage.set('trakt_active_device_auth_started_at', null);
@@ -6782,7 +6782,7 @@
           logApiMissing();
           return;
         }
-        Api$1 &amp;&amp; Api$1.auth.logout();
+        Api$1 && Api$1.auth.logout();
         Lampa.Bell.push({
           text: Lampa.Lang.translate('trakttvLogoutNoty')
         });
@@ -6835,7 +6835,7 @@
       },
       onRender: function onRender(item) {
         item.empty();
-        item.append("&lt;div class=\"settings-param__name\"&gt;&lt;b&gt;".concat(t$1('trakt_bookmarks_sync_section', 'Bookmarks sync'), "&lt;/b&gt;&lt;/div&gt;"));
+        item.append("<div class=\"settings-param__name\"><b>".concat(t$1('trakt_bookmarks_sync_section', 'Bookmarks sync'), "</b></div>"));
       }
     });
     Lampa.SettingsApi.addParam({
@@ -6909,7 +6909,7 @@
       },
       onRender: function onRender(item) {
         item.empty();
-        item.append("&lt;div class=\"settings-param__name\"&gt;&lt;b&gt;".concat(t$1('trakt_progress_section', 'Progress configuration'), "&lt;/b&gt;&lt;/div&gt;"));
+        item.append("<div class=\"settings-param__name\"><b>".concat(t$1('trakt_progress_section', 'Progress configuration'), "</b></div>"));
       }
     });
     Lampa.SettingsApi.addParam({
@@ -6923,7 +6923,7 @@
       },
       onRender: function onRender(item) {
         item.empty();
-        item.append("&lt;div class=\"settings-param__name\"&gt;&lt;b&gt;".concat(t$1('trakttv_source_section', 'TraktTV source filters'), "&lt;/b&gt;&lt;/div&gt;"));
+        item.append("<div class=\"settings-param__name\"><b>".concat(t$1('trakttv_source_section', 'TraktTV source filters'), "</b></div>"));
       }
     });
     Lampa.SettingsApi.addParam({
@@ -7065,11 +7065,11 @@
     return mode === 'my_lists' ? 'my_lists' : 'watchlist';
   }
   function getSupportedFavoriteTypes() {
-    var types = bookmarksSync &amp;&amp; Array.isArray(bookmarksSync.supportedFavoriteTypes) ? bookmarksSync.supportedFavoriteTypes : DEFAULT_BOOKMARKS_SYNC_TYPES;
+    var types = bookmarksSync && Array.isArray(bookmarksSync.supportedFavoriteTypes) ? bookmarksSync.supportedFavoriteTypes : DEFAULT_BOOKMARKS_SYNC_TYPES;
     return types.length ? types : DEFAULT_BOOKMARKS_SYNC_TYPES;
   }
   function getFavoriteTypeTitle() {
-    var type = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : 'book';
+    var type = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 'book';
     return t$1("title_".concat(type), type);
   }
   function getBookmarksFavoriteTypeValues() {
@@ -7082,7 +7082,7 @@
   function getBookmarksFavoriteType() {
     var type = (Lampa.Storage.field('trakt_bookmarks_favorite_type') || 'book').toString().trim().toLowerCase();
     var supportedTypes = getSupportedFavoriteTypes();
-    return supportedTypes.indexOf(type) &gt; -1 ? type : 'book';
+    return supportedTypes.indexOf(type) > -1 ? type : 'book';
   }
   function buildProgressBar(percent) {
     var total = 12;
@@ -7091,8 +7091,8 @@
     return '[' + '#'.repeat(filled) + '-'.repeat(Math.max(0, total - filled)) + ']';
   }
   function formatSyncProgressText(operation) {
-    var payload = arguments.length &gt; 1 &amp;&amp; arguments[1] !== undefined ? arguments[1] : {};
-    var favoriteType = arguments.length &gt; 2 &amp;&amp; arguments[2] !== undefined ? arguments[2] : 'book';
+    var payload = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+    var favoriteType = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 'book';
     var percent = Math.max(0, Math.min(100, Number(payload.percent) || 0));
     var bar = buildProgressBar(percent);
     var favoriteTypeTitle = getFavoriteTypeTitle(favoriteType);
@@ -7121,8 +7121,8 @@
     return "".concat(bar, " ").concat(percent, "% ").concat(phaseText).concat(counter, " \xB7 ").concat(favoriteTypeTitle);
   }
   function formatSyncSummary(operation) {
-    var summary = arguments.length &gt; 1 &amp;&amp; arguments[1] !== undefined ? arguments[1] : {};
-    var favoriteType = arguments.length &gt; 2 &amp;&amp; arguments[2] !== undefined ? arguments[2] : 'book';
+    var summary = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+    var favoriteType = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 'book';
     var prefix = operation === 'import' ? t$1('trakt_bookmarks_import_done', 'Import completed') : t$1('trakt_bookmarks_export_done', 'Export completed');
     var favoriteTypeTitle = getFavoriteTypeTitle(summary.favorite_type || favoriteType);
     return "".concat(prefix, " (").concat(favoriteTypeTitle, "): ").concat(t$1('trakt_bookmarks_added', 'Added'), " ").concat(summary.added || 0, ", ").concat(t$1('trakt_bookmarks_duplicates', 'Duplicates'), " ").concat(summary.duplicates || 0, ", ").concat(t$1('trakt_bookmarks_skipped_unsupported', 'Skipped'), " ").concat(summary.skipped_unsupported || 0, ", ").concat(t$1('trakt_bookmarks_failed', 'Failed'), " ").concat(summary.failed || 0);
@@ -7133,7 +7133,7 @@
       page: 1,
       limit: 100
     }).then(function (response) {
-      var lists = response &amp;&amp; Array.isArray(response.results) ? response.results.filter(function (list) {
+      var lists = response && Array.isArray(response.results) ? response.results.filter(function (list) {
         return !!list.id;
       }) : [];
       if (!lists.length) {
@@ -7164,7 +7164,7 @@
             return;
           }
           if (Lampa.Controller) Lampa.Controller.toggle('settings_component');
-          _onSelect &amp;&amp; _onSelect(item);
+          _onSelect && _onSelect(item);
         },
         onBack: function onBack() {
           if (Lampa.Controller) Lampa.Controller.toggle('settings_component');
@@ -7202,7 +7202,7 @@
       return _regenerator().w(function (_context) {
         while (1) switch (_context.n) {
           case 0:
-            _ref = _args.length &gt; 1 &amp;&amp; _args[1] !== undefined ? _args[1] : {}, _ref$source = _ref.source, source = _ref$source === void 0 ? 'watchlist' : _ref$source, _ref$target = _ref.target, target = _ref$target === void 0 ? 'watchlist' : _ref$target, _ref$listId = _ref.listId, listId = _ref$listId === void 0 ? null : _ref$listId, _ref$favoriteType = _ref.favoriteType, favoriteType = _ref$favoriteType === void 0 ? 'book' : _ref$favoriteType;
+            _ref = _args.length > 1 && _args[1] !== undefined ? _args[1] : {}, _ref$source = _ref.source, source = _ref$source === void 0 ? 'watchlist' : _ref$source, _ref$target = _ref.target, target = _ref$target === void 0 ? 'watchlist' : _ref$target, _ref$listId = _ref.listId, listId = _ref$listId === void 0 ? null : _ref$listId, _ref$favoriteType = _ref.favoriteType, favoriteType = _ref$favoriteType === void 0 ? 'book' : _ref$favoriteType;
             if (ensureBookmarksSyncAvailable()) {
               _context.n = 1;
               break;
@@ -7218,7 +7218,7 @@
             });
             return _context.a(2);
           case 2:
-            resolvedFavoriteType = getSupportedFavoriteTypes().indexOf(favoriteType) &gt; -1 ? favoriteType : getBookmarksFavoriteType();
+            resolvedFavoriteType = getSupportedFavoriteTypes().indexOf(favoriteType) > -1 ? favoriteType : getBookmarksFavoriteType();
             favoriteTypeTitle = getFavoriteTypeTitle(resolvedFavoriteType);
             isBookmarksSyncRunning = true;
             isCanceled = false;
@@ -7281,7 +7281,7 @@
           case 8:
             _context.p = 8;
             _t2 = _context.v;
-            if (_t2 &amp;&amp; _t2.code === 'canceled') {
+            if (_t2 && _t2.code === 'canceled') {
               Lampa.Bell.push({
                 text: t$1('trakt_bookmarks_canceled', 'Operation canceled')
               });
@@ -7353,7 +7353,7 @@
 
   // Centralized error handling and polling stop
   function handlePollingError(modalInstance, messageKey, defaultMessage, code) {
-    var stop = arguments.length &gt; 4 &amp;&amp; arguments[4] !== undefined ? arguments[4] : true;
+    var stop = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : true;
     logWarn('Device auth polling stopped', {
       code: code
     }, {
@@ -7394,7 +7394,7 @@
     }
     pollInFlight = false;
     checkNowHandler = null;
-    if (Api$1 &amp;&amp; Api$1.auth &amp;&amp; typeof Api$1.auth.storeTokens === 'function') {
+    if (Api$1 && Api$1.auth && typeof Api$1.auth.storeTokens === 'function') {
       Api$1.auth.storeTokens(response);
     } else {
       Lampa.Storage.set('trakt_token', response.access_token);
@@ -7411,7 +7411,7 @@
     });
   }
   function extractPollingErrorCode(error) {
-    var payload = error &amp;&amp; error.response;
+    var payload = error && error.response;
     if (!payload) return '';
     if (_typeof(payload) === 'object') {
       return String(payload.error || payload.error_code || '').trim().toLowerCase();
@@ -7419,7 +7419,7 @@
     if (typeof payload === 'string') {
       try {
         var decoded = JSON.parse(payload);
-        if (decoded &amp;&amp; _typeof(decoded) === 'object') {
+        if (decoded && _typeof(decoded) === 'object') {
           return String(decoded.error || decoded.error_code || '').trim().toLowerCase();
         }
       } catch (e) {
@@ -7429,11 +7429,11 @@
     return '';
   }
   function parseRetryAfterMs() {
-    var headers = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {};
-    var value = headers &amp;&amp; headers['retry-after'];
+    var headers = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    var value = headers && headers['retry-after'];
     if (!value) return null;
     var numeric = Number(value);
-    if (Number.isFinite(numeric) &amp;&amp; numeric &gt;= 0) {
+    if (Number.isFinite(numeric) && numeric >= 0) {
       return numeric * 1000;
     }
     var dateMs = Date.parse(value);
@@ -7445,10 +7445,10 @@
 
   // Окрема функція для poll авторизації
   function pollAuth(data, modalInstance) {
-    var originalIntervalSec = Number(data &amp;&amp; data.interval);
-    var originalIntervalMs = Number.isFinite(originalIntervalSec) &amp;&amp; originalIntervalSec &gt; 0 ? originalIntervalSec * 1000 : 5000;
+    var originalIntervalSec = Number(data && data.interval);
+    var originalIntervalMs = Number.isFinite(originalIntervalSec) && originalIntervalSec > 0 ? originalIntervalSec * 1000 : 5000;
     var currentPollingStepMs = originalIntervalMs;
-    var expiresMs = Number.isFinite(Number(data &amp;&amp; data.expires_in)) ? Number(data.expires_in) * 1000 : 600 * 1000;
+    var expiresMs = Number.isFinite(Number(data && data.expires_in)) ? Number(data.expires_in) * 1000 : 600 * 1000;
     var pendingCount = 0;
     if (!data || !data.device_code) {
       handlePollingError(modalInstance, 'trakttvAuthError', 'Authentication error', 'missing-device_code');
@@ -7475,7 +7475,7 @@
       currentPollTimeoutId = null;
 
       // Check for timeout BEFORE making the API call
-      if (Date.now() - startTime &gt;= expiresMs) {
+      if (Date.now() - startTime >= expiresMs) {
         logWarn('Device auth polling timeout', {
           expiresMs: expiresMs
         }, {
@@ -7495,14 +7495,14 @@
         pendingCount = 0;
         handleAuthSuccess(modalInstance, response);
       })["catch"](function (error) {
-        var status = error &amp;&amp; error.status;
+        var status = error && error.status;
         var errorCode = extractPollingErrorCode(error);
         switch (status) {
           case 400:
             if (!errorCode || errorCode === 'authorization_pending') {
               pendingCount++;
               var effectiveDelay = originalIntervalMs;
-              if (pendingCount &gt; 3) {
+              if (pendingCount > 3) {
                 var multiplier = Math.min(1.5 + (pendingCount - 4) * 0.25, 4);
                 effectiveDelay = Math.min(originalIntervalMs * multiplier, 45 * 1000);
                 logDebug('Adaptive backoff increased delay', {
@@ -7543,7 +7543,7 @@
             pendingCount = 0;
             currentPollingStepMs = Math.min(currentPollingStepMs * 2, 60 * 1000);
             var jitter = Math.random() * 1000;
-            var retryAfterMs = parseRetryAfterMs(error &amp;&amp; error.headers ? error.headers : {});
+            var retryAfterMs = parseRetryAfterMs(error && error.headers ? error.headers : {});
             var nextStepMs = Math.max(currentPollingStepMs + jitter, retryAfterMs || 0);
             logWarn('Device auth polling slowed down by server', {
               nextStepMs: nextStepMs
@@ -7588,7 +7588,7 @@
         }
       } else {
         // Tab visible again — restart a normal poll cycle
-        if (!currentPollTimeoutId &amp;&amp; Lampa.Storage.get('trakt_active_device_auth') === true) {
+        if (!currentPollTimeoutId && Lampa.Storage.get('trakt_active_device_auth') === true) {
           currentPollingStepMs = originalIntervalMs;
           scheduleNext(originalIntervalMs);
         }
@@ -7609,10 +7609,10 @@
    * Record shape: { ts:number, token:string, status:'intent'|'finishing'|'finished' }
    */
 
-  var completionCache = new Map(); // key -&gt; { ts, token, status }
-  var lockQueues = new Map(); // key -&gt; array of resolvers for queued locks
+  var completionCache = new Map(); // key -> { ts, token, status }
+  var lockQueues = new Map(); // key -> array of resolvers for queued locks
   var requestInProgress = {}; // Об'єкт для відстеження запитів, що виконуються
-  var hashMetaCache = new Map(); // hash -&gt; { ts, card, season, episode, ids }
+  var hashMetaCache = new Map(); // hash -> { ts, card, season, episode, ids }
   var HASH_META_TTL_SEC = 60 * 60 * 24 * 7; // 7 days
 
   function nowSec() {
@@ -7640,7 +7640,7 @@
     return Lampa.Storage.field('trakt_enable_logging');
   }
   function shouldEmitDebugLog() {
-    var args = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : [];
+    var args = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : [];
     var first = typeof args[0] === 'string' ? args[0] : '';
     var second = typeof args[1] === 'string' ? args[1] : '';
     if (first === 'watching.init called while already initialized, skipping') return true;
@@ -7651,12 +7651,12 @@
     if (first === 'finish') {
       if (second.indexOf('retry attempt') === 0) return true;
       if (second === 'abort on client error') return true;
-      if (second === '409 conflict -&gt; treat as finished, no retries') return true;
+      if (second === '409 conflict -> treat as finished, no retries') return true;
     }
     return false;
   }
   function slog() {
-    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key &lt; _len; _key++) {
+    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
       args[_key] = arguments[_key];
     }
     if (!logEnabled() || !shouldEmitDebugLog(args)) return;
@@ -7688,12 +7688,12 @@
     var raw = Lampa.Storage.get('trakt_hash_meta_cache');
     var now = nowSec();
     hashMetaCache.clear();
-    if (raw &amp;&amp; Array.isArray(raw.entries)) {
+    if (raw && Array.isArray(raw.entries)) {
       raw.entries.forEach(function (_ref) {
         var _ref2 = _slicedToArray(_ref, 2),
           k = _ref2[0],
           v = _ref2[1];
-        if (v &amp;&amp; now - v.ts &lt;= HASH_META_TTL_SEC) {
+        if (v && now - v.ts <= HASH_META_TTL_SEC) {
           hashMetaCache.set(k, v);
         }
       });
@@ -7709,7 +7709,7 @@
         var _step$value = _slicedToArray(_step.value, 2),
           k = _step$value[0],
           v = _step$value[1];
-        if (!v || now - v.ts &gt; HASH_META_TTL_SEC) hashMetaCache["delete"](k);
+        if (!v || now - v.ts > HASH_META_TTL_SEC) hashMetaCache["delete"](k);
       }
       // keep cache small
     } catch (err) {
@@ -7717,7 +7717,7 @@
     } finally {
       _iterator.f();
     }
-    if (hashMetaCache.size &gt; 300) {
+    if (hashMetaCache.size > 300) {
       var ordered = Array.from(hashMetaCache.entries()).sort(function (a, b) {
         return (a[1].ts || 0) - (b[1].ts || 0);
       });
@@ -7740,7 +7740,7 @@
       card: normalizeCardForCache(meta.card),
       season: meta.season,
       episode: meta.episode,
-      ids: meta.ids || meta.card &amp;&amp; meta.card.ids
+      ids: meta.ids || meta.card && meta.card.ids
     };
     hashMetaCache.set(hash, next);
     persistHashMetaCache();
@@ -7749,7 +7749,7 @@
     if (!hash) return null;
     var rec = hashMetaCache.get(hash);
     if (!rec) return null;
-    if (nowSec() - rec.ts &gt; HASH_META_TTL_SEC) {
+    if (nowSec() - rec.ts > HASH_META_TTL_SEC) {
       hashMetaCache["delete"](hash);
       return null;
     }
@@ -7767,7 +7767,7 @@
   function collectTitleCandidates() {
     var seen = new Set();
     var candidates = [];
-    for (var _len2 = arguments.length, sources = new Array(_len2), _key2 = 0; _key2 &lt; _len2; _key2++) {
+    for (var _len2 = arguments.length, sources = new Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
       sources[_key2] = arguments[_key2];
     }
     sources.forEach(function (source) {
@@ -7798,12 +7798,12 @@
         if (media.hash) return "movie:hash:".concat(media.hash);
       } else {
         // Prefer show trakt id + season/episode if present on card
-        var showTrakt = ids &amp;&amp; ids.trakt || media.show &amp;&amp; media.show.ids &amp;&amp; media.show.ids.trakt;
+        var showTrakt = ids && ids.trakt || media.show && media.show.ids && media.show.ids.trakt;
         var s = media.season_number || media.season || media.seasonNumber;
         var e = media.episode_number || media.episode || media.episodeNumber;
-        if (showTrakt &amp;&amp; s &amp;&amp; e) return "episode:trakt:".concat(showTrakt, ":S").concat(s, ":E").concat(e);
+        if (showTrakt && s && e) return "episode:trakt:".concat(showTrakt, ":S").concat(s, ":E").concat(e);
         // fallback tmdb
-        if (media.id &amp;&amp; s &amp;&amp; e) return "episode:tmdb:".concat(media.id, ":S").concat(s, ":E").concat(e);
+        if (media.id && s && e) return "episode:tmdb:".concat(media.id, ":S").concat(s, ":E").concat(e);
         if (media.hash) return "episode:hash:".concat(media.hash);
       }
     } catch (e) {}
@@ -7820,12 +7820,12 @@
     var ttl = getTTL();
     var now = nowSec();
     completionCache.clear();
-    if (raw &amp;&amp; Array.isArray(raw.entries)) {
+    if (raw && Array.isArray(raw.entries)) {
       raw.entries.forEach(function (_ref5) {
         var _ref6 = _slicedToArray(_ref5, 2),
           k = _ref6[0],
           v = _ref6[1];
-        if (v &amp;&amp; now - v.ts &lt;= ttl) {
+        if (v && now - v.ts <= ttl) {
           completionCache.set(k, v);
         }
       });
@@ -7843,7 +7843,7 @@
         var _step2$value = _slicedToArray(_step2.value, 2),
           k = _step2$value[0],
           v = _step2$value[1];
-        if (!v || now - v.ts &gt; ttl) completionCache["delete"](k);
+        if (!v || now - v.ts > ttl) completionCache["delete"](k);
       }
     } catch (err) {
       _iterator2.e(err);
@@ -7880,7 +7880,7 @@
       allow: true,
       reason: 'no_record'
     };
-    if (now - rec.ts &gt; ttl) {
+    if (now - rec.ts > ttl) {
       // expired
       completionCache["delete"](key);
       return {
@@ -7999,7 +7999,7 @@
                     lastErr = null;
                     attempt = 0;
                   case 2:
-                    if (!(attempt &lt; delays.length)) {
+                    if (!(attempt < delays.length)) {
                       _context2.n = 10;
                       break;
                     }
@@ -8012,18 +8012,18 @@
                     markFinished(key, token, 'finished');
                     return _context2.a(2, {
                       ok: true,
-                      status: res &amp;&amp; res.status,
+                      status: res && res.status,
                       data: res
                     });
                   case 5:
                     _context2.p = 5;
                     _t = _context2.v;
-                    status = _t &amp;&amp; _t.status; // Treat 409 as finished without retries
+                    status = _t && _t.status; // Treat 409 as finished without retries
                     if (!(status === 409)) {
                       _context2.n = 6;
                       break;
                     }
-                    slog(logPrefix, '409 conflict -&gt; treat as finished, no retries');
+                    slog(logPrefix, '409 conflict -> treat as finished, no retries');
                     markFinished(key, token, 'finished');
                     return _context2.a(2, {
                       ok: true,
@@ -8031,7 +8031,7 @@
                       conflict: true
                     });
                   case 6:
-                    if (!(!status || status &gt;= 500 &amp;&amp; status &lt; 600)) {
+                    if (!(!status || status >= 500 && status < 600)) {
                       _context2.n = 8;
                       break;
                     }
@@ -8040,7 +8040,7 @@
                       status: status,
                       err: _t
                     });
-                    if (!(attempt &lt; delays.length - 1)) {
+                    if (!(attempt < delays.length - 1)) {
                       _context2.n = 7;
                       break;
                     }
@@ -8049,7 +8049,7 @@
                   case 7:
                     return _context2.a(3, 9);
                   case 8:
-                    // Other 4xx =&gt; no retries
+                    // Other 4xx => no retries
                     slog(logPrefix, 'abort on client error', {
                       status: status,
                       err: _t
@@ -8066,7 +8066,7 @@
                     _context2.n = 2;
                     break;
                   case 10:
-                    // all retries exhausted -&gt; rollback to intent
+                    // all retries exhausted -> rollback to intent
                     markFinished(key, token, 'intent');
                     return _context2.a(2, {
                       ok: false,
@@ -8080,7 +8080,7 @@
     }));
     return _finishWithIdempotency.apply(this, arguments);
   }
-  var intentTimers = new Map(); // key -&gt; timeout id
+  var intentTimers = new Map(); // key -> timeout id
   function markFinishIntent(key) {
     var token = Lampa.Storage.get('trakt_token');
     var ttl = getTTL();
@@ -8096,10 +8096,10 @@
       });
     }
     var rec = completionCache.get(key);
-    var isFresh = rec &amp;&amp; now - rec.ts &lt;= ttl;
+    var isFresh = rec && now - rec.ts <= ttl;
 
     // Do not downgrade terminal states to intent inside TTL window.
-    if (isFresh &amp;&amp; (rec.status === 'finished' || rec.status === 'finishing')) {
+    if (isFresh && (rec.status === 'finished' || rec.status === 'finishing')) {
       slog('markFinishIntent skipped (terminal state preserved)', key, rec);
       return {
         skipped: true,
@@ -8120,7 +8120,7 @@
     var t = setTimeout(function () {
       var cur = completionCache.get(key);
       // keep latest ts fresh only for intent state
-      if (cur &amp;&amp; cur.status === 'intent') {
+      if (cur && cur.status === 'intent') {
         completionCache.set(key, _objectSpread2(_objectSpread2({}, cur), {}, {
           ts: nowSec()
         }));
@@ -8137,8 +8137,8 @@
 
   /**
    * Compute finish for given media via API:
-   * - movie -&gt; /sync/history
-   * - show episode -&gt; /sync/history with show/episodes derived by hash/season/episode
+   * - movie -> /sync/history
+   * - show episode -> /sync/history with show/episodes derived by hash/season/episode
    * This function is the only entry point that sends final Trakt request.
    */
   function finish(_x4) {
@@ -8204,13 +8204,13 @@
                   while (1) switch (_context4.n) {
                     case 0:
                       // replicate existing logic but only final "history" call
-                      type = getContentType$1(media); // if movie -&gt; addToHistory({method:'movie', id, ids})
+                      type = getContentType$1(media); // if movie -> addToHistory({method:'movie', id, ids})
                       if (!(type === 'movie')) {
                         _context4.n = 4;
                         break;
                       }
                       // look up trakt id if needed
-                      tmdbId = media.id || media.ids &amp;&amp; media.ids.tmdb;
+                      tmdbId = media.id || media.ids && media.ids.tmdb;
                       _context4.n = 1;
                       return api$1.get("/search/tmdb/".concat(tmdbId, "?type=movie"));
                     case 1:
@@ -8240,7 +8240,7 @@
                       });
                     case 4:
                       // show episode
-                      _tmdbId = media.id || media.ids &amp;&amp; media.ids.tmdb;
+                      _tmdbId = media.id || media.ids && media.ids.tmdb;
                       _context4.n = 5;
                       return api$1.get("/search/tmdb/".concat(_tmdbId, "?type=show"));
                     case 5:
@@ -8308,8 +8308,8 @@
                         break;
                       }
                       title = _step5.value;
-                      epHash = Lampa.Utils.hash([s.number, s.number &gt; 10 ? ':' : '', ep.number, title].join(''));
-                      if (!(media.hash &amp;&amp; epHash === media.hash)) {
+                      epHash = Lampa.Utils.hash([s.number, s.number > 10 ? ':' : '', ep.number, title].join(''));
+                      if (!(media.hash && epHash === media.hash)) {
                         _context4.n = 16;
                         break;
                       }
@@ -8382,7 +8382,7 @@
                         hash: media.hash,
                         mediaTitles: collectTitleCandidates(media),
                         lastCardTitles: collectTitleCandidates(Lampa.Storage.get('trakt_last_card', null)),
-                        hasMediaIds: !!(media &amp;&amp; media.ids)
+                        hasMediaIds: !!(media && media.ids)
                       });
                       _e3 = new Error('Episode index not resolved');
                       _e3.status = 422;
@@ -8479,13 +8479,13 @@
       slog('watching.init');
 
       // Слідкуємо за оновленнями Timeline
-      if (window.Lampa &amp;&amp; Lampa.Timeline &amp;&amp; Lampa.Timeline.listener) {
+      if (window.Lampa && Lampa.Timeline && Lampa.Timeline.listener) {
         Lampa.Timeline.listener.follow('update', this.processTimelineUpdate.bind(this));
         slog('Timeline listener attached');
       }
 
       // Слідкуємо за стартом програвача для збереження поточної картки
-      if (window.Lampa &amp;&amp; Lampa.Player &amp;&amp; Lampa.Player.listener) {
+      if (window.Lampa && Lampa.Player && Lampa.Player.listener) {
         Lampa.Player.listener.follow('start', this.onPlayerStart.bind(this));
         slog('Player listener attached');
       }
@@ -8498,7 +8498,7 @@
       if (this.isLoggingEnabled()) {
         slog('Player start event received', data);
       }
-      var card = data.card || Lampa.Activity.active() &amp;&amp; Lampa.Activity.active().movie;
+      var card = data.card || Lampa.Activity.active() && Lampa.Activity.active().movie;
       if (this.isLoggingEnabled()) {
         slog('Card determined in onPlayerStart', card);
       }
@@ -8515,16 +8515,16 @@
         slog('Card saved to storage', card);
       }
 
-      // Кешуємо відповідність hash -&gt; card/season/episode для стабільного фінішу
-      var timeline = data &amp;&amp; data.timeline;
-      var hash = timeline &amp;&amp; timeline.hash;
+      // Кешуємо відповідність hash -> card/season/episode для стабільного фінішу
+      var timeline = data && data.timeline;
+      var hash = timeline && timeline.hash;
       if (hash) {
         var se = extractSeasonEpisode(data);
         setHashMeta(hash, {
           card: card,
           season: se.season,
           episode: se.episode,
-          ids: card &amp;&amp; card.ids
+          ids: card && card.ids
         });
         if (this.isLoggingEnabled()) {
           slog('Hash meta cached from player start', {
@@ -8560,9 +8560,9 @@
           slog('Invalid data received', data);
         }
         slog('Invalid data - data:', data);
-        slog('Invalid data - data.data:', data &amp;&amp; data.data);
-        slog('Invalid data - data.data.hash:', data &amp;&amp; data.data &amp;&amp; data.data.hash);
-        slog('Invalid data - data.data.road:', data &amp;&amp; data.data &amp;&amp; data.data.road);
+        slog('Invalid data - data.data:', data && data.data);
+        slog('Invalid data - data.data.hash:', data && data.data && data.data.hash);
+        slog('Invalid data - data.data.road:', data && data.data && data.data.road);
         return;
       }
       var hash = data.data.hash;
@@ -8601,25 +8601,25 @@
       }
       var card = this.getCurrentCard();
       var meta = getHashMeta(hash);
-      if (!card &amp;&amp; meta &amp;&amp; meta.card) {
+      if (!card && meta && meta.card) {
         card = meta.card;
         if (this.isLoggingEnabled()) {
           slog('Card restored from hash meta cache', card);
         }
       }
-      if (card &amp;&amp; hash) {
+      if (card && hash) {
         var se = extractSeasonEpisode(card);
         var cachedMeta = meta || getHashMeta(hash);
-        var seasonValue = se.season || cachedMeta &amp;&amp; cachedMeta.season;
-        var episodeValue = se.episode || cachedMeta &amp;&amp; cachedMeta.episode;
-        var idsValue = card.ids || cachedMeta &amp;&amp; cachedMeta.ids;
+        var seasonValue = se.season || cachedMeta && cachedMeta.season;
+        var episodeValue = se.episode || cachedMeta && cachedMeta.episode;
+        var idsValue = card.ids || cachedMeta && cachedMeta.ids;
         setHashMeta(hash, {
           card: card,
           season: seasonValue,
           episode: episodeValue,
           ids: idsValue
         });
-        if (this.isLoggingEnabled() &amp;&amp; (!se.season || !se.episode) &amp;&amp; cachedMeta &amp;&amp; (cachedMeta.season || cachedMeta.episode)) {
+        if (this.isLoggingEnabled() && (!se.season || !se.episode) && cachedMeta && (cachedMeta.season || cachedMeta.episode)) {
           slog('Hash meta preserved season/episode from cache', {
             hash: hash,
             season: seasonValue,
@@ -8642,16 +8642,16 @@
 
       // Інтеграція нового фініш-флоу: при досягненні порогу формуємо key і викликаємо finish()
       slog('Checking if should finish with idempotency, percent:', percent, 'minProgress:', minProgress);
-      var watchedByPercent = (typeof percent === 'number' ? percent : 0) &gt;= minProgress;
-      var watchedByTime = road &amp;&amp; road.time &amp;&amp; road.duration ? road.time / road.duration * 100 &gt;= minProgress : false;
+      var watchedByPercent = (typeof percent === 'number' ? percent : 0) >= minProgress;
+      var watchedByTime = road && road.time && road.duration ? road.time / road.duration * 100 >= minProgress : false;
       if (watchedByPercent || watchedByTime) {
         var media = Object.assign({}, card, {
           hash: hash
         });
         if (meta) {
-          if (!media.season_number &amp;&amp; meta.season) media.season_number = meta.season;
-          if (!media.episode_number &amp;&amp; meta.episode) media.episode_number = meta.episode;
-          if (!media.ids &amp;&amp; meta.ids) media.ids = meta.ids;
+          if (!media.season_number && meta.season) media.season_number = meta.season;
+          if (!media.episode_number && meta.episode) media.episode_number = meta.episode;
+          if (!media.ids && meta.ids) media.ids = meta.ids;
         }
 
         // DEBUG: Log media object and hash source
@@ -8696,14 +8696,14 @@
      * @returns {Object|null} Поточна картка
      */
     getCurrentCard: function getCurrentCard() {
-      var card = Lampa.Activity &amp;&amp; Lampa.Activity.active &amp;&amp; Lampa.Activity.active() &amp;&amp; (Lampa.Activity.active().card_data || Lampa.Activity.active().card || Lampa.Activity.active().movie) || null;
+      var card = Lampa.Activity && Lampa.Activity.active && Lampa.Activity.active() && (Lampa.Activity.active().card_data || Lampa.Activity.active().card || Lampa.Activity.active().movie) || null;
       if (!card) card = Lampa.Storage.get('trakt_last_card', null);
 
       // Додаткове логування для налагодження
-      slog('getCurrentCard - Activity.active():', Lampa.Activity &amp;&amp; Lampa.Activity.active &amp;&amp; Lampa.Activity.active());
-      slog('getCurrentCard - card_data:', Lampa.Activity &amp;&amp; Lampa.Activity.active &amp;&amp; Lampa.Activity.active() &amp;&amp; Lampa.Activity.active().card_data);
-      slog('getCurrentCard - card:', Lampa.Activity &amp;&amp; Lampa.Activity.active &amp;&amp; Lampa.Activity.active() &amp;&amp; Lampa.Activity.active().card);
-      slog('getCurrentCard - movie:', Lampa.Activity &amp;&amp; Lampa.Activity.active &amp;&amp; Lampa.Activity.active() &amp;&amp; Lampa.Activity.active().movie);
+      slog('getCurrentCard - Activity.active():', Lampa.Activity && Lampa.Activity.active && Lampa.Activity.active());
+      slog('getCurrentCard - card_data:', Lampa.Activity && Lampa.Activity.active && Lampa.Activity.active() && Lampa.Activity.active().card_data);
+      slog('getCurrentCard - card:', Lampa.Activity && Lampa.Activity.active && Lampa.Activity.active() && Lampa.Activity.active().card);
+      slog('getCurrentCard - movie:', Lampa.Activity && Lampa.Activity.active && Lampa.Activity.active() && Lampa.Activity.active().movie);
       slog('getCurrentCard - trakt_last_card from storage:', Lampa.Storage.get('trakt_last_card', null));
       slog('getCurrentCard - final card:', card);
       if (this.isLoggingEnabled()) {
@@ -8767,7 +8767,7 @@
 
       // Додаткове логування для налагодження
       slog('addShowToWatching called with card:', card);
-      var tmdbId = card.id || card.ids &amp;&amp; card.ids.tmdb;
+      var tmdbId = card.id || card.ids && card.ids.tmdb;
       slog('Determined tmdbId:', tmdbId);
       if (!tmdbId) {
         slog('No tmdbId found, returning');
@@ -8782,9 +8782,9 @@
       slog('Searching for content by tmdbId:', tmdbId, 'type:', contentType);
       api$1.get("/search/tmdb/".concat(tmdbId, "?type=").concat(contentType)).then(function (response) {
         slog('Search response:', response);
-        if (response &amp;&amp; response.length &gt; 0) {
+        if (response && response.length > 0) {
           var item = response[0];
-          var traktId = item.show &amp;&amp; item.show.ids.trakt || item.movie &amp;&amp; item.movie.ids.trakt;
+          var traktId = item.show && item.show.ids.trakt || item.movie && item.movie.ids.trakt;
           slog('Found traktId:', traktId);
 
           // Додаємо вміст в "Смотрю"
@@ -8862,15 +8862,15 @@
       slog('findEpisodeByHash called with:', {
         card: card,
         hash: hash,
-        seasons: seasons &amp;&amp; seasons.length
+        seasons: seasons && seasons.length
       });
       slog('originalName:', originalName);
-      for (var i = 0; i &lt; seasons.length; i++) {
+      for (var i = 0; i < seasons.length; i++) {
         var season = seasons[i];
         if (!season.episodes) continue;
-        for (var j = 0; j &lt; season.episodes.length; j++) {
+        for (var j = 0; j < season.episodes.length; j++) {
           var episode = season.episodes[j];
-          var episodeHashStr = [season.number, season.number &gt; 10 ? ':' : '', episode.number, originalName].join('');
+          var episodeHashStr = [season.number, season.number > 10 ? ':' : '', episode.number, originalName].join('');
           var episodeHash = Lampa.Utils.hash(episodeHashStr);
 
           // Додаткове логування для налагодження
@@ -8881,7 +8881,7 @@
             episodeHash: episodeHash,
             ids: episode.ids
           });
-          if (episodeHash === hash &amp;&amp; episode.ids &amp;&amp; episode.ids.trakt) {
+          if (episodeHash === hash && episode.ids && episode.ids.trakt) {
             var result = {
               traktId: episode.ids.trakt,
               season: season.number,
@@ -8900,24 +8900,24 @@
   var isInitialized = false;
   var API_MISSING_LOG_KEY = 'events:api-missing';
   function resolveUpnextProgress() {
-    var data = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {};
+    var data = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
     var watched = Number(data.trakt_upnext_watched);
     var total = Number(data.trakt_upnext_total);
     var text = (data.trakt_upnext_progress || '').toString().trim();
     var safeWatched = Number.isFinite(watched) ? watched : 0;
     var safeTotal = Number.isFinite(total) ? total : 0;
-    if (!text &amp;&amp; safeTotal &gt; 0) {
+    if (!text && safeTotal > 0) {
       text = "".concat(safeWatched, "/").concat(safeTotal);
     }
-    if ((!safeWatched || !safeTotal) &amp;&amp; text.indexOf('/') &gt; -1) {
+    if ((!safeWatched || !safeTotal) && text.indexOf('/') > -1) {
       var parts = text.split('/');
       var parsedWatched = Number(parts[0]);
       var parsedTotal = Number(parts[1]);
-      if (Number.isFinite(parsedWatched) &amp;&amp; parsedWatched &gt;= 0) safeWatched = parsedWatched;
-      if (Number.isFinite(parsedTotal) &amp;&amp; parsedTotal &gt; 0) safeTotal = parsedTotal;
+      if (Number.isFinite(parsedWatched) && parsedWatched >= 0) safeWatched = parsedWatched;
+      if (Number.isFinite(parsedTotal) && parsedTotal > 0) safeTotal = parsedTotal;
     }
     if (!text) return null;
-    var percent = safeTotal &gt; 0 ? Math.max(0, Math.min(100, Math.round(safeWatched / safeTotal * 100))) : null;
+    var percent = safeTotal > 0 ? Math.max(0, Math.min(100, Math.round(safeWatched / safeTotal * 100))) : null;
     return {
       text: text,
       percent: percent
@@ -8928,13 +8928,13 @@
     var progress = resolveUpnextProgress(cardInstance.data);
     if (!progress) return;
     var cardNode = cardInstance.render(true);
-    var cardView = cardNode &amp;&amp; cardNode.querySelector ? cardNode.querySelector('.card__view') : null;
+    var cardView = cardNode && cardNode.querySelector ? cardNode.querySelector('.card__view') : null;
     if (!cardView) return;
     var wrap = cardView.querySelector('.card-watched.trakt-upnext-watched');
     if (!wrap) {
       wrap = document.createElement('div');
       wrap.className = 'card-watched trakt-upnext-watched';
-      wrap.innerHTML = '&lt;div class="card-watched__inner"&gt;&lt;div class="card-watched__body"&gt;&lt;/div&gt;&lt;/div&gt;';
+      wrap.innerHTML = '<div class="card-watched__inner"><div class="card-watched__body"></div></div>';
       cardView.insertBefore(wrap, cardView.firstChild);
     }
     var body = wrap.querySelector('.card-watched__body');
@@ -8943,13 +8943,13 @@
     if (!row) {
       row = document.createElement('div');
       row.className = 'card-watched__item trakt-upnext-watched__item';
-      row.innerHTML = '&lt;span&gt;&lt;/span&gt;&lt;div class="time-line"&gt;&lt;div&gt;&lt;/div&gt;&lt;/div&gt;';
+      row.innerHTML = '<span></span><div class="time-line"><div></div></div>';
       body.innerHTML = '';
       body.appendChild(row);
     }
     var title = row.querySelector('span');
     if (title) title.textContent = progress.text;
-    var bar = row.querySelector('.time-line &gt; div');
+    var bar = row.querySelector('.time-line > div');
     if (bar) bar.style.width = "".concat(progress.percent || 0, "%");
   }
   function decorateUpnextLine(event) {
@@ -8982,7 +8982,7 @@
 
       // Додаємо кнопку watchlist на картку
       Lampa.Listener.follow('full', function (e) {
-        if (e.type === 'complite' &amp;&amp; Lampa.Storage.get('trakt_token')) {
+        if (e.type === 'complite' && Lampa.Storage.get('trakt_token')) {
           _this.onFullCardReady(e);
         }
       });
@@ -8994,43 +8994,43 @@
       });
 
       // Переадресація завершальних подій програвача на idempotent intent
-      if (window.Lampa &amp;&amp; Lampa.Player &amp;&amp; Lampa.Player.listener) {
-        // onEnded / onStop / onHidden -&gt; markFinishIntent for the current media key
+      if (window.Lampa && Lampa.Player && Lampa.Player.listener) {
+        // onEnded / onStop / onHidden -> markFinishIntent for the current media key
         var routeFinishIntent = function routeFinishIntent(evt) {
           try {
             if (!Lampa.Storage.field('trakt_enable_watching')) return;
             var token = Lampa.Storage.get('trakt_token');
             if (!token) return;
-            var card = Lampa.Activity.active &amp;&amp; Lampa.Activity.active() &amp;&amp; (Lampa.Activity.active().card_data || Lampa.Activity.active().card || Lampa.Activity.active().movie) || Lampa.Storage.get('trakt_last_card');
+            var card = Lampa.Activity.active && Lampa.Activity.active() && (Lampa.Activity.active().card_data || Lampa.Activity.active().card || Lampa.Activity.active().movie) || Lampa.Storage.get('trakt_last_card');
             if (!card) return;
             // Include last known hash if available from timeline storage
-            var lastTimeline = window.last_timeline_event &amp;&amp; window.last_timeline_event.data || {};
+            var lastTimeline = window.last_timeline_event && window.last_timeline_event.data || {};
             var media = Object.assign({}, card, {
               hash: lastTimeline.hash
             });
-            var meta = watching &amp;&amp; typeof watching.getMetaByHash === 'function' ? watching.getMetaByHash(lastTimeline.hash) : null;
+            var meta = watching && typeof watching.getMetaByHash === 'function' ? watching.getMetaByHash(lastTimeline.hash) : null;
             if (meta) {
-              if (!media.season_number &amp;&amp; meta.season) media.season_number = meta.season;
-              if (!media.episode_number &amp;&amp; meta.episode) media.episode_number = meta.episode;
-              if (!media.ids &amp;&amp; meta.ids) media.ids = meta.ids;
+              if (!media.season_number && meta.season) media.season_number = meta.season;
+              if (!media.episode_number && meta.episode) media.episode_number = meta.episode;
+              if (!media.ids && meta.ids) media.ids = meta.ids;
             }
-            var key = watching &amp;&amp; typeof watching.getCompletionKey === 'function' ? watching.getCompletionKey(media) : null;
-            if (key &amp;&amp; watching &amp;&amp; typeof watching.markFinishIntent === 'function') {
+            var key = watching && typeof watching.getCompletionKey === 'function' ? watching.getCompletionKey(media) : null;
+            if (key && watching && typeof watching.markFinishIntent === 'function') {
               watching.markFinishIntent(key);
             }
 
             // Primary finish route is timeline update.
             // Fallback to direct finish only when "ended" happened without known timeline hash.
-            var shouldFallbackFinish = !!(evt &amp;&amp; evt.type === 'ended' &amp;&amp; !lastTimeline.hash);
-            if (shouldFallbackFinish &amp;&amp; watching &amp;&amp; typeof watching.finish === 'function') {
-              var contentType = watching &amp;&amp; typeof watching.getContentType === 'function' ? watching.getContentType(media) : 'movie';
+            var shouldFallbackFinish = !!(evt && evt.type === 'ended' && !lastTimeline.hash);
+            if (shouldFallbackFinish && watching && typeof watching.finish === 'function') {
+              var contentType = watching && typeof watching.getContentType === 'function' ? watching.getContentType(media) : 'movie';
               var season = media.season_number || media.season || media.seasonNumber;
               var episode = media.episode_number || media.episode || media.episodeNumber;
-              var canFinishSafely = contentType === 'movie' || season &amp;&amp; episode || media.hash;
+              var canFinishSafely = contentType === 'movie' || season && episode || media.hash;
               if (canFinishSafely) {
                 watching.finish(media)["catch"](function (e) {
                   logWarn('Fallback finish failed', {
-                    eventType: evt &amp;&amp; evt.type,
+                    eventType: evt && evt.type,
                     error: e
                   }, {
                     debugOnly: true
@@ -9047,7 +9047,7 @@
         Lampa.Player.listener.follow('ended', routeFinishIntent);
         Lampa.Player.listener.follow('stop', routeFinishIntent);
         Lampa.Player.listener.follow('visibility', function (e) {
-          if (e &amp;&amp; e.hidden) routeFinishIntent({
+          if (e && e.hidden) routeFinishIntent({
             type: 'hidden'
           });
         });
@@ -9072,8 +9072,8 @@
       if (!e) return;
 
       // Перевірка чи вже додано (дедуплікація)
-      if (e.object &amp;&amp; e.object.activity &amp;&amp; typeof e.object.activity.render === 'function') {
-        if (e.object.activity.render().find('.tag-count.trakttv-lists').length &gt; 0) {
+      if (e.object && e.object.activity && typeof e.object.activity.render === 'function') {
+        if (e.object.activity.render().find('.tag-count.trakttv-lists').length > 0) {
           return;
         }
       }
@@ -9086,17 +9086,17 @@
       var method = (_e$object = e.object) === null || _e$object === void 0 ? void 0 : _e$object.method; // 'tv' or 'movie'
 
       // Fallback через евристики з e.data.movie
-      if (!method &amp;&amp; e.data &amp;&amp; e.data.movie) {
+      if (!method && e.data && e.data.movie) {
         method = e.data.movie.name || e.data.movie.first_air_date ? 'tv' : 'movie';
       }
 
       // Fallback через card евристики
-      if (!method &amp;&amp; card) {
+      if (!method && card) {
         method = card.method || card.card_type || (card.first_air_date || card.name ? 'tv' : 'movie');
       }
 
       // Перевіряємо наявність ID
-      if (!card.id &amp;&amp; (!card.external_ids || !card.external_ids.trakt_id)) return;
+      if (!card.id && (!card.external_ids || !card.external_ids.trakt_id)) return;
 
       // Параметри для запиту
       // Trakt API використовує 'show' замість 'tv'
@@ -9106,7 +9106,7 @@
       };
 
       // Додаємо trakt_id, якщо він доступний
-      if (card.external_ids &amp;&amp; card.external_ids.trakt_id) {
+      if (card.external_ids && card.external_ids.trakt_id) {
         params.ids = {
           trakt: card.external_ids.trakt_id
         };
@@ -9114,12 +9114,12 @@
 
       // Отримуємо пов'язані списки та списки, які користувач лайкнув
       // Local safe resolver for Api to support runtime-scoped execution (e.g., dev/trakt.js)
-      var Api = typeof api !== 'undefined' &amp;&amp; api || window.TraktTV &amp;&amp; window.TraktTV.api || null;
+      var Api = typeof api !== 'undefined' && api || window.TraktTV && window.TraktTV.api || null;
       if (!Api) {
         logDebugOnce(API_MISSING_LOG_KEY, 'API bridge is unavailable in events');
         return;
       }
-      Promise.all([Api &amp;&amp; Api.getMediaLists(params), Api &amp;&amp; Api.likesLists({
+      Promise.all([Api && Api.getMediaLists(params), Api && Api.likesLists({
         page: 1,
         limit: 1000
       }) // Отримуємо всі лайкнуті списки
@@ -9149,7 +9149,7 @@
         }
 
         // Створюємо елемент для відображення кількості списків
-        var listsCountElement = $("\n                &lt;div class=\"tag-count selector trakttv-lists\"&gt;\n                    &lt;div class=\"tag-count__name\"&gt;".concat(Lampa.Lang.translate('trakttv_related_lists'), "&lt;/div&gt;\n                &lt;/div&gt;\n            "));
+        var listsCountElement = $("\n                <div class=\"tag-count selector trakttv-lists\">\n                    <div class=\"tag-count__name\">".concat(Lampa.Lang.translate('trakttv_related_lists'), "</div>\n                </div>\n            "));
 
         // Додаємо обробник кліку для відображення списків
         listsCountElement.on('hover:enter', function () {
@@ -9186,7 +9186,7 @@
             },
             onRender: function onRender(item, element) {
               if (element.liked) {
-                item.find('.selectbox__title').append('&lt;span class="selectbox__lables"&gt;&lt;svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="22px" height="22px" viewBox="0 0 22 22" xml:space="preserve"&gt;&lt;path fill="currentColor" d="M11,20c-0.3,0-0.5-0.1-0.7-0.3l-8.5-8.5c-0.9-0.9-1.4-2-1.4-3.3c0-2.6,2.1-4.7,4.7-4.7c1.4,0,2.7,0.6,3.6,1.5l2.3,2.3l2.3-2.3c0.9-0.9,2.2-1.5,3.6-1.5c2.6,0,4.7,2.1,4.7,4.7c0,1.3-0.5,2.4-1.4,3.3l-8.5,8.5C11.5,19.9,11.3,20,11,20z"&gt;&lt;/path&gt;&lt;/svg&gt;&lt;/span&gt;');
+                item.find('.selectbox__title').append('<span class="selectbox__lables"><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="22px" height="22px" viewBox="0 0 22 22" xml:space="preserve"><path fill="currentColor" d="M11,20c-0.3,0-0.5-0.1-0.7-0.3l-8.5-8.5c-0.9-0.9-1.4-2-1.4-3.3c0-2.6,2.1-4.7,4.7-4.7c1.4,0,2.7,0.6,3.6,1.5l2.3,2.3l2.3-2.3c0.9-0.9,2.2-1.5,3.6-1.5c2.6,0,4.7,2.1,4.7,4.7c0,1.3-0.5,2.4-1.4,3.3l-8.5,8.5C11.5,19.9,11.3,20,11,20z"></path></svg></span>');
               }
             },
             onBack: function onBack() {
@@ -9235,15 +9235,15 @@
         // Спробуємо отримати ID з інших джерел
 
         // Перевіряємо наявність ID в різних можливих полях
-        if (e.data.card &amp;&amp; e.data.card.id) {
+        if (e.data.card && e.data.card.id) {
           e.data.id = e.data.card.id;
-        } else if (e.data.data &amp;&amp; e.data.data.id) {
+        } else if (e.data.data && e.data.data.id) {
           e.data.id = e.data.data.id;
-        } else if (e.data.movie &amp;&amp; e.data.movie.id) {
+        } else if (e.data.movie && e.data.movie.id) {
           e.data.id = e.data.movie.id;
-        } else if (e.data.show &amp;&amp; e.data.show.id) {
+        } else if (e.data.show && e.data.show.id) {
           e.data.id = e.data.show.id;
-        } else if (e.data.external_ids &amp;&amp; e.data.external_ids.tmdb_id) {
+        } else if (e.data.external_ids && e.data.external_ids.tmdb_id) {
           e.data.id = e.data.external_ids.tmdb_id;
         } else {
           return;
@@ -9416,7 +9416,7 @@
   var listenersBound = false;
   function isEnabled() {
     if (!Lampa || !Lampa.Platform || !Lampa.Storage) return false;
-    return Lampa.Platform.is('apple_tv') === true &amp;&amp; Lampa.Storage.field(SETTINGS_KEY);
+    return Lampa.Platform.is('apple_tv') === true && Lampa.Storage.field(SETTINGS_KEY);
   }
   function syncCustomFlag(enabled) {
     if (typeof localStorage === 'undefined') return;
@@ -9460,20 +9460,20 @@
         id: String(id),
         title: title,
         imageURL: imageURL,
-        deepLink: "lampa://topshelf?card=".concat(encodeURIComponent(id), "&amp;media=").concat(encodeURIComponent(media), "&amp;source=").concat(encodeURIComponent(source))
+        deepLink: "lampa://topshelf?card=".concat(encodeURIComponent(id), "&media=").concat(encodeURIComponent(media), "&source=").concat(encodeURIComponent(source))
       };
     }).filter(Boolean);
   }
   function buildSections() {
     var sections = [];
-    if (isRowEnabled(ROW_UPNEXT) &amp;&amp; Array.isArray(sectionsState.upnext) &amp;&amp; sectionsState.upnext.length) {
+    if (isRowEnabled(ROW_UPNEXT) && Array.isArray(sectionsState.upnext) && sectionsState.upnext.length) {
       sections.push({
         title: Lampa.Lang.translate('trakttv_upnext'),
         imageShape: 'poster',
         items: mapItems(sectionsState.upnext, 'poster')
       });
     }
-    if (isRowEnabled(ROW_RECOMMENDATIONS) &amp;&amp; Array.isArray(sectionsState.recommendations) &amp;&amp; sectionsState.recommendations.length) {
+    if (isRowEnabled(ROW_RECOMMENDATIONS) && Array.isArray(sectionsState.recommendations) && sectionsState.recommendations.length) {
       sections.push({
         title: Lampa.Lang.translate('trakttv_recommendations'),
         imageShape: 'poster',
@@ -9481,7 +9481,7 @@
       });
     }
     return sections.filter(function (section) {
-      return section.items &amp;&amp; section.items.length;
+      return section.items && section.items.length;
     });
   }
   function writePayload() {
@@ -9494,7 +9494,7 @@
     };
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
-      if (typeof window !== 'undefined' &amp;&amp; window.location &amp;&amp; window.location.assign) {
+      if (typeof window !== 'undefined' && window.location && window.location.assign) {
         window.location.assign('lampa://topshelfupdate');
       }
     } catch (error) {
@@ -9514,9 +9514,9 @@
       if (!isEnabled()) return;
       writePayload();
     });
-    if (Lampa.Storage &amp;&amp; Lampa.Storage.listener) {
+    if (Lampa.Storage && Lampa.Storage.listener) {
       Lampa.Storage.listener.follow('change', function (e) {
-        if (e &amp;&amp; e.name === SETTINGS_KEY) {
+        if (e && e.name === SETTINGS_KEY) {
           syncCustomFlag(isEnabled());
         }
       });
@@ -9535,7 +9535,7 @@
   }
 
   // Local safe resolver for Api
-  var Api = typeof api$1 !== 'undefined' &amp;&amp; api$1 || window.TraktTV &amp;&amp; window.TraktTV.api || null;
+  var Api = typeof api$1 !== 'undefined' && api$1 || window.TraktTV && window.TraktTV.api || null;
   var initialized = false;
   var UI_DEADLINE_MAIN_MS = 2800;
   var UI_DEADLINE_CATEGORY_MS = 3200;
@@ -9564,13 +9564,13 @@
     return null;
   }
   function readBooleanStorage$1(name) {
-    var fallback = arguments.length &gt; 1 &amp;&amp; arguments[1] !== undefined ? arguments[1] : false;
+    var fallback = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : false;
     try {
-      if (Lampa &amp;&amp; Lampa.Storage &amp;&amp; typeof Lampa.Storage.get === 'function') {
+      if (Lampa && Lampa.Storage && typeof Lampa.Storage.get === 'function') {
         var direct = parseBooleanValue(Lampa.Storage.get(name));
         if (direct !== null) return direct;
       }
-      if (Lampa &amp;&amp; Lampa.Storage &amp;&amp; typeof Lampa.Storage.field === 'function') {
+      if (Lampa && Lampa.Storage && typeof Lampa.Storage.field === 'function') {
         var fromField = parseBooleanValue(Lampa.Storage.field(name));
         if (fromField !== null) return fromField;
       }
@@ -9585,8 +9585,8 @@
     return "iw:".concat(ignoreWatched, "|iwl:").concat(ignoreWatchlisted);
   }
   function buildRowCacheKey(config, params, screen) {
-    var rowName = config &amp;&amp; config.name ? config.name : 'unknown';
-    var categoryContext = params &amp;&amp; params.url ? String(params.url) : '';
+    var rowName = config && config.name ? config.name : 'unknown';
+    var categoryContext = params && params.url ? String(params.url) : '';
     var authFingerprint = getAuthFingerprint();
     var filtersFingerprint = getSourceFilterFingerprint();
     return STORAGE_CACHE_PREFIX + [rowName, screen || 'unknown', categoryContext, authFingerprint, filtersFingerprint].join('|');
@@ -9624,10 +9624,10 @@
     if (!Lampa || !Lampa.Storage || typeof Lampa.Storage.get !== 'function') return null;
     try {
       var cached = Lampa.Storage.get(cacheKey);
-      var time = Number(cached &amp;&amp; cached.time || 0);
-      var line = cached &amp;&amp; cached.line;
+      var time = Number(cached && cached.time || 0);
+      var line = cached && cached.line;
       if (!time || !line || !Array.isArray(line.results) || !line.results.length) return null;
-      if (Date.now() - time &gt; STALE_CACHE_TTL_MS) return null;
+      if (Date.now() - time > STALE_CACHE_TTL_MS) return null;
       return line;
     } catch (error) {
       logWarn('Rows cache load failed', error, {
@@ -9674,8 +9674,8 @@
       trakt_more_title: config.displayTitle,
       trakt_row: config.traktRow || '',
       source: 'tmdb',
-      page: data &amp;&amp; data.page ? data.page : 1,
-      total_pages: data &amp;&amp; data.total_pages ? data.total_pages : 1,
+      page: data && data.page ? data.page : 1,
+      total_pages: data && data.total_pages ? data.total_pages : 1,
       results: normalizedResults
     };
   }
@@ -9702,7 +9702,7 @@
   function registerSourceFiltersCacheInvalidation() {
     if (!Lampa || !Lampa.Storage || !Lampa.Storage.listener || typeof Lampa.Storage.listener.follow !== 'function') return;
     Lampa.Storage.listener.follow('change', function (event) {
-      var name = event &amp;&amp; event.name ? String(event.name) : '';
+      var name = event && event.name ? String(event.name) : '';
       if (!name || SOURCE_FILTER_FIELDS.indexOf(name) === -1) return;
       clearAllRowCaches();
     });
@@ -9712,9 +9712,9 @@
       if (!e || e.type !== 'create' || !e.data || !e.data.trakt_line) return;
       try {
         var titleNode = icons.createLineTitle(e.data.trakt_line_title || e.data.title || '');
-        var container = e.line &amp;&amp; e.line.render ? e.line.render().find('.items-line__title') : null;
-        if (container &amp;&amp; container.length) container.empty().append(titleNode);
-        if (e.line &amp;&amp; typeof e.line.use === 'function' &amp;&amp; e.data.trakt_more_component) {
+        var container = e.line && e.line.render ? e.line.render().find('.items-line__title') : null;
+        if (container && container.length) container.empty().append(titleNode);
+        if (e.line && typeof e.line.use === 'function' && e.data.trakt_more_component) {
           e.line.use({
             onlyMore: function onlyMore() {
               Lampa.Activity.push({
@@ -9735,8 +9735,8 @@
   }
   function createRowCall(config) {
     return function (params, screen) {
-      if (typeof config.visibleOn === 'function' &amp;&amp; !config.visibleOn(params, screen)) return;
-      if (typeof config.checkPermission === 'function' &amp;&amp; !config.checkPermission()) return;
+      if (typeof config.visibleOn === 'function' && !config.visibleOn(params, screen)) return;
+      if (typeof config.checkPermission === 'function' && !config.checkPermission()) return;
       var rowLimit = Math.max(1, parseInt(config.limit, 10) || 20);
       var rowDisplayLimit = Math.max(1, parseInt(config.displayLimit, 10) || 0);
       return function (call) {
@@ -9757,7 +9757,7 @@
           if (done) return;
           done = true;
           if (timeoutId) clearTimeout(timeoutId);
-          if (line &amp;&amp; Array.isArray(line.results) &amp;&amp; line.results.length) call(line);else call();
+          if (line && Array.isArray(line.results) && line.results.length) call(line);else call();
         };
         timeoutId = setTimeout(function () {
           finish(staleLine);
@@ -9766,16 +9766,16 @@
           limit: rowLimit,
           page: 1
         }).then(function (data) {
-          var results = data &amp;&amp; Array.isArray(data.results) ? data.results : [];
+          var results = data && Array.isArray(data.results) ? data.results : [];
           var filtered = typeof config.filter === 'function' ? config.filter(results, params, screen) : results;
           if (!filtered || !filtered.length) {
             clearRowCache(cacheKey);
             if (!done) finish(null);
             return;
           }
-          var limitedResults = rowDisplayLimit &gt; 0 ? filtered.slice(0, rowDisplayLimit) : filtered;
+          var limitedResults = rowDisplayLimit > 0 ? filtered.slice(0, rowDisplayLimit) : filtered;
           var normalizedResults = normalizeContentData(limitedResults);
-          if (screen === 'main' &amp;&amp; config.topshelf) {
+          if (screen === 'main' && config.topshelf) {
             updateTopshelf(config.topshelf, filtered);
           }
           var line = createRowPayload(config, data, normalizedResults);
@@ -9888,7 +9888,7 @@
         if (!Lampa.Storage.get('trakt_token')) return;
 
         // Screen-specific visibility
-        if (typeof screenFilter === 'function' &amp;&amp; !screenFilter(params, screen)) return;
+        if (typeof screenFilter === 'function' && !screenFilter(params, screen)) return;
         return function (call) {
           var now = new Date();
           var startDate = new Date(now);
@@ -9904,8 +9904,8 @@
             // Group by show TMDB ID (deduplicate — one card per show)
             var showMap = {};
             raw.forEach(function (item) {
-              var show = item &amp;&amp; item.show;
-              var episode = item &amp;&amp; item.episode;
+              var show = item && item.show;
+              var episode = item && item.episode;
               if (!show || !show.ids) return;
               var tmdbId = show.ids.tmdb;
               if (!tmdbId) return;
@@ -9924,9 +9924,9 @@
               return (a.first_aired || '').localeCompare(b.first_aired || '');
             });
 
-            // Resolve Episode interaction &amp; Module from Lampa runtime
-            var EpisodeClass = Lampa.Maker &amp;&amp; Lampa.Maker.get('Episode');
-            var EpisodeModule = Lampa.Maker &amp;&amp; Lampa.Maker.module('Episode');
+            // Resolve Episode interaction & Module from Lampa runtime
+            var EpisodeClass = Lampa.Maker && Lampa.Maker.get('Episode');
+            var EpisodeModule = Lampa.Maker && Lampa.Maker.module('Episode');
             var moduleMask = EpisodeModule ? EpisodeModule.only('Card', 'Callback') : undefined;
             var selectedShows = shows.slice(0, ROW_LIMIT);
 
@@ -9966,14 +9966,14 @@
               };
 
               // Copy episode fields to root
-              Lampa.Arrays &amp;&amp; Lampa.Arrays.extend ? Lampa.Arrays.extend(out, epData) : Object.keys(epData).forEach(function (k) {
+              Lampa.Arrays && Lampa.Arrays.extend ? Lampa.Arrays.extend(out, epData) : Object.keys(epData).forEach(function (k) {
                 out[k] = epData[k];
               });
 
               // Episode interaction
               if (EpisodeClass) {
                 out.params.createInstance = function (data) {
-                  var merged = _typeof(data) === 'object' &amp;&amp; data !== null ? Object.assign({}, data, data.episode || {}, {
+                  var merged = _typeof(data) === 'object' && data !== null ? Object.assign({}, data, data.episode || {}, {
                     card: data.card || data
                   }) : {};
                   return new EpisodeClass(merged);
@@ -9994,7 +9994,7 @@
                   });
                 },
                 onlyFocus: function onlyFocus() {
-                  if (Lampa.Utils &amp;&amp; Lampa.Utils.cardImgBackgroundBlur) {
+                  if (Lampa.Utils && Lampa.Utils.cardImgBackgroundBlur) {
                     Lampa.Background.change(Lampa.Utils.cardImgBackgroundBlur(card));
                   }
                 }
@@ -10004,16 +10004,16 @@
 
             // Fetch episode stills from TMDB in parallel (silent, each fails to empty string)
             var stillPromises = selectedShows.map(function (item) {
-              var showTmdbId = item.show &amp;&amp; item.show.ids &amp;&amp; item.show.ids.tmdb;
-              var seasonNum = item.episode &amp;&amp; item.episode.season;
-              var epNum = item.episode &amp;&amp; item.episode.number;
+              var showTmdbId = item.show && item.show.ids && item.show.ids.tmdb;
+              var seasonNum = item.episode && item.episode.season;
+              var epNum = item.episode && item.episode.number;
               if (!showTmdbId || seasonNum == null || epNum == null) return Promise.resolve('');
               return new Promise(function (resolve) {
                 try {
-                  var url = Lampa.TMDB.api('tv/' + showTmdbId + '/season/' + seasonNum + '/episode/' + epNum + '?api_key=' + Lampa.TMDB.key() + '&amp;language=' + Lampa.Storage.get('language', 'en'));
+                  var url = Lampa.TMDB.api('tv/' + showTmdbId + '/season/' + seasonNum + '/episode/' + epNum + '?api_key=' + Lampa.TMDB.key() + '&language=' + Lampa.Storage.get('language', 'en'));
                   var network = new Lampa.Reguest();
                   network.silent(url, function (data) {
-                    resolve(data &amp;&amp; data.still_path ? String(data.still_path) : '');
+                    resolve(data && data.still_path ? String(data.still_path) : '');
                   }, function () {
                     resolve('');
                   });
@@ -10064,7 +10064,7 @@
       index: 3,
       screen: ['category'],
       call: createCalendarCall(function (params) {
-        return params &amp;&amp; params.url === 'tv';
+        return params && params.url === 'tv';
       })
     });
   }
@@ -10098,7 +10098,7 @@
       displayLimit: 20,
       checkPermission: checkCalendarPermissions,
       visibleOn: function visibleOn(params) {
-        return params &amp;&amp; params.url === 'movie';
+        return params && params.url === 'movie';
       }
     }];
     dvdRows.forEach(function (row) {
@@ -10265,10 +10265,10 @@
     supported_types: ['movies', 'shows']
   }];
   var TRAKT_TRENDING_GENRE_SLUGS = new Set(TRAKT_TRENDING_GENRES.map(function (genre) {
-    return String(genre &amp;&amp; genre.slug ? genre.slug : '').trim().toLowerCase();
+    return String(genre && genre.slug ? genre.slug : '').trim().toLowerCase();
   }).filter(Boolean));
   function t(key) {
-    var fallback = arguments.length &gt; 1 &amp;&amp; arguments[1] !== undefined ? arguments[1] : '';
+    var fallback = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
     try {
       var translated = Lampa.Lang.translate(key);
       return translated || fallback || key;
@@ -10293,14 +10293,14 @@
   }
   function toPositiveInt(value) {
     var parsed = parseInt(value, 10);
-    return Number.isFinite(parsed) &amp;&amp; parsed &gt; 0 ? parsed : null;
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
   }
   function toNonNegativeInt(value) {
     var parsed = parseInt(value, 10);
-    return Number.isFinite(parsed) &amp;&amp; parsed &gt;= 0 ? parsed : null;
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
   }
   function readBooleanStorage(name) {
-    var fallback = arguments.length &gt; 1 &amp;&amp; arguments[1] !== undefined ? arguments[1] : false;
+    var fallback = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : false;
     var parse = function parse(value) {
       if (typeof value === 'boolean') return value;
       if (value === 1 || value === '1' || value === 'true') return true;
@@ -10308,11 +10308,11 @@
       return null;
     };
     try {
-      if (Lampa &amp;&amp; Lampa.Storage &amp;&amp; typeof Lampa.Storage.get === 'function') {
+      if (Lampa && Lampa.Storage && typeof Lampa.Storage.get === 'function') {
         var direct = parse(Lampa.Storage.get(name));
         if (direct !== null) return direct;
       }
-      if (Lampa &amp;&amp; Lampa.Storage &amp;&amp; typeof Lampa.Storage.field === 'function') {
+      if (Lampa && Lampa.Storage && typeof Lampa.Storage.field === 'function') {
         var fromField = parse(Lampa.Storage.field(name));
         if (fromField !== null) return fromField;
       }
@@ -10322,10 +10322,10 @@
     return fallback;
   }
   function resolvePagination() {
-    var headers = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {};
-    var page = arguments.length &gt; 1 &amp;&amp; arguments[1] !== undefined ? arguments[1] : 1;
-    var limit = arguments.length &gt; 2 &amp;&amp; arguments[2] !== undefined ? arguments[2] : DEFAULT_LIMIT;
-    var count = arguments.length &gt; 3 &amp;&amp; arguments[3] !== undefined ? arguments[3] : 0;
+    var headers = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    var page = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 1;
+    var limit = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : DEFAULT_LIMIT;
+    var count = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 0;
     var fallbackPage = toPositiveInt(page) || 1;
     var fallbackLimit = toPositiveInt(limit) || DEFAULT_LIMIT;
     var safeCount = Math.max(0, parseInt(count, 10) || 0);
@@ -10334,7 +10334,7 @@
     var headerTotal = toNonNegativeInt(headers['x-pagination-item-count']);
     var headerPageCount = toPositiveInt(headers['x-pagination-page-count']);
     var total = headerTotal !== null ? headerTotal : (Math.max(1, headerPage) - 1) * Math.max(1, headerLimit) + safeCount;
-    var totalPages = headerPageCount || (safeCount &gt;= headerLimit ? headerPage + 1 : Math.max(1, headerPage));
+    var totalPages = headerPageCount || (safeCount >= headerLimit ? headerPage + 1 : Math.max(1, headerPage));
     return {
       page: headerPage,
       limit: headerLimit,
@@ -10343,7 +10343,7 @@
     };
   }
   function normalizeSearchType() {
-    var rawType = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : '';
+    var rawType = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '';
     var value = String(rawType || '').trim().toLowerCase();
     if (value === 'movie' || value === 'movies') return 'movie';
     if (value === 'tv' || value === 'show' || value === 'shows' || value === 'series') return 'show';
@@ -10351,11 +10351,11 @@
     return '';
   }
   function normalizePath() {
-    var path = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : '';
+    var path = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '';
     return String(path || '').trim().replace(/^\/+/, '');
   }
   function applyQueryParams(query) {
-    var params = arguments.length &gt; 1 &amp;&amp; arguments[1] !== undefined ? arguments[1] : {};
+    var params = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
     if (!params || _typeof(params) !== 'object') return query;
     Object.keys(params).forEach(function (key) {
       var value = params[key];
@@ -10375,9 +10375,9 @@
     return query;
   }
   function buildFeedUrl(path) {
-    var page = arguments.length &gt; 1 &amp;&amp; arguments[1] !== undefined ? arguments[1] : 1;
-    var limit = arguments.length &gt; 2 &amp;&amp; arguments[2] !== undefined ? arguments[2] : DEFAULT_LIMIT;
-    var queryParams = arguments.length &gt; 3 &amp;&amp; arguments[3] !== undefined ? arguments[3] : {};
+    var page = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 1;
+    var limit = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : DEFAULT_LIMIT;
+    var queryParams = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : {};
     var query = applyQueryParams(applySourceFilters(new URLSearchParams({
       extended: 'full,images',
       page: String(Math.max(1, parseInt(page, 10) || 1)),
@@ -10386,9 +10386,9 @@
     return "/".concat(normalizePath(path), "?").concat(query.toString());
   }
   function buildRecommendationsUrl(type) {
-    var page = arguments.length &gt; 1 &amp;&amp; arguments[1] !== undefined ? arguments[1] : 1;
-    var limit = arguments.length &gt; 2 &amp;&amp; arguments[2] !== undefined ? arguments[2] : DEFAULT_LIMIT;
-    var queryParams = arguments.length &gt; 3 &amp;&amp; arguments[3] !== undefined ? arguments[3] : {};
+    var page = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 1;
+    var limit = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : DEFAULT_LIMIT;
+    var queryParams = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : {};
     var normalizedType = normalizePath(type).replace(/^recommendations\//, '');
     var query = applyQueryParams(applySourceFilters(new URLSearchParams({
       extended: 'full,images',
@@ -10399,9 +10399,9 @@
     return "/recommendations/".concat(normalizedType, "?").concat(query.toString());
   }
   function buildSearchUrl(type, query) {
-    var page = arguments.length &gt; 2 &amp;&amp; arguments[2] !== undefined ? arguments[2] : 1;
-    var limit = arguments.length &gt; 3 &amp;&amp; arguments[3] !== undefined ? arguments[3] : DEFAULT_LIMIT;
-    var queryParams = arguments.length &gt; 4 &amp;&amp; arguments[4] !== undefined ? arguments[4] : {};
+    var page = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 1;
+    var limit = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : DEFAULT_LIMIT;
+    var queryParams = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : {};
     var normalizedQuery = decodeQuery(query);
     if (!normalizedQuery) return '';
     var finalParams = applyQueryParams(applySourceFilters(new URLSearchParams({
@@ -10422,7 +10422,7 @@
     return '';
   }
   function resolveTraktGenreFilter() {
-    var params = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {};
+    var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
     var raw = params ? params.genres : null;
     if (raw === undefined || raw === null || raw === '') return '';
     var values = Array.isArray(raw) ? raw : String(raw).split(',');
@@ -10433,16 +10433,16 @@
     return Array.from(new Set(normalizedValues)).join(',');
   }
   function supportsAllGenreTypes() {
-    var genre = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {};
-    var requiredTypes = arguments.length &gt; 1 &amp;&amp; arguments[1] !== undefined ? arguments[1] : [];
+    var genre = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    var requiredTypes = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
     if (!Array.isArray(requiredTypes) || !requiredTypes.length) return true;
     var supportedTypes = Array.isArray(genre.supported_types) ? genre.supported_types : [];
     return requiredTypes.every(function (type) {
-      return supportedTypes.indexOf(type) &gt; -1;
+      return supportedTypes.indexOf(type) > -1;
     });
   }
   function buildTrendingGenreDefinitions(path, typeHint) {
-    var requiredTypes = arguments.length &gt; 2 &amp;&amp; arguments[2] !== undefined ? arguments[2] : [];
+    var requiredTypes = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : [];
     var trendingTitle = t('trakttv_source_trending', 'Trending');
     return TRAKT_TRENDING_GENRES.filter(function (genre) {
       return supportsAllGenreTypes(genre, requiredTypes);
@@ -10458,11 +10458,11 @@
     });
   }
   function detectMediaType(entry) {
-    var typeHint = arguments.length &gt; 1 &amp;&amp; arguments[1] !== undefined ? arguments[1] : '';
+    var typeHint = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
     var normalizedHint = String(typeHint || '').toLowerCase();
     if (normalizedHint === 'movie' || normalizedHint === 'movies') return 'movie';
     if (normalizedHint === 'show' || normalizedHint === 'shows' || normalizedHint === 'tv') return 'tv';
-    if (entry &amp;&amp; _typeof(entry) === 'object') {
+    if (entry && _typeof(entry) === 'object') {
       if (entry.movie) return 'movie';
       if (entry.show) return 'tv';
       if (entry.type === 'movie') return 'movie';
@@ -10472,11 +10472,11 @@
     return 'movie';
   }
   function mapMediaCard(entry) {
-    var typeHint = arguments.length &gt; 1 &amp;&amp; arguments[1] !== undefined ? arguments[1] : '';
+    var typeHint = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
     if (!entry || _typeof(entry) !== 'object') return null;
     var media = entry.movie || entry.show || entry;
     if (!media || _typeof(media) !== 'object') return null;
-    var ids = media.ids &amp;&amp; _typeof(media.ids) === 'object' ? _objectSpread2({}, media.ids) : {};
+    var ids = media.ids && _typeof(media.ids) === 'object' ? _objectSpread2({}, media.ids) : {};
     var mediaType = detectMediaType(entry, typeHint);
     var id = ids.tmdb || null;
     if (!id) return null;
@@ -10515,7 +10515,7 @@
   function mapListCard(entry) {
     if (!entry || _typeof(entry) !== 'object') return null;
     var list = entry.list || entry;
-    var ids = list.ids &amp;&amp; _typeof(list.ids) === 'object' ? _objectSpread2({}, list.ids) : {};
+    var ids = list.ids && _typeof(list.ids) === 'object' ? _objectSpread2({}, list.ids) : {};
     var listId = ids.trakt || list.id;
     if (!listId) return null;
     var title = (list.name || list.title || list.slug || "List ".concat(listId)).toString().trim();
@@ -10538,7 +10538,7 @@
     };
   }
   function mapCards(items) {
-    var typeHint = arguments.length &gt; 1 &amp;&amp; arguments[1] !== undefined ? arguments[1] : '';
+    var typeHint = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
     var source = Array.isArray(items) ? items : [];
     var normalizedHint = String(typeHint || '').toLowerCase();
     if (normalizedHint === 'list') {
@@ -10552,8 +10552,8 @@
     return requestApi('GET', url, {}, false, 0, {
       withMeta: true
     }).then(function (response) {
-      var data = response &amp;&amp; Array.isArray(response.data) ? response.data : [];
-      var headers = response &amp;&amp; response.headers ? response.headers : {};
+      var data = response && Array.isArray(response.data) ? response.data : [];
+      var headers = response && response.headers ? response.headers : {};
       return {
         data: data,
         headers: headers
@@ -10581,7 +10581,7 @@
       total_pages: pagination.total_pages,
       results: results
     };
-    var genres = query &amp;&amp; _typeof(query) === 'object' ? String(query.genres || '').trim() : '';
+    var genres = query && _typeof(query) === 'object' ? String(query.genres || '').trim() : '';
     if (genres) line.genres = genres;
     return line;
   }
@@ -10594,8 +10594,8 @@
       recommendations = _ref2$recommendations === void 0 ? false : _ref2$recommendations,
       _ref2$query = _ref2.query,
       query = _ref2$query === void 0 ? {} : _ref2$query;
-    var page = arguments.length &gt; 1 &amp;&amp; arguments[1] !== undefined ? arguments[1] : 1;
-    var limit = arguments.length &gt; 2 &amp;&amp; arguments[2] !== undefined ? arguments[2] : DEFAULT_LIMIT;
+    var page = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 1;
+    var limit = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : DEFAULT_LIMIT;
     var endpoint = recommendations ? buildRecommendationsUrl(path, page, limit, query) : buildFeedUrl(path, page, limit, query);
     return fetchWithMeta(endpoint).then(function (_ref3) {
       var data = _ref3.data,
@@ -10613,9 +10613,9 @@
     });
   }
   function loadSearchLine(type, query) {
-    var page = arguments.length &gt; 2 &amp;&amp; arguments[2] !== undefined ? arguments[2] : 1;
-    var limit = arguments.length &gt; 3 &amp;&amp; arguments[3] !== undefined ? arguments[3] : DEFAULT_LIMIT;
-    var extraQuery = arguments.length &gt; 4 &amp;&amp; arguments[4] !== undefined ? arguments[4] : {};
+    var page = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 1;
+    var limit = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : DEFAULT_LIMIT;
+    var extraQuery = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : {};
     var normalizedType = normalizeSearchType(type);
     var normalizedQuery = decodeQuery(query);
     if (!normalizedType || !normalizedQuery) return Promise.resolve(null);
@@ -10673,10 +10673,10 @@
     return defs;
   }
   function buildCategoryDefinitions() {
-    var section = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : 'movies';
-    var traktGenre = arguments.length &gt; 1 &amp;&amp; arguments[1] !== undefined ? arguments[1] : '';
+    var section = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 'movies';
+    var traktGenre = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
     var isShows = section === 'shows';
-    var useMediaForAnimation = !isShows &amp;&amp; traktGenre === 'animation';
+    var useMediaForAnimation = !isShows && traktGenre === 'animation';
     var basePath = useMediaForAnimation ? 'media' : section;
     var baseTypeHint = useMediaForAnimation ? 'media' : isShows ? 'show' : 'movie';
     var query = traktGenre ? {
@@ -10730,22 +10730,22 @@
     return defs;
   }
   function createPart(definition) {
-    var params = arguments.length &gt; 1 &amp;&amp; arguments[1] !== undefined ? arguments[1] : {};
+    var params = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
     return function (call) {
       var page = Math.max(1, parseInt(params.page, 10) || 1);
       var limit = Math.max(1, parseInt(params.limit, 10) || DEFAULT_LIMIT);
       loadFeedLine(definition, page, limit).then(function (line) {
-        return call(line &amp;&amp; line.results &amp;&amp; line.results.length ? line : null);
+        return call(line && line.results && line.results.length ? line : null);
       })["catch"](function () {
         return call(null);
       });
     };
   }
   function nextParts() {
-    var parts = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : [];
-    var limit = arguments.length &gt; 1 &amp;&amp; arguments[1] !== undefined ? arguments[1] : DEFAULT_CHUNK;
-    var loaded = arguments.length &gt; 2 ? arguments[2] : undefined;
-    var empty = arguments.length &gt; 3 ? arguments[3] : undefined;
+    var parts = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : [];
+    var limit = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : DEFAULT_CHUNK;
+    var loaded = arguments.length > 2 ? arguments[2] : undefined;
+    var empty = arguments.length > 3 ? arguments[3] : undefined;
     var chunk = parts.filter(Boolean).slice(0, Math.max(1, parseInt(limit, 10) || DEFAULT_CHUNK));
     if (!chunk.length) {
       if (empty) empty();
@@ -10756,8 +10756,8 @@
     chunk.forEach(function (part) {
       if (typeof part !== 'function') {
         var index = parts.indexOf(part);
-        if (index &gt; -1) parts[index] = null;
-        if (part &amp;&amp; Array.isArray(part.results) &amp;&amp; part.results.length) {
+        if (index > -1) parts[index] = null;
+        if (part && Array.isArray(part.results) && part.results.length) {
           collected.push(part);
         }
         pending -= 1;
@@ -10772,12 +10772,12 @@
       }
       part(function (line) {
         var index = parts.indexOf(part);
-        if (index &gt; -1) parts[index] = null;
-        if (line &amp;&amp; Array.isArray(line.results) &amp;&amp; line.results.length) {
+        if (index > -1) parts[index] = null;
+        if (line && Array.isArray(line.results) && line.results.length) {
           collected.push(line);
         }
         pending -= 1;
-        if (pending &gt; 0) return;
+        if (pending > 0) return;
         if (collected.length) {
           if (loaded) loaded(collected);
         } else {
@@ -10787,11 +10787,11 @@
     });
   }
   function injectContentRows() {
-    var screen = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : 'main';
-    var params = arguments.length &gt; 1 &amp;&amp; arguments[1] !== undefined ? arguments[1] : {};
-    var parts = arguments.length &gt; 2 &amp;&amp; arguments[2] !== undefined ? arguments[2] : [];
+    var screen = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 'main';
+    var params = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+    var parts = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : [];
     try {
-      if (Lampa.ContentRows &amp;&amp; typeof Lampa.ContentRows.call === 'function') {
+      if (Lampa.ContentRows && typeof Lampa.ContentRows.call === 'function') {
         Lampa.ContentRows.call(screen, params, parts);
       }
     } catch (error) {
@@ -10801,17 +10801,17 @@
     }
   }
   function createPartsLoader() {
-    var definitions = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : [];
-    var params = arguments.length &gt; 1 &amp;&amp; arguments[1] !== undefined ? arguments[1] : {};
-    var oncomplite = arguments.length &gt; 2 ? arguments[2] : undefined;
-    var onerror = arguments.length &gt; 3 ? arguments[3] : undefined;
-    var screen = arguments.length &gt; 4 &amp;&amp; arguments[4] !== undefined ? arguments[4] : 'main';
+    var definitions = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : [];
+    var params = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+    var oncomplite = arguments.length > 2 ? arguments[2] : undefined;
+    var onerror = arguments.length > 3 ? arguments[3] : undefined;
+    var screen = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 'main';
     var parts = definitions.map(function (definition) {
       return createPart(definition, params);
     });
     injectContentRows(screen, params, parts);
     var load = function load(resolve, reject) {
-      if (Lampa.Api &amp;&amp; typeof Lampa.Api.partNext === 'function') {
+      if (Lampa.Api && typeof Lampa.Api.partNext === 'function') {
         Lampa.Api.partNext(parts, DEFAULT_CHUNK, resolve, reject);
         return;
       }
@@ -10821,21 +10821,21 @@
     return load;
   }
   function resolveListPath() {
-    var params = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {};
+    var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
     var urlPath = normalizePath(params.url);
     var idPath = typeof params.id === 'string' ? normalizePath(params.id) : '';
     var genresPath = typeof params.genres === 'string' ? normalizePath(params.genres) : '';
     var traktGenre = resolveTraktGenreFilter(params);
-    if (idPath.indexOf('/') &gt; -1) return idPath;
-    if (genresPath.indexOf('/') &gt; -1) return genresPath;
-    if (urlPath.indexOf('/') &gt; -1) return urlPath;
+    if (idPath.indexOf('/') > -1) return idPath;
+    if (genresPath.indexOf('/') > -1) return genresPath;
+    if (urlPath.indexOf('/') > -1) return urlPath;
     if (urlPath === 'tv' || urlPath === 'show' || urlPath === 'shows') return 'shows/popular';
-    if ((urlPath === 'movie' || urlPath === 'movies') &amp;&amp; traktGenre === 'animation') return 'media/popular';
+    if ((urlPath === 'movie' || urlPath === 'movies') && traktGenre === 'animation') return 'media/popular';
     if (urlPath === 'movie' || urlPath === 'movies') return 'movies/popular';
     return 'media/popular';
   }
   function openSearchListDetail() {
-    var element = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {};
+    var element = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
     var listId = element.trakt_list_id || element.list_id;
     if (!listId) return;
     Lampa.Activity.push({
@@ -10850,8 +10850,8 @@
   }
   function delegateToTmdb(method, args) {
     try {
-      var tmdb = Lampa.Api &amp;&amp; Lampa.Api.sources &amp;&amp; Lampa.Api.sources.tmdb;
-      if (tmdb &amp;&amp; typeof tmdb[method] === 'function') {
+      var tmdb = Lampa.Api && Lampa.Api.sources && Lampa.Api.sources.tmdb;
+      if (tmdb && typeof tmdb[method] === 'function') {
         tmdb[method].apply(tmdb, args);
         return true;
       }
@@ -10862,23 +10862,23 @@
   }
   var TraktSourceProvider = {
     main: function main() {
-      var params = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {};
-      var oncomplite = arguments.length &gt; 1 ? arguments[1] : undefined;
-      var onerror = arguments.length &gt; 2 ? arguments[2] : undefined;
+      var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+      var oncomplite = arguments.length > 1 ? arguments[1] : undefined;
+      var onerror = arguments.length > 2 ? arguments[2] : undefined;
       return createPartsLoader(buildMainDefinitions(), params, oncomplite, onerror, 'main');
     },
     category: function category() {
-      var params = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {};
-      var oncomplite = arguments.length &gt; 1 ? arguments[1] : undefined;
-      var onerror = arguments.length &gt; 2 ? arguments[2] : undefined;
+      var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+      var oncomplite = arguments.length > 1 ? arguments[1] : undefined;
+      var onerror = arguments.length > 2 ? arguments[2] : undefined;
       var section = (params.url || '').toString().toLowerCase() === 'tv' ? 'shows' : 'movies';
       var traktGenre = resolveTraktGenreFilter(params);
       return createPartsLoader(buildCategoryDefinitions(section, traktGenre), params, oncomplite, onerror, 'category');
     },
     list: function list() {
-      var params = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {};
-      var oncomplite = arguments.length &gt; 1 ? arguments[1] : undefined;
-      var onerror = arguments.length &gt; 2 ? arguments[2] : undefined;
+      var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+      var oncomplite = arguments.length > 1 ? arguments[1] : undefined;
+      var onerror = arguments.length > 2 ? arguments[2] : undefined;
       var page = Math.max(1, parseInt(params.page, 10) || 1);
       var limit = Math.max(1, parseInt(params.limit, 10) || DEFAULT_LIMIT);
       var query = decodeQuery(params.query);
@@ -10887,11 +10887,11 @@
         genres: traktGenre
       } : {};
       var searchType = normalizeSearchType(params.search_type || (normalizePath(params.url).startsWith('search/') ? normalizePath(params.url).split('/')[1] : ''));
-      if (searchType &amp;&amp; !query) {
+      if (searchType && !query) {
         if (onerror) onerror();
         return;
       }
-      if (query &amp;&amp; searchType) {
+      if (query && searchType) {
         loadSearchLine(searchType, query, page, limit, extraQuery).then(function (line) {
           if (!line || !line.results.length) {
             if (onerror) onerror();
@@ -10924,7 +10924,7 @@
       });
     },
     menu: function menu() {
-      var oncomplite = arguments.length &gt; 1 ? arguments[1] : undefined;
+      var oncomplite = arguments.length > 1 ? arguments[1] : undefined;
       var items = [{
         title: "".concat(t('menu_movies', 'Movies'), ": ").concat(t('trakttv_source_trending', 'Trending')),
         id: 'movies/trending'
@@ -10947,8 +10947,8 @@
       oncomplite(items);
     },
     menuCategory: function menuCategory() {
-      var params = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {};
-      var oncomplite = arguments.length &gt; 1 ? arguments[1] : undefined;
+      var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+      var oncomplite = arguments.length > 1 ? arguments[1] : undefined;
       var action = (params.action || '').toString().toLowerCase();
       var section = action === 'tv' ? 'shows' : 'movies';
       var items = [{
@@ -10970,39 +10970,39 @@
       oncomplite(items);
     },
     full: function full() {
-      var params = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {};
-      var oncomplite = arguments.length &gt; 1 ? arguments[1] : undefined;
-      var onerror = arguments.length &gt; 2 ? arguments[2] : undefined;
+      var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+      var oncomplite = arguments.length > 1 ? arguments[1] : undefined;
+      var onerror = arguments.length > 2 ? arguments[2] : undefined;
       if (delegateToTmdb('full', [_objectSpread2(_objectSpread2({}, params), {}, {
         source: 'tmdb'
       }), oncomplite, onerror])) return;
       if (onerror) onerror();
     },
     person: function person() {
-      var params = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {};
-      var oncomplite = arguments.length &gt; 1 ? arguments[1] : undefined;
-      var onerror = arguments.length &gt; 2 ? arguments[2] : undefined;
+      var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+      var oncomplite = arguments.length > 1 ? arguments[1] : undefined;
+      var onerror = arguments.length > 2 ? arguments[2] : undefined;
       if (delegateToTmdb('person', [params, oncomplite, onerror])) return;
       if (onerror) onerror();
     },
     company: function company() {
-      var params = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {};
-      var oncomplite = arguments.length &gt; 1 ? arguments[1] : undefined;
-      var onerror = arguments.length &gt; 2 ? arguments[2] : undefined;
+      var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+      var oncomplite = arguments.length > 1 ? arguments[1] : undefined;
+      var onerror = arguments.length > 2 ? arguments[2] : undefined;
       if (delegateToTmdb('company', [params, oncomplite, onerror])) return;
       if (onerror) onerror();
     },
     seasons: function seasons() {
-      var tv = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {};
-      var from = arguments.length &gt; 1 &amp;&amp; arguments[1] !== undefined ? arguments[1] : [];
-      var oncomplite = arguments.length &gt; 2 ? arguments[2] : undefined;
+      var tv = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+      var from = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
+      var oncomplite = arguments.length > 2 ? arguments[2] : undefined;
       if (delegateToTmdb('seasons', [tv, from, oncomplite])) return;
-      oncomplite &amp;&amp; oncomplite({});
+      oncomplite && oncomplite({});
     },
     collections: function collections() {
-      var params = arguments.length &gt; 0 &amp;&amp; arguments[0] !== undefined ? arguments[0] : {};
-      var oncomplite = arguments.length &gt; 1 ? arguments[1] : undefined;
-      var onerror = arguments.length &gt; 2 ? arguments[2] : undefined;
+      var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+      var oncomplite = arguments.length > 1 ? arguments[1] : undefined;
+      var onerror = arguments.length > 2 ? arguments[2] : undefined;
       if (delegateToTmdb('collections', [params, oncomplite, onerror])) return;
       if (onerror) onerror();
     },
@@ -11013,7 +11013,7 @@
           save: true
         },
         search: function search(params, oncomplite) {
-          var query = decodeQuery(params &amp;&amp; params.query).trim();
+          var query = decodeQuery(params && params.query).trim();
           if (!query) {
             oncomplite([]);
             return;
@@ -11084,9 +11084,9 @@
           });
         },
         onSelect: function onSelect(params, close) {
-          var element = params &amp;&amp; (params.element || params.item_data) ? params.element || params.item_data : {};
-          var isList = element &amp;&amp; (element.trakt_search_type === 'list' || element.method === 'list');
-          close &amp;&amp; close();
+          var element = params && (params.element || params.item_data) ? params.element || params.item_data : {};
+          var isList = element && (element.trakt_search_type === 'list' || element.method === 'list');
+          close && close();
           if (isList) {
             openSearchListDetail(element);
             return;
@@ -11097,10 +11097,10 @@
           }));
         },
         onMore: function onMore(params, close) {
-          var query = decodeQuery(params &amp;&amp; params.query).trim();
-          var row = params &amp;&amp; params.data ? params.data : {};
+          var query = decodeQuery(params && params.query).trim();
+          var row = params && params.data ? params.data : {};
           var searchType = normalizeSearchType(row.search_type || row.type);
-          close &amp;&amp; close();
+          close && close();
           if (!query || !searchType) return;
           if (searchType === 'list') {
             Lampa.Bell.push({
@@ -11127,10 +11127,10 @@
   // Helper getter: prefer module api, fallback to global bridge
   function getGlobalApi() {
     try {
-      if (typeof api$1 !== 'undefined' &amp;&amp; api$1) return api$1;
+      if (typeof api$1 !== 'undefined' && api$1) return api$1;
     } catch (e) {/* noop */}
     try {
-      if (typeof window !== 'undefined' &amp;&amp; window.TraktTV &amp;&amp; window.TraktTV.api) {
+      if (typeof window !== 'undefined' && window.TraktTV && window.TraktTV.api) {
         return window.TraktTV.api;
       }
     } catch (e) {/* noop */}
@@ -11139,17 +11139,17 @@
   function registerSourceSelectorOption() {
     try {
       if (!Lampa || !Lampa.Params || typeof Lampa.Params.select !== 'function') return;
-      var baseValues = Lampa.Params.values &amp;&amp; _typeof(Lampa.Params.values.source) === 'object' ? Lampa.Params.values.source : {
+      var baseValues = Lampa.Params.values && _typeof(Lampa.Params.values.source) === 'object' ? Lampa.Params.values.source : {
         tmdb: 'TMDB',
         cub: 'CUB'
       };
       var sourceValues = _objectSpread2(_objectSpread2({}, baseValues), {}, {
         trakttv: 'TraktTV'
       });
-      var paramsDefault = Lampa.Params.defaults &amp;&amp; Lampa.Params.defaults.source ? Lampa.Params.defaults.source : 'tmdb';
+      var paramsDefault = Lampa.Params.defaults && Lampa.Params.defaults.source ? Lampa.Params.defaults.source : 'tmdb';
       var defaultValue = sourceValues[paramsDefault] ? paramsDefault : sourceValues.tmdb ? 'tmdb' : Object.keys(sourceValues)[0];
-      var storedSource = Lampa.Storage &amp;&amp; typeof Lampa.Storage.field === 'function' ? Lampa.Storage.field('source') : '';
-      var safeDefault = storedSource &amp;&amp; sourceValues[storedSource] ? storedSource : defaultValue || 'tmdb';
+      var storedSource = Lampa.Storage && typeof Lampa.Storage.field === 'function' ? Lampa.Storage.field('source') : '';
+      var safeDefault = storedSource && sourceValues[storedSource] ? storedSource : defaultValue || 'tmdb';
       Lampa.Params.select('source', sourceValues, safeDefault);
     } catch (error) {
       logError('Source selector registration failed', error);
@@ -11162,7 +11162,7 @@
     try {
       if (typeof window !== 'undefined') {
         window.TraktTV = window.TraktTV || {};
-        var current = typeof api$1 !== 'undefined' &amp;&amp; api$1 ? api$1 : null;
+        var current = typeof api$1 !== 'undefined' && api$1 ? api$1 : null;
         var existing = window.TraktTV.api || null;
 
         // Assign if not set or differs; keep existing if current is null
@@ -11178,14 +11178,14 @@
     } catch (e) {/* noop */}
 
     // Додаємо стилі
-    Lampa.Template.add('trakt_style', "&lt;style&gt;@charset 'UTF-8';.full-start-new__details.trakt{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;color:#fff}.trakt-brand-icon{width:100%;height:100%;display:block;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0;color:inherit}.trakt-brand-icon path{fill:currentColor}.trakt-head-action.focus .trakt-brand-icon,.trakt-head-action.hover .trakt-brand-icon,.menu__item.focus .trakt-brand-icon,.menu__item.hover .trakt-brand-icon,.menu__item.traverse .trakt-brand-icon,.settings-folder.focus .trakt-brand-icon{color:inherit}.full-start-new__details.trakt .trakt-icon{margin-right:.5em;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center}.full-start-new__details.trakt .full-start-new__split{margin:0 .5em}.trakt-applecation-progress{display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.4em;margin-right:.6em;margin-left:.6em}.trakt-applecation-progress .trakt-icon{width:18px;height:18px;display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center}.trakt-applecation-progress .trakt-icon svg{width:100%;height:100%}.trakt-applecation-progress__text{white-space:nowrap}.trakt-lists-container{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:1em;padding:1em}.trakt-list-card{width:150px;background:rgba(255,255,255,0.1);-webkit-border-radius:.5em;border-radius:.5em;padding:.5em;cursor:pointer;-webkit-transition:background .3s ease;-o-transition:background .3s ease;transition:background .3s ease}.trakt-list-card:hover{background:rgba(255,255,255,0.2)}.trakt-list-card__poster{width:100%;height:225px;background-size:cover;background-position:center;-webkit-border-radius:.5em;border-radius:.5em;margin-bottom:.5em}.trakt-list-card__title{font-size:.9em;text-align:center;white-space:nowrap;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis}.trakt-list-detail-header{padding:1em;background:rgba(0,0,0,0.3);margin-bottom:1em}.trakt-list-detail-title{font-size:1.5em;margin-bottom:.5em}.trakt-list-detail-description{font-size:1em;opacity:.8}.trakt-head-action{color:#ff4d4d}.trakt-head-action--ok{color:#37ff54}.trakt-head-action--error{color:#ff4d4d}.trakt-head-action svg{width:100%;height:100%;display:block}.trakt-head-icon{width:100%;height:100%;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center}.trakt-list-manager-button{display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.5em}.trakt-list-manager-button svg{width:1.2em;height:1.2em}.trakt-watchlist-hub{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;height:100%}.trakt-watchlist-hub__controls{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;gap:.55em;padding:.8em 1.5em .2em}.trakt-watchlist-hub__tabs{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:.8em}.trakt-watchlist-hub__tabs .simple-button{margin-right:0;-webkit-box-flex:1;-webkit-flex:1 1 11em;-ms-flex:1 1 11em;flex:1 1 11em;min-width:9.5em;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;text-align:center}.trakt-watchlist-hub__tabs .simple-button--filter&gt;div{width:100%;margin-left:0;padding:0;background:transparent;text-align:center;font-weight:700}.trakt-watchlist-hub__sorts{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:.55em}.trakt-watchlist__sort{margin-right:0;-webkit-box-flex:1;-webkit-flex:1 1 10em;-ms-flex:1 1 10em;flex:1 1 10em;min-width:7.6em;padding:.65em .85em;-webkit-box-pack:justify;-webkit-justify-content:space-between;-ms-flex-pack:justify;justify-content:space-between;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.55em;-webkit-border-radius:.9em;border-radius:.9em}.trakt-watchlist__sort&gt;div{margin-left:0}.trakt-watchlist__sort .trakt-watchlist__sort-label{min-width:0;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis;white-space:nowrap;font-weight:600;text-align:left}.trakt-watchlist__sort .trakt-watchlist__sort-state{-webkit-box-flex:0;-webkit-flex:0 0 auto;-ms-flex:0 0 auto;flex:0 0 auto;min-width:1em;font-size:1.05em;line-height:1;font-weight:700;text-align:center;opacity:.88}.trakt-watchlist__sort .trakt-watchlist__sort-state:empty{display:none}.trakt-watchlist__sort--active{background:rgba(255,255,255,0.14);-webkit-box-shadow:inset 0 0 0 1px rgba(255,255,255,0.16);box-shadow:inset 0 0 0 1px rgba(255,255,255,0.16)}.trakt-watchlist__sort--more{-webkit-flex-basis:8.4em;-ms-flex-preferred-size:8.4em;flex-basis:8.4em}.trakt-watchlist__sort--desc .trakt-watchlist__sort-state,.trakt-watchlist__sort--asc .trakt-watchlist__sort-state{opacity:1}.trakt-watchlist-hub__body{-webkit-box-flex:1;-webkit-flex:1;-ms-flex:1;flex:1;min-height:0}.trakt-watchlist__view.hide{display:none}.trakt-list-wide-card__meta{margin-top:.6em;font-size:1.1em;opacity:.8}.trakt-list-wide-card:not(.trakt-list-wide-card--create) .card__promo{display:none !important}.trakt-list-wide-card--create .card__view{background:-webkit-linear-gradient(315deg,rgba(23,129,255,0.28),rgba(53,255,145,0.22));background:-o-linear-gradient(315deg,rgba(23,129,255,0.28),rgba(53,255,145,0.22));background:linear-gradient(135deg,rgba(23,129,255,0.28),rgba(53,255,145,0.22));-webkit-border-radius:1em;border-radius:1em}.trakt-list-wide-card--create .card__view::before{content:'+';position:absolute;inset:0;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;font-size:6em;line-height:1;color:rgba(255,255,255,0.82);font-weight:500;z-index:0}.trakt-list-wide-card--create .card__img{opacity:0}.trakt-list-wide-card--create .card__promo{z-index:2}.trakt-list-wide-card--create .card__promo-title{font-weight:700}.trakt-userinfo-name{line-height:1.35;margin-bottom:.3em}.trakt-userinfo-vip{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.5em;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;line-height:1.35;margin-top:.1em}.trakt-userinfo-vip__label{opacity:.75}.trakt-vip-badge{display:inline-block;-webkit-border-radius:999px;border-radius:999px;padding:.2em .65em;font-size:.9em;line-height:1.25;border:1px solid transparent;vertical-align:middle}.trakt-vip-badge--enabled{color:#1be26f;border-color:rgba(27,226,111,0.45);background:rgba(27,226,111,0.14)}.trakt-vip-badge--disabled{color:#aeb5bc;border-color:rgba(174,181,188,0.45);background:rgba(174,181,188,0.12)}.trakt-device-auth{padding:.4em 1.2em 1.2em}.trakt-device-auth__inner{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:horizontal;-webkit-box-direction:normal;-webkit-flex-direction:row;-ms-flex-direction:row;flex-direction:row;gap:1.5em;-webkit-box-align:start;-webkit-align-items:flex-start;-ms-flex-align:start;align-items:flex-start}.trakt-device-auth__qr-col{-webkit-box-flex:0;-webkit-flex:0 0 auto;-ms-flex:0 0 auto;flex:0 0 auto;width:min(45%,14em)}.trakt-device-auth__info-col{-webkit-box-flex:1;-webkit-flex:1 1 auto;-ms-flex:1 1 auto;flex:1 1 auto;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;gap:.6em;-webkit-box-align:start;-webkit-align-items:flex-start;-ms-flex-align:start;align-items:flex-start;padding-top:.4em}.trakt-device-auth__qr-container{width:100%}.trakt-device-auth__qr-container--hidden{display:none}.trakt-device-auth__qr-link{display:block}.trakt-device-auth__qr-image{display:block;width:100%;height:auto;background:#fff;border:2px solid #e3e3e3;-webkit-border-radius:.8em;border-radius:.8em;padding:.35em;-webkit-box-sizing:border-box;box-sizing:border-box}.trakt-device-auth__qr-caption{margin-top:.6em;font-size:.95em;opacity:.72;text-align:center}.trakt-device-auth__verification{font-size:1.05em;line-height:1.5;word-break:break-word;opacity:.9}.trakt-device-auth__code{margin:0}.trakt-device-auth__code strong{letter-spacing:.08em}.trakt-check-btn{cursor:pointer;margin-top:.4em}@media screen and (max-width:480px){.trakt-device-auth{padding:0 .6em -webkit-calc(0.8em + env(safe-area-inset-bottom));padding:0 .6em calc(0.8em + env(safe-area-inset-bottom))}.trakt-device-auth__inner{-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center}.trakt-device-auth__qr-col{width:min(100%,18.5em)}.trakt-device-auth__info-col{-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;text-align:center}}&lt;/style&gt;");
+    Lampa.Template.add('trakt_style', "<style>@charset 'UTF-8';.full-start-new__details.trakt{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;color:#fff}.trakt-brand-icon{width:100%;height:100%;display:block;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0;color:inherit}.trakt-brand-icon path{fill:currentColor}.trakt-head-action.focus .trakt-brand-icon,.trakt-head-action.hover .trakt-brand-icon,.menu__item.focus .trakt-brand-icon,.menu__item.hover .trakt-brand-icon,.menu__item.traverse .trakt-brand-icon,.settings-folder.focus .trakt-brand-icon{color:inherit}.full-start-new__details.trakt .trakt-icon{margin-right:.5em;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center}.full-start-new__details.trakt .full-start-new__split{margin:0 .5em}.trakt-applecation-progress{display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.4em;margin-right:.6em;margin-left:.6em}.trakt-applecation-progress .trakt-icon{width:18px;height:18px;display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center}.trakt-applecation-progress .trakt-icon svg{width:100%;height:100%}.trakt-applecation-progress__text{white-space:nowrap}.trakt-lists-container{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:1em;padding:1em}.trakt-list-card{width:150px;background:rgba(255,255,255,0.1);-webkit-border-radius:.5em;border-radius:.5em;padding:.5em;cursor:pointer;-webkit-transition:background .3s ease;-o-transition:background .3s ease;transition:background .3s ease}.trakt-list-card:hover{background:rgba(255,255,255,0.2)}.trakt-list-card__poster{width:100%;height:225px;background-size:cover;background-position:center;-webkit-border-radius:.5em;border-radius:.5em;margin-bottom:.5em}.trakt-list-card__title{font-size:.9em;text-align:center;white-space:nowrap;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis}.trakt-list-detail-header{padding:1em;background:rgba(0,0,0,0.3);margin-bottom:1em}.trakt-list-detail-title{font-size:1.5em;margin-bottom:.5em}.trakt-list-detail-description{font-size:1em;opacity:.8}.trakt-head-action{color:#ff4d4d}.trakt-head-action--ok{color:#37ff54}.trakt-head-action--error{color:#ff4d4d}.trakt-head-action svg{width:100%;height:100%;display:block}.trakt-head-icon{width:100%;height:100%;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center}.trakt-list-manager-button{display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.5em}.trakt-list-manager-button svg{width:1.2em;height:1.2em}.trakt-watchlist-hub{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;height:100%}.trakt-watchlist-hub__controls{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;gap:.55em;padding:.8em 1.5em .2em}.trakt-watchlist-hub__tabs{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:.8em}.trakt-watchlist-hub__tabs .simple-button{margin-right:0;-webkit-box-flex:1;-webkit-flex:1 1 11em;-ms-flex:1 1 11em;flex:1 1 11em;min-width:9.5em;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;text-align:center}.trakt-watchlist-hub__tabs .simple-button--filter>div{width:100%;margin-left:0;padding:0;background:transparent;text-align:center;font-weight:700}.trakt-watchlist-hub__sorts{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:.55em}.trakt-watchlist__sort{margin-right:0;-webkit-box-flex:1;-webkit-flex:1 1 10em;-ms-flex:1 1 10em;flex:1 1 10em;min-width:7.6em;padding:.65em .85em;-webkit-box-pack:justify;-webkit-justify-content:space-between;-ms-flex-pack:justify;justify-content:space-between;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.55em;-webkit-border-radius:.9em;border-radius:.9em}.trakt-watchlist__sort>div{margin-left:0}.trakt-watchlist__sort .trakt-watchlist__sort-label{min-width:0;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis;white-space:nowrap;font-weight:600;text-align:left}.trakt-watchlist__sort .trakt-watchlist__sort-state{-webkit-box-flex:0;-webkit-flex:0 0 auto;-ms-flex:0 0 auto;flex:0 0 auto;min-width:1em;font-size:1.05em;line-height:1;font-weight:700;text-align:center;opacity:.88}.trakt-watchlist__sort .trakt-watchlist__sort-state:empty{display:none}.trakt-watchlist__sort--active{background:rgba(255,255,255,0.14);-webkit-box-shadow:inset 0 0 0 1px rgba(255,255,255,0.16);box-shadow:inset 0 0 0 1px rgba(255,255,255,0.16)}.trakt-watchlist__sort--more{-webkit-flex-basis:8.4em;-ms-flex-preferred-size:8.4em;flex-basis:8.4em}.trakt-watchlist__sort--desc .trakt-watchlist__sort-state,.trakt-watchlist__sort--asc .trakt-watchlist__sort-state{opacity:1}.trakt-watchlist-hub__body{-webkit-box-flex:1;-webkit-flex:1;-ms-flex:1;flex:1;min-height:0}.trakt-watchlist__view.hide{display:none}.trakt-list-wide-card__meta{margin-top:.6em;font-size:1.1em;opacity:.8}.trakt-list-wide-card:not(.trakt-list-wide-card--create) .card__promo{display:none !important}.trakt-list-wide-card--create .card__view{background:-webkit-linear-gradient(315deg,rgba(23,129,255,0.28),rgba(53,255,145,0.22));background:-o-linear-gradient(315deg,rgba(23,129,255,0.28),rgba(53,255,145,0.22));background:linear-gradient(135deg,rgba(23,129,255,0.28),rgba(53,255,145,0.22));-webkit-border-radius:1em;border-radius:1em}.trakt-list-wide-card--create .card__view::before{content:'+';position:absolute;inset:0;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;font-size:6em;line-height:1;color:rgba(255,255,255,0.82);font-weight:500;z-index:0}.trakt-list-wide-card--create .card__img{opacity:0}.trakt-list-wide-card--create .card__promo{z-index:2}.trakt-list-wide-card--create .card__promo-title{font-weight:700}.trakt-userinfo-name{line-height:1.35;margin-bottom:.3em}.trakt-userinfo-vip{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.5em;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;line-height:1.35;margin-top:.1em}.trakt-userinfo-vip__label{opacity:.75}.trakt-vip-badge{display:inline-block;-webkit-border-radius:999px;border-radius:999px;padding:.2em .65em;font-size:.9em;line-height:1.25;border:1px solid transparent;vertical-align:middle}.trakt-vip-badge--enabled{color:#1be26f;border-color:rgba(27,226,111,0.45);background:rgba(27,226,111,0.14)}.trakt-vip-badge--disabled{color:#aeb5bc;border-color:rgba(174,181,188,0.45);background:rgba(174,181,188,0.12)}.trakt-device-auth{padding:.4em 1.2em 1.2em}.trakt-device-auth__inner{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:horizontal;-webkit-box-direction:normal;-webkit-flex-direction:row;-ms-flex-direction:row;flex-direction:row;gap:1.5em;-webkit-box-align:start;-webkit-align-items:flex-start;-ms-flex-align:start;align-items:flex-start}.trakt-device-auth__qr-col{-webkit-box-flex:0;-webkit-flex:0 0 auto;-ms-flex:0 0 auto;flex:0 0 auto;width:min(45%,14em)}.trakt-device-auth__info-col{-webkit-box-flex:1;-webkit-flex:1 1 auto;-ms-flex:1 1 auto;flex:1 1 auto;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;gap:.6em;-webkit-box-align:start;-webkit-align-items:flex-start;-ms-flex-align:start;align-items:flex-start;padding-top:.4em}.trakt-device-auth__qr-container{width:100%}.trakt-device-auth__qr-container--hidden{display:none}.trakt-device-auth__qr-link{display:block}.trakt-device-auth__qr-image{display:block;width:100%;height:auto;background:#fff;border:2px solid #e3e3e3;-webkit-border-radius:.8em;border-radius:.8em;padding:.35em;-webkit-box-sizing:border-box;box-sizing:border-box}.trakt-device-auth__qr-caption{margin-top:.6em;font-size:.95em;opacity:.72;text-align:center}.trakt-device-auth__verification{font-size:1.05em;line-height:1.5;word-break:break-word;opacity:.9}.trakt-device-auth__code{margin:0}.trakt-device-auth__code strong{letter-spacing:.08em}.trakt-check-btn{cursor:pointer;margin-top:.4em}@media screen and (max-width:480px){.trakt-device-auth{padding:0 .6em -webkit-calc(0.8em + env(safe-area-inset-bottom));padding:0 .6em calc(0.8em + env(safe-area-inset-bottom))}.trakt-device-auth__inner{-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center}.trakt-device-auth__qr-col{width:min(100%,18.5em)}.trakt-device-auth__info-col{-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;text-align:center}}</style>");
     $('body').append(Lampa.Template.get('trakt_style', {}, true));
 
     // Фонова валідація токена при старті (єдиний шлях auth lifecycle).
     if (Lampa.Storage.get('trakt_refresh_token')) {
       var _getGlobalApi;
       var authApi = (_getGlobalApi = getGlobalApi()) === null || _getGlobalApi === void 0 ? void 0 : _getGlobalApi.auth;
-      if (authApi &amp;&amp; typeof authApi.ensureValid === 'function') {
+      if (authApi && typeof authApi.ensureValid === 'function') {
         authApi.ensureValid({
           reason: 'startup'
         })["catch"](function (error) {
@@ -11193,7 +11193,7 @@
             debugOnly: true
           });
         });
-      } else if (authApi &amp;&amp; typeof authApi.refresh === 'function') {
+      } else if (authApi && typeof authApi.refresh === 'function') {
         authApi.refresh({
           reason: 'startup-fallback'
         })["catch"](function (error) {
@@ -11259,8 +11259,8 @@
   function registerContextListAction() {
     if (typeof Lampa === 'undefined' || !Lampa.Manifest) return;
     var pluginName = Lampa.Lang.translate('trakt_manage_lists_title') || 'Trakt Lists';
-    var exists = Array.isArray(Lampa.Manifest.plugins) &amp;&amp; Lampa.Manifest.plugins.some(function (plugin) {
-      return plugin &amp;&amp; plugin.name === pluginName &amp;&amp; plugin.component === 'trakt_context_lists';
+    var exists = Array.isArray(Lampa.Manifest.plugins) && Lampa.Manifest.plugins.some(function (plugin) {
+      return plugin && plugin.name === pluginName && plugin.component === 'trakt_context_lists';
     });
     if (exists) return;
     Lampa.Manifest.plugins = {
