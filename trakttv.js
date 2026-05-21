@@ -1881,7 +1881,7 @@
           image: getImageUrl(media, 'fanart'),
           method: item.movie ? 'movie' : 'tv',
           card_type: item.movie ? 'movie' : 'tv',
-          trakt_released: item.movie ? (media.released || null) : null
+          trakt_released: item.movie ? (media.released || null) : (media.first_aired ? media.first_aired.split('T')[0] : null)
         };
       }).filter(Boolean)
     };
@@ -3026,6 +3026,18 @@
       cardView.appendChild(type);
     }
   }
+  function insertUpcomingDivider(comp) {
+    var container = comp && typeof comp.render === 'function' ? comp.render(true) : null;
+    if (!container) return;
+    if (container.querySelector('.trakt-upcoming-section')) return;
+    var firstUpcoming = container.querySelector('.trakt-upcoming-first');
+    if (!firstUpcoming || !firstUpcoming.parentNode) return;
+    var label = Lampa.Lang && Lampa.Lang.translate ? Lampa.Lang.translate('trakttv_watchlist_upcoming') || 'Скоро' : 'Скоро';
+    var div = document.createElement('div');
+    div.className = 'trakt-upcoming-section';
+    div.textContent = label;
+    firstUpcoming.parentNode.insertBefore(div, firstUpcoming);
+  }
   function rearrangeWatchlistUpcoming(data) {
     if (!data || !Array.isArray(data.results)) return data;
     var today = new Date();
@@ -3078,6 +3090,7 @@
             _this.build(data && _typeof(data) === 'object' && Array.isArray(data.results) ? data : {
               results: []
             });
+            if (type === 'watchlist') setTimeout(function () { insertUpcomingDivider(_this); }, 0);
           })["catch"](function () {
             _this.empty();
           });
@@ -3111,6 +3124,7 @@
               resolve.call(_this2, data && _typeof(data) === 'object' && Array.isArray(data.results) ? data : {
                 results: []
               });
+              if (type === 'watchlist') setTimeout(function () { insertUpcomingDivider(_this2); }, 0);
               waitload = false;
             })["catch"](function () {
               waitload = false;
@@ -3145,15 +3159,9 @@
               if (type === 'upnext') {
                 renderUpnextCardWatched(this, element);
               }
-              if (type === 'watchlist' && element._trakt_upcoming_first && !upcomingDividerShown) {
-                upcomingDividerShown = true;
+              if (type === 'watchlist' && element._trakt_upcoming_first) {
                 var node = typeof this.render === 'function' ? this.render(true) : null;
-                if (node && node.parentNode) {
-                  var div = document.createElement('div');
-                  div.className = 'trakt-upcoming-section';
-                  div.textContent = Lampa.Lang && Lampa.Lang.translate ? Lampa.Lang.translate('trakttv_watchlist_upcoming') || 'Скоро' : 'Скоро';
-                  node.parentNode.insertBefore(div, node);
-                }
+                if (node) node.classList.add('trakt-upcoming-first');
               }
             }
           });
