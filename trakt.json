@@ -392,8 +392,8 @@ function () {
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var CLIENT_ID = 'YOUR_CLIENT_ID_HERE';
-  var CLIENT_SECRET = 'YOUR_CLIENT_SECRET_HERE';
+  function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
+  function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
   var DEVICE_AUTH_STALE_MS = 20 * 60 * 1000;
   var MAX_RETRY_ATTEMPTS = 2; // 3 спроби загалом
@@ -1163,8 +1163,8 @@ function () {
                 refresh_token: refresh_token,
                 redirect_uri: redirect_uri || '',
                 grant_type: 'refresh_token',
-                client_id: CLIENT_ID,
-                client_secret: CLIENT_SECRET
+                client_id: getClientId(),
+                client_secret: getClientSecret()
               }, true);
             }).then(function (res) {
               rlRecordRequest('/oauth/token', 200);
@@ -1855,7 +1855,7 @@ function () {
     var headers = {
       'Content-Type': 'application/json',
       'trakt-api-version': '2',
-      'trakt-api-key': CLIENT_ID
+      'trakt-api-key': getClientId()
     };
     if (!unauthorized) {
       var token = Lampa.Storage.get('trakt_token');
@@ -2419,8 +2419,8 @@ function () {
           code: code,
           redirect_uri: redirect_uri,
           grant_type: 'authorization_code',
-          client_id: CLIENT_ID,
-          client_secret: CLIENT_SECRET
+          client_id: getClientId(),
+          client_secret: getClientSecret()
         }, true).then(function (res) {
           if (res &amp;&amp; res.access_token) {
             saveTokens(res);
@@ -2464,8 +2464,8 @@ function () {
         var token = _ref0.token;
         return requestApi('POST', '/oauth/revoke', {
           token: token,
-          client_id: CLIENT_ID,
-          client_secret: CLIENT_SECRET
+          client_id: getClientId(),
+          client_secret: getClientSecret()
         }, true);
       },
       device: {
@@ -2475,7 +2475,7 @@ function () {
         login: function login() {
           var url = '/oauth/device/code';
           return rlWaitForSlot(url).then(function () {
-            return _performRequest('POST', url, { client_id: CLIENT_ID }, true);
+            return _performRequest('POST', url, { client_id: getClientId() }, true);
           }).then(function (res) {
             rlRecordRequest(url, 200);
             return res;
@@ -2493,8 +2493,8 @@ function () {
           return rlWaitForSlot(url).then(function () {
             return _performRequest('POST', url, {
               code: device_code,
-              client_id: CLIENT_ID,
-              client_secret: CLIENT_SECRET
+              client_id: getClientId(),
+              client_secret: getClientSecret()
             }, true);
           }).then(function (response) {
             rlRecordRequest(url, 200);
@@ -4924,6 +4924,21 @@ function () {
       },
       trakttv_settings_thanks_description: {
         ru: "Поддержка развития TraktTV-плагина добровольная. Спасибо за вклад.",
+      },
+      trakt_client_id_label: {
+        ru: "Client ID приложения Trakt",
+      },
+      trakt_client_id_description: {
+        ru: "Введите Client ID из настроек вашего приложения на trakt.tv/oauth/applications",
+      },
+      trakt_client_secret_label: {
+        ru: "Client Secret приложения Trakt",
+      },
+      trakt_client_secret_description: {
+        ru: "Введите Client Secret из настроек вашего приложения на trakt.tv/oauth/applications",
+      },
+      trakt_not_set: {
+        ru: "не задан",
       }
     });
   }
@@ -6589,6 +6604,62 @@ function () {
         })["catch"](function () {
           loading.remove();
           item.append("&lt;div&gt;".concat(Lampa.Lang.translate('trakttvAuthError'), "&lt;/div&gt;"));
+        });
+      }
+    });
+
+    // Client ID и Client Secret
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: {
+        name: 'trakt_client_id',
+        type: 'button'
+      },
+      field: {
+        name: Lampa.Lang.translate('trakt_client_id_label'),
+        description: Lampa.Lang.translate('trakt_client_id_description')
+      },
+      onRender: function onRender(item) {
+        var val = Lampa.Storage.get('trakt_client_id') || '';
+        item.find('.settings-param__value').text(val ? val.slice(0, 8) + '...' : Lampa.Lang.translate('trakt_not_set'));
+      },
+      onChange: function onChange() {
+        Lampa.Input.edit({
+          title: Lampa.Lang.translate('trakt_client_id_label'),
+          value: Lampa.Storage.get('trakt_client_id') || '',
+          free: true,
+          nosave: true,
+          nomic: true
+        }, function (val) {
+          Lampa.Storage.set('trakt_client_id', (val || '').trim());
+          Lampa.Settings.update();
+        });
+      }
+    });
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: {
+        name: 'trakt_client_secret',
+        type: 'button'
+      },
+      field: {
+        name: Lampa.Lang.translate('trakt_client_secret_label'),
+        description: Lampa.Lang.translate('trakt_client_secret_description')
+      },
+      onRender: function onRender(item) {
+        var val = Lampa.Storage.get('trakt_client_secret') || '';
+        item.find('.settings-param__value').text(val ? '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022' : Lampa.Lang.translate('trakt_not_set'));
+      },
+      onChange: function onChange() {
+        Lampa.Input.edit({
+          title: Lampa.Lang.translate('trakt_client_secret_label'),
+          value: Lampa.Storage.get('trakt_client_secret') || '',
+          free: true,
+          nosave: true,
+          nomic: true
+        }, function (val) {
+          Lampa.Storage.set('trakt_client_secret', (val || '').trim());
+          Lampa.Settings.update();
         });
       }
     });
