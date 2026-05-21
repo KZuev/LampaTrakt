@@ -5882,6 +5882,7 @@
               if (a.action !== 'confirm' || !_A) return;
               _A.removeFromHistory({ method: method, ids: { tmdb: itemId } }).then(function() {
                 invalidateWatchedCache();
+                document.querySelectorAll('.trakt-watched-badge[data-tmdb="' + itemId + '"]').forEach(function(el) { el.remove(); });
                 notify$1(Lampa.Lang.translate('trakt_history_removed'));
                 TraktHistory.showWatchProgress(data, element);
               }).catch(function() {});
@@ -9401,6 +9402,7 @@
     if (!cardView || cardView.querySelector('.trakt-watched-badge')) return;
     var badge = document.createElement('div');
     badge.className = 'trakt-watched-badge';
+    badge.setAttribute('data-tmdb', String(data.id));
     badge.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>';
     cardView.appendChild(badge);
   }
