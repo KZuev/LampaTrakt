@@ -5744,19 +5744,19 @@
               onSelect: function(a) {
                 if (a.action === 'dropped' && _A) {
                   _A.hideFromProgress({ id: itemId }).then(function() {
-                    if (_hiddenShowsCache) _hiddenShowsCache.add(String(itemId));
+                    if (_hiddenShowsCache) _hiddenShowsCache.tmdb.add(String(itemId));
                     invalidateWatchedCache();
                     TraktHistory.showWatchProgress(data, element);
                   }).catch(function() {});
                 } else if (a.action === 'completed' && _A) {
                   _A.addToHistory({ method: 'show', id: itemId, ids: { tmdb: itemId } }, 'all').then(function() {
-                    if (_hiddenShowsCache) _hiddenShowsCache.delete(String(itemId));
+                    if (_hiddenShowsCache) { _hiddenShowsCache.tmdb.delete(String(itemId)); }
                     invalidateWatchedCache();
                     TraktHistory.showWatchProgress(data, element);
                   }).catch(function() {});
                 } else if (_A) {
                   _A.unhideFromProgress({ id: itemId }).catch(function() {});
-                  if (_hiddenShowsCache) _hiddenShowsCache.delete(String(itemId));
+                  if (_hiddenShowsCache) { _hiddenShowsCache.tmdb.delete(String(itemId)); }
                   TraktHistory.showWatchProgress(data, element);
                 }
               },
@@ -5833,7 +5833,8 @@
             return;
           }
 
-          var isDropped = hiddenSet.has(String(itemId));
+          var isDropped = hiddenSet.tmdb.has(String(itemId)) ||
+            (result.traktId && hiddenSet.trakt.has(String(result.traktId)));
           var isCompleted = aired > 0 && aired === watchedCount;
 
           var labelType;
@@ -9228,25 +9229,29 @@
   var _hiddenShowsCache = null;
   var _hiddenShowsCachePromise = null;
 
+  function _emptyHiddenCache() { return { tmdb: new Set(), trakt: new Set() }; }
+
   function ensureHiddenShowsCache() {
     if (_hiddenShowsCache) return Promise.resolve(_hiddenShowsCache);
     if (_hiddenShowsCachePromise) return _hiddenShowsCachePromise;
-    if (!Lampa.Storage.get('trakt_token')) return Promise.resolve(new Set());
+    if (!Lampa.Storage.get('trakt_token')) return Promise.resolve(_emptyHiddenCache());
     var _A = typeof api$1 !== 'undefined' && api$1 || null;
-    if (!_A || typeof _A.hiddenShows !== 'function') return Promise.resolve(new Set());
+    if (!_A || typeof _A.hiddenShows !== 'function') return Promise.resolve(_emptyHiddenCache());
     _hiddenShowsCachePromise = _A.hiddenShows().then(function(res) {
-      var ids = new Set();
+      var cache = _emptyHiddenCache();
       (res || []).forEach(function(item) {
         if (item.type !== 'show') return;
-        var tmdb = item.show && item.show.ids && item.show.ids.tmdb;
-        if (tmdb) ids.add(String(tmdb));
+        var ids = item.show && item.show.ids;
+        if (!ids) return;
+        if (ids.tmdb) cache.tmdb.add(String(ids.tmdb));
+        if (ids.trakt) cache.trakt.add(String(ids.trakt));
       });
-      _hiddenShowsCache = ids;
+      _hiddenShowsCache = cache;
       _hiddenShowsCachePromise = null;
-      return ids;
+      return cache;
     }).catch(function() {
       _hiddenShowsCachePromise = null;
-      _hiddenShowsCache = new Set();
+      _hiddenShowsCache = _emptyHiddenCache();
       return _hiddenShowsCache;
     });
     return _hiddenShowsCachePromise;
