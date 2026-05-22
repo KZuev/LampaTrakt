@@ -6339,7 +6339,7 @@
                   TraktHistory.showWatchProgress(data, element);
                 } else if ((a.action === 'now' || a.action === 'unknown') && !isShow && _A) {
                   var payload = { method: 'movie', id: itemId, ids: { tmdb: itemId } };
-                  if (a.action === 'unknown') payload.watched_at = null;
+                  if (a.action === 'unknown') payload.watched_at = '1970-01-01T00:00:00.000Z';
                   _A.addToHistory(payload).then(function() {
                     invalidateWatchedCache();
                     TraktHistory.showWatchProgress(data, element);
