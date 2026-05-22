@@ -11200,19 +11200,6 @@
    */
   function registerDvdRows() {
     var dvdRows = [{
-      name: 'TraktDvdCalendarRow',
-      title: Lampa.Lang.translate('trakttv_row_dvd_calendar_main'),
-      index: 3,
-      screen: ['main'],
-      displayTitle: Lampa.Lang.translate('trakttv_calendar'),
-      apiMethod: 'dvdCalendar',
-      limit: 36,
-      displayLimit: 20,
-      checkPermission: checkCalendarPermissions,
-      visibleOn: function visibleOn() {
-        return true;
-      }
-    }, {
       name: 'TraktDvdCalendarRowMovies',
       title: Lampa.Lang.translate('trakttv_row_dvd_calendar_movies'),
       index: 3,
