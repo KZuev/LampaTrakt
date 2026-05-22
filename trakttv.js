@@ -11354,6 +11354,12 @@
                     var merged = _typeof(data) === 'object' && data !== null
                       ? Object.assign({}, data, data.episode || {}, { card: data.card || data })
                       : {};
+                    // Strip episode numbers from rendered instance so badge is hidden.
+                    // Raw item keeps season_number:1 for module validation only.
+                    delete merged.season_number;
+                    delete merged.episode_number;
+                    delete merged.season;
+                    delete merged.number;
                     return new EpisodeClass(merged);
                   };
                 }
