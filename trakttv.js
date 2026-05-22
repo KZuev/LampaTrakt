@@ -1888,7 +1888,9 @@
           image: getImageUrl(media, 'fanart'),
           method: item.movie ? 'movie' : 'tv',
           card_type: item.movie ? 'movie' : 'tv',
-          trakt_released: item.movie ? (media.released || null) : (media.first_aired ? media.first_aired.split('T')[0] : null)
+          trakt_released: item.movie ? (media.released || null) : (media.first_aired ? media.first_aired.split('T')[0] : null),
+          trakt_genres: Array.isArray(media.genres) ? media.genres : [],
+          trakt_country: typeof media.country === 'string' ? media.country.toLowerCase() : ''
         };
       }).filter(Boolean)
     };
@@ -3292,6 +3294,29 @@
     if (upcoming.length > 0) upcoming[0]._trakt_upcoming_first = true;
     return Object.assign({}, data, { results: released.concat(upcoming) });
   }
+  function applyWatchlistClientFilters(data, options) {
+    if (!data || !Array.isArray(data.results)) return data;
+    var results = data.results;
+    if (options.filterYear) {
+      var fy = String(options.filterYear);
+      if (fy.indexOf('-') > 0) {
+        var parts = fy.split('-');
+        var yFrom = parseInt(parts[0], 10), yTo = parseInt(parts[1], 10);
+        results = results.filter(function(x) { var y = parseInt(x.release_date, 10); return y >= yFrom && y <= yTo; });
+      } else {
+        results = results.filter(function(x) { return String(x.release_date).slice(0, 4) === fy; });
+      }
+    }
+    if (options.filterGenre) {
+      var fg = String(options.filterGenre);
+      results = results.filter(function(x) { return Array.isArray(x.trakt_genres) && x.trakt_genres.indexOf(fg) >= 0; });
+    }
+    if (options.filterCountry) {
+      var fc = String(options.filterCountry).toLowerCase();
+      results = results.filter(function(x) { return x.trakt_country === fc; });
+    }
+    return Object.assign({}, data, { results: results });
+  }
   function baseComponent(object, type) {
     var comp;
     var total_pages = 0;
@@ -3321,7 +3346,7 @@
             if (data && data.total_pages) {
               total_pages = data.total_pages;
             }
-            if (type === 'watchlist') data = rearrangeWatchlistUpcoming(data);
+            if (type === 'watchlist') { data = applyWatchlistClientFilters(data, object); data = rearrangeWatchlistUpcoming(data); }
             if (type === 'upnext') data = rearrangeUpnextNotStarted(data);
             _this.build(data && _typeof(data) === 'object' && Array.isArray(data.results) ? data : {
               results: []
@@ -3357,7 +3382,7 @@
                 total_pages = data.total_pages;
                 _this2.total_pages = data.total_pages;
               }
-              if (type === 'watchlist') data = rearrangeWatchlistUpcoming(data);
+              if (type === 'watchlist') { data = applyWatchlistClientFilters(data, object); data = rearrangeWatchlistUpcoming(data); }
               if (type === 'upnext') data = rearrangeUpnextNotStarted(data);
               resolve.call(_this2, data && _typeof(data) === 'object' && Array.isArray(data.results) ? data : {
                 results: []
