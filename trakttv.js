@@ -5896,11 +5896,9 @@
         return appendChunk(chunkStart, CHUNK_DAYS, data);
       }).then(function () {
         // Keep loadingMore=true until after the timeout so the down handler
-        // cannot re-trigger loadMoreDays before the grid is updated.
+        // cannot re-trigger loadMoreDays before the new items are in the DOM.
         setTimeout(function () {
           if (Lampa.Controller.enabled() !== 'content') { loadingMore = false; return; }
-          // Find the item after the current one and focus it directly by index,
-          // bypassing Navigator's spatial computation (stale on Apple TV).
           var _items = body.find('.timetable__item.selector');
           var _curIdx = -1;
           if (last) {
@@ -5908,13 +5906,11 @@
               if (_items[_i] === last) { _curIdx = _i; break; }
             }
           }
-          var _nextItem = _curIdx >= 0 && _curIdx + 1 < _items.length
-            ? _items[_curIdx + 1]
-            : (last || (_items.length ? _items[0] : false));
-          Lampa.Controller.collectionSet(scroll.render());
-          Lampa.Controller.collectionFocus(_nextItem || false, scroll.render());
+          var _nextIdx = _curIdx >= 0 && _curIdx + 1 < _items.length ? _curIdx + 1 : _curIdx;
+          if (_items[_nextIdx] && last) $(last).trigger('hover:blur');
+          if (_items[_nextIdx]) { last = _items[_nextIdx]; $(last).trigger('hover:focus'); }
           loadingMore = false;
-        }, 300);
+        }, 200);
       })['catch'](function () {
         loadingMore = false;
       });
@@ -5953,7 +5949,10 @@
             scroll.onEnd = loadMoreDays;
             if (!hasAny) this.empty();
 
-            // Color legend
+            scroll.minus();
+            scroll.append(body);
+
+            // Color legend — added to html outside the scroll so it never scrolls away
             (function () {
               var _ll = Lampa.Storage ? Lampa.Storage.get('language', 'ru') : 'ru';
               var _lm = {
@@ -5976,11 +5975,9 @@
                 return chip(t.color, lb ? (lb[_ll] || lb.en) : t.key);
               });
               html_parts.push(chip('#FF9800', Lampa.Lang.translate('trakt_digital_release') || (_ll === 'ru' ? 'Цифровой релиз' : 'Digital release')));
-              body.prepend($('<div style="display:flex;flex-wrap:wrap;padding:.5em 1em .3em;font-size:.8em;opacity:.65;line-height:1.8">' + html_parts.join('') + '</div>'));
+              html.append($('<div style="display:flex;flex-wrap:wrap;padding:.5em 1em .3em;font-size:.8em;opacity:.75;line-height:1.8;flex-shrink:0">' + html_parts.join('') + '</div>'));
             })();
 
-            scroll.minus();
-            scroll.append(body);
             html.append(scroll.render());
 
             if (this.activity) this.activity.loader(false);
@@ -6111,7 +6108,10 @@
           if (typeof Navigator !== 'undefined' && Navigator.canmove('up')) Navigator.move('up');else Lampa.Controller.toggle('head');
         },
         down: function down() {
-          // Find the current item's sequential index in the list
+          // Fully index-based: never use Navigator.canmove/move for vertical
+          // movement in the calendar list. Navigator rebuilds on every collectionSet
+          // call and can drift focus right. Direct hover events are reliable on
+          // Apple TV regardless of whether element positions are computed yet.
           var _items = body.find('.timetable__item.selector');
           var _curIdx = -1;
           if (last) {
@@ -6119,14 +6119,10 @@
               if (_items[_i] === last) { _curIdx = _i; break; }
             }
           }
-          if (typeof Navigator !== 'undefined' && Navigator.canmove('down')) {
-            // Navigator knows about the next item — use it normally
-            Navigator.move('down');
-          } else if (_curIdx >= 0 && _curIdx < _items.length - 1) {
-            // Navigator's positions are stale (items just added) but the next
-            // item exists in the DOM — jump to it directly by index
-            Lampa.Controller.collectionSet(scroll.render());
-            Lampa.Controller.collectionFocus(_items[_curIdx + 1], scroll.render());
+          if (_curIdx >= 0 && _curIdx < _items.length - 1) {
+            if (last) $(last).trigger('hover:blur');
+            last = _items[_curIdx + 1];
+            $(last).trigger('hover:focus');
           } else {
             loadMoreDays();
           }
