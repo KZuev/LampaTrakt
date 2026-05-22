@@ -5632,6 +5632,10 @@
       trakt_watched_no: {
         ru: "Не просмотрено",
       },
+      trakt_digital_release: {
+        ru: "Цифровой релиз",
+        en: "Digital release",
+      },
       trakttv_na: {
         ru: "на",
       },
@@ -6619,51 +6623,31 @@
   };
 
   function showDigitalReleaseDate(data, element) {
-    var _n = function(msg) { try { Lampa.Noty.show(msg); } catch(e) {} };
     var movieData = (data && data.movie) || data || {};
     var movieId = movieData.id || (data && data.id);
-    if (!movieId || !Lampa.TMDB || !Lampa.Reguest) { _n('[dig] exit: no id/TMDB/Reguest'); return; }
+    if (!movieId || !Lampa.TMDB || !Lampa.Reguest) return;
     var renderRoot = element && element.object && element.object.activity &&
       typeof element.object.activity.render === 'function'
       ? element.object.activity.render() : null;
-    if (!renderRoot) { _n('[dig] exit: no renderRoot'); return; }
-
-    var releaseYear = String(movieData.release_date || movieData.year || data.release_date || data.year || '').replace(/\D/g, '').slice(0, 4);
-    _n('[dig] id=' + movieId + ' year=' + releaseYear + ' rd=' + (movieData.release_date || data.release_date));
-    if (!releaseYear) return;
+    if (!renderRoot) return;
 
     function applyDate(isoDate) {
+      if (renderRoot.find('.trakt-digital-date').length) return;
       var datePart = (isoDate || '').split('T')[0];
       var parts = datePart.split('-');
       if (parts.length !== 3 || !parts[1] || !parts[2]) return;
       var displayDate = parts[2] + '.' + parts[1] + '.' + parts[0];
-      var yearRe = new RegExp('\\b' + releaseYear + '\\b');
-      var found = [];
-      renderRoot.find('*').each(function() {
-        if (this.children.length > 2) return;
-        var clone = this.cloneNode(true);
-        clone.querySelectorAll('svg,img').forEach(function(s) { s.remove(); });
-        var text = (clone.textContent || '').replace(/\s+/g, ' ').trim();
-        if (text.length < 40 && yearRe.test(text)) {
-          found.push((this.className || this.tagName).toString().slice(0, 25) + ':"' + text.slice(0, 15) + '"');
-        }
-      });
-      _n('[dig] year in: ' + (found.length ? found.slice(0, 3).join(' / ') : 'NOT FOUND'));
-      var details = renderRoot.find('.full-start-new__details:not(.trakt)');
-      details.each(function() {
-        if (this.querySelector('.trakt-digital-date')) return false;
-        var clone = this.cloneNode(true);
-        clone.querySelectorAll('svg').forEach(function(s) { s.remove(); });
-        var text = (clone.textContent || '').replace(/\s+/g, ' ').trim();
-        if (text.length < 30 && yearRe.test(text)) {
-          var span = document.createElement('span');
-          span.className = 'trakt-digital-date';
-          span.textContent = ' (' + displayDate + ')';
-          this.appendChild(span);
-          _n('[dig] applied: ' + displayDate);
-          return false;
-        }
-      });
+      var label = (Lampa.Lang && Lampa.Lang.translate('trakt_digital_release')) || 'Digital';
+      var chip = document.createElement('div');
+      chip.className = 'full-start-new__details trakt-digital-date';
+      chip.textContent = label + ': ' + displayDate;
+      var anchor = renderRoot.find('.full-start-new__details:not(.trakt-digital-date)').last();
+      if (anchor.length) {
+        anchor.after(chip);
+      } else {
+        var rateLine = renderRoot.find('.full-start-new__rate-line');
+        if (rateLine.length) rateLine.before(chip);
+      }
     }
 
     var lang = Lampa.Storage ? Lampa.Storage.get('language', 'ru') : 'ru';
@@ -6674,8 +6658,6 @@
     var url = Lampa.TMDB.api('movie/' + movieId + '/release_dates?api_key=' + Lampa.TMDB.key());
     var network = new Lampa.Reguest();
     network.silent(url, function(resp) {
-      var cnt = resp && resp.results && resp.results.length;
-      _n('[dig] TMDB ok, ' + cnt + ' countries');
       if (!resp || !Array.isArray(resp.results)) return;
       var exactDate = null, usDate = null, anyDate = null;
       resp.results.forEach(function(entry) {
@@ -6688,10 +6670,9 @@
           }
         });
       });
-      _n('[dig] exact=' + exactDate + ' us=' + usDate + ' any=' + anyDate);
       var chosen = exactDate || usDate || anyDate;
       if (chosen) applyDate(chosen);
-    }, function(err) { _n('[dig] TMDB error: ' + JSON.stringify(err)); });
+    }, function() {});
   }
 
   /**
@@ -10372,7 +10353,6 @@
           TraktHistory.showWatchProgress(e.data, e);
         }
       }
-      try { Lampa.Noty.show('[card] method=' + (e.object && e.object.method) + ' id=' + (e.data && e.data.id)); } catch(x) {}
       if (e.object.method === 'movie') {
         showDigitalReleaseDate(e.data, e);
       }
