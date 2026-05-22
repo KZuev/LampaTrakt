@@ -4618,7 +4618,7 @@
         return this.render();
       },
       render: function render(js) { return js ? html[0] : html; },
-      start: function start() { Lampa.Controller.toggle(WL_FILTER_CTRL); },
+      start: function start() { if (currentView && currentView.start) currentView.start(); },
       pause: function pause() {},
       stop: function stop() {},
       destroy: function destroy() {
