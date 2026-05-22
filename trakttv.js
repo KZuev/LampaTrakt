@@ -2421,11 +2421,30 @@
       });
     },
     watchlist: function watchlist() {
+      var self = this;
       var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       var page = Math.max(1, parseInt(params.page, 10) || 1);
       var limit = Math.max(1, parseInt(params.limit, 10) || 36);
       var sort = normalizeWatchlistSort(params.sort || params.watchlistSort);
       var mediaType = normalizeWatchlistMediaType(params.mediaType || params.watchlistType || params.type);
+      if (mediaType === 'movies,shows') {
+        var half = Math.ceil(limit / 2);
+        var mParams = Object.assign({}, params, { mediaType: 'movies', limit: half });
+        var sParams = Object.assign({}, params, { mediaType: 'shows', limit: half });
+        return Promise.all([
+          self.watchlist(mParams).catch(function() { return { results: [], total: 0, total_pages: 1, page: page, limit: half }; }),
+          self.watchlist(sParams).catch(function() { return { results: [], total: 0, total_pages: 1, page: page, limit: half }; })
+        ]).then(function(res) {
+          var combined = (res[0].results || []).concat(res[1].results || []);
+          return enrichWithTmdbLocale({
+            results: combined,
+            total: (res[0].total || 0) + (res[1].total || 0),
+            total_pages: Math.max(res[0].total_pages || 1, res[1].total_pages || 1),
+            page: page,
+            limit: limit
+          });
+        });
+      }
       var url = buildWatchlistUrl({
         mediaType: mediaType,
         sort: sort,
@@ -4318,7 +4337,7 @@
     var currentView = null;
     var lastFilterFocus = null;
     var activeFilters = {
-      type: object.watchlistType || object.mediaType || object.type || 'all',
+      type: object.watchlistType || object.mediaType || object.type || 'movies',
       year: object.filterYear || '',
       genre: object.filterGenre || '',
       country: object.filterCountry || ''
