@@ -11327,17 +11327,31 @@
                 var title = (data && (data.title || data.name)) || movie.title || '';
                 var poster = data && data.poster_path ? 'https://image.tmdb.org/t/p/w500' + data.poster_path : getImageUrl(movie, 'poster');
                 var image = data && data.backdrop_path ? 'https://image.tmdb.org/t/p/w1280' + data.backdrop_path : getImageUrl(movie, 'fanart');
+                var stillPath = data && data.backdrop_path ? data.backdrop_path : '';
                 var airTime = Lampa.Utils.parseToDate(digitalDate).getTime();
                 var card = {
                   id: tmdbId, ids: movie.ids, title: title,
                   original_title: movie.title || title, original_name: title, name: title,
                   poster: poster, image: image, source: 'tmdb', type: 'movie'
                 };
-                var out = {
-                  card: card, time: airTime, title: title,
-                  id: tmdbId, ids: movie.ids, params: {},
-                  air_date: digitalDate, isMovie: true
+                // Use episode-card structure so the row renders movies identically to TV shows
+                // (horizontal backdrop at top, small poster at bottom, date badge)
+                var epData = {
+                  air_date: digitalDate,
+                  season_number: null,
+                  episode_number: null,
+                  name: '',
+                  still_path: stillPath
                 };
+                var out = {
+                  card: card, episode: epData, time: airTime, title: title,
+                  id: tmdbId, ids: movie.ids, params: {},
+                  still_path: stillPath, isMovie: true
+                };
+                Lampa.Arrays && Lampa.Arrays.extend
+                  ? Lampa.Arrays.extend(out, epData)
+                  : Object.keys(epData).forEach(function (k) { out[k] = epData[k]; });
+                if (moduleMask) out.params.module = moduleMask;
                 out.params.emit = {
                   onlyEnter: function onlyEnter() {
                     Lampa.Activity.push({ url: '', component: 'full', id: tmdbId, method: 'movie', card: card, source: 'tmdb' });
