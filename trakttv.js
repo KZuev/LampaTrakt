@@ -5908,12 +5908,13 @@
           }
           var _nextIdx = _curIdx >= 0 && _curIdx + 1 < _items.length ? _curIdx + 1 : -1;
           if (_nextIdx >= 0 && _items[_nextIdx]) {
-            var _nextEl = _items[_nextIdx];
-            if (typeof Navigator !== 'undefined' && Navigator.focus) Navigator.focus(_nextEl);
-            else { if (last) $(last).trigger('hover:blur'); last = _nextEl; $(_nextEl).trigger('hover:focus'); }
+            // Rebuild collection to include newly appended items, then focus.
+            // 500 ms gives Apple TV's WebKit time to paint and compute positions.
+            Lampa.Controller.collectionSet(scroll.render());
+            Lampa.Controller.collectionFocus(_items[_nextIdx], scroll.render());
           }
           loadingMore = false;
-        }, 200);
+        }, 500);
       })['catch'](function () {
         loadingMore = false;
       });
@@ -6095,49 +6096,31 @@
       Lampa.Controller.add('content', {
         link: this,
         toggle: function toggle() {
-          // Build Navigator collection once per activation so the frame
-          // renderer knows the coordinate space of this view.
+          // Build the Navigator grid once per activation.
+          // Do NOT rebuild inside the down/up handlers — rebuilding on every
+          // keypress causes stale positions that make Navigator drift sideways.
           Lampa.Controller.collectionSet(scroll.render());
           if (!last) last = body.find('.timetable__item.selector').get(0);
-          if (last) {
-            if (typeof Navigator !== 'undefined' && Navigator.focus) Navigator.focus(last);
-            else Lampa.Controller.collectionFocus(last, scroll.render());
-          }
+          Lampa.Controller.collectionFocus(last || false, scroll.render());
         },
         left: function left() {
-          Lampa.Controller.toggle('menu');
+          if (typeof Navigator !== 'undefined' && Navigator.canmove('left')) Navigator.move('left');
+          else Lampa.Controller.toggle('menu');
         },
         right: function right() {
-          // Vertical-only list — no rightward movement.
+          // Intentionally empty: prevent accidental Siri-Remote swipes from
+          // drifting the selection into adjacent UI elements.
         },
         up: function up() {
-          var _items = body.find('.timetable__item.selector');
-          var _curIdx = -1;
-          if (last) {
-            for (var _i = 0; _i < _items.length; _i++) {
-              if (_items[_i] === last) { _curIdx = _i; break; }
-            }
-          }
-          if (_curIdx > 0) {
-            var prevEl = _items[_curIdx - 1];
-            if (typeof Navigator !== 'undefined' && Navigator.focus) Navigator.focus(prevEl);
-            else { $(last).trigger('hover:blur'); last = prevEl; $(prevEl).trigger('hover:focus'); }
-          } else {
-            Lampa.Controller.toggle('head');
-          }
+          if (typeof Navigator !== 'undefined' && Navigator.canmove('up')) Navigator.move('up');
+          else Lampa.Controller.toggle('head');
         },
         down: function down() {
-          var _items = body.find('.timetable__item.selector');
-          var _curIdx = -1;
-          if (last) {
-            for (var _i = 0; _i < _items.length; _i++) {
-              if (_items[_i] === last) { _curIdx = _i; break; }
-            }
-          }
-          if (_curIdx >= 0 && _curIdx < _items.length - 1) {
-            var nextEl = _items[_curIdx + 1];
-            if (typeof Navigator !== 'undefined' && Navigator.focus) Navigator.focus(nextEl);
-            else { $(last).trigger('hover:blur'); last = nextEl; $(nextEl).trigger('hover:focus'); }
+          // Use Navigator.move for spatial navigation (not index-based) so the
+          // frame moves in the correct visual direction. collectionSet is NOT
+          // called here — rebuilding the grid on every keypress caused drift.
+          if (typeof Navigator !== 'undefined' && Navigator.canmove('down')) {
+            Navigator.move('down');
           } else {
             loadMoreDays();
           }
