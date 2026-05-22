@@ -2490,13 +2490,13 @@
           limit: requestedLimit,
           total: fallbackTotal
         });
-        return {
+        return enrichWithTmdbLocale({
           results: mapped,
           total: pagination.total,
           total_pages: pagination.total_pages,
           page: pagination.page,
           limit: pagination.limit
-        };
+        });
       });
     },
     history: function(params) {
@@ -5106,6 +5106,9 @@
       },
       trakttv_row_recommendations_tv: {
         ru: "Trakt.TV: Рекомендации (сериалы)",
+      },
+      trakttv_row_watchlist_main: {
+        ru: "Trakt.TV: Хочу посмотреть",
       },
       trakttv_row_calendar_main: {
         ru: "Trakt.TV: Календарь выходов",
@@ -10897,6 +10900,20 @@
         return true;
       }
     }, {
+      name: 'TraktWatchlistRow',
+      title: Lampa.Lang.translate('trakttv_row_watchlist_main'),
+      index: 4,
+      screen: ['main'],
+      displayTitle: Lampa.Lang.translate('trakttv_watchlist'),
+      apiMethod: 'watchlist',
+      component: 'trakt_watchlist',
+      limit: 36,
+      displayLimit: 20,
+      checkPermission: checkUpNextPermissions,
+      visibleOn: function visibleOn() {
+        return true;
+      }
+    }, {
       name: 'TraktRecommendationsRowMovie',
       title: Lampa.Lang.translate('trakttv_row_recommendations_movie'),
       index: 2,
@@ -11093,7 +11110,34 @@
                 }
               });
             });
-            return Promise.all(stillPromises).then(function (stillPaths) {
+            var _calLang = Lampa.Storage ? Lampa.Storage.get('language', 'ru') : 'ru';
+            var enrichPromises = baseResults.map(function (out) {
+              var tmdbId = out.id;
+              if (!tmdbId || !Lampa.TMDB || !Lampa.Reguest) return Promise.resolve();
+              var cacheKey = 'tv/' + tmdbId + '/' + _calLang;
+              if (_tmdbLocaleCache[cacheKey]) {
+                var cached = _tmdbLocaleCache[cacheKey];
+                if (cached.title) { out.title = cached.title; if (out.card) { out.card.title = cached.title; out.card.name = cached.title; } }
+                if (cached.poster && out.card) out.card.poster = cached.poster;
+                if (cached.image && out.card) out.card.image = cached.image;
+                return Promise.resolve();
+              }
+              return new Promise(function (resolve) {
+                var url = Lampa.TMDB.api('tv/' + tmdbId + '?api_key=' + Lampa.TMDB.key() + '&language=' + _calLang);
+                var network = new Lampa.Reguest();
+                network.silent(url, function (d) {
+                  var entry = {};
+                  var localTitle = d && (d.title || d.name);
+                  if (localTitle) { out.title = localTitle; if (out.card) { out.card.title = localTitle; out.card.name = localTitle; } entry.title = localTitle; }
+                  if (d && d.poster_path) { var calPoster = 'https://image.tmdb.org/t/p/w500' + d.poster_path; if (out.card) out.card.poster = calPoster; entry.poster = calPoster; }
+                  if (d && d.backdrop_path) { var calImage = 'https://image.tmdb.org/t/p/w1280' + d.backdrop_path; if (out.card) out.card.image = calImage; entry.image = calImage; }
+                  _tmdbLocaleCache[cacheKey] = entry;
+                  resolve();
+                }, function () { resolve(); });
+              });
+            });
+            return Promise.all([Promise.all(stillPromises), Promise.all(enrichPromises)]).then(function (res) {
+              var stillPaths = res[0];
               // Merge still_path into results
               baseResults.forEach(function (out, index) {
                 var path = stillPaths[index];
