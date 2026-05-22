@@ -5138,6 +5138,21 @@
       trakttv_recommendations_ignore_watched_descr: {
         ru: "Не показывать в рекомендациях фильмы и сериалы, которые уже отмечены как просмотренные",
       },
+      trakttv_lampa_section: {
+        ru: "Главная страница Lampa",
+      },
+      trakttv_hide_lampa_continue: {
+        ru: "Скрыть «Продолжить просмотр» Lampa",
+      },
+      trakttv_hide_lampa_continue_descr: {
+        ru: "Убрать раздел с главной страницы — он дублируется разделом Trakt «Начать просмотр»",
+      },
+      trakttv_hide_lampa_recomend: {
+        ru: "Скрыть «Рекомендуем посмотреть» Lampa",
+      },
+      trakttv_hide_lampa_recomend_descr: {
+        ru: "Убрать раздел с главной страницы — он дублируется разделом Trakt «Рекомендации»",
+      },
       trakttv_source_ignore_watchlisted: {
         ru: "Источник: скрывать watchlist",
       },
@@ -7790,6 +7805,42 @@
       field: {
         name: t$1('trakttv_recommendations_ignore_watched', 'Recommendations: hide watched'),
         description: t$1('trakttv_recommendations_ignore_watched_descr', 'Hide already watched movies and shows from recommendations')
+      }
+    });
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: {
+        name: 'trakt_lampa_section',
+        type: 'static'
+      },
+      field: { name: '' },
+      onRender: function onRender(item) {
+        item.empty();
+        item.append("<div class=\"settings-param__name\"><b>".concat(t$1('trakttv_lampa_section', 'Lampa home page'), "</b></div>"));
+      }
+    });
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: {
+        name: 'trakt_hide_lampa_continue',
+        type: 'trigger',
+        "default": false
+      },
+      field: {
+        name: t$1('trakttv_hide_lampa_continue', 'Hide Lampa «Continue watching»'),
+        description: t$1('trakttv_hide_lampa_continue_descr', 'Remove from home page — duplicated by Trakt «Up Next» row')
+      }
+    });
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: {
+        name: 'trakt_hide_lampa_recomend',
+        type: 'trigger',
+        "default": false
+      },
+      field: {
+        name: t$1('trakttv_hide_lampa_recomend', 'Hide Lampa «Recommended to watch»'),
+        description: t$1('trakttv_hide_lampa_recomend_descr', 'Remove from home page — duplicated by Trakt Recommendations row')
       }
     });
     Lampa.SettingsApi.addParam({
@@ -10639,6 +10690,7 @@
     Lampa.Storage.set('trakttv_cached_recommendations', null);
     clearAllRowCaches();
     registerLineTitleDecorator();
+    registerLampaRowHider();
     registerSourceFiltersCacheInvalidation();
     registerRows();
     registerCalendarRows();
@@ -10676,6 +10728,20 @@
           debugOnly: true
         });
       }
+    });
+  }
+  function registerLampaRowHider() {
+    Lampa.Listener.follow('line', function (e) {
+      if (!e || e.type !== 'create' || !e.data || e.data.trakt_line) return;
+      var comp = e.data.component;
+      if (!comp || !e.line || typeof e.line.render !== 'function') return;
+      try {
+        if (comp === 'continue' && Lampa.Storage.get('trakt_hide_lampa_continue')) {
+          e.line.render().remove();
+        } else if (comp === 'recomend' && Lampa.Storage.get('trakt_hide_lampa_recomend')) {
+          e.line.render().remove();
+        }
+      } catch (err) {}
     });
   }
   function createRowCall(config) {
