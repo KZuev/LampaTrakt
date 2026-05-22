@@ -5847,10 +5847,16 @@
         return appendChunk(chunkStart, CHUNK_DAYS, data);
       }).then(function () {
         loadingMore = false;
-        // Refresh controller collection so new items are navigable
-        if (Lampa.Controller.enabled() === 'content') {
+        // Wait for browser to calculate positions of new elements,
+        // then refresh the Navigator grid and auto-move focus down
+        setTimeout(function () {
+          if (Lampa.Controller.enabled() !== 'content') return;
           Lampa.Controller.collectionSet(scroll.render());
-        }
+          Lampa.Controller.collectionFocus(last || false, scroll.render());
+          if (typeof Navigator !== 'undefined' && Navigator.canmove('down')) {
+            Navigator.move('down');
+          }
+        }, 150);
       })['catch'](function () {
         loadingMore = false;
       });
