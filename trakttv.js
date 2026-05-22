@@ -3296,28 +3296,16 @@
   }
   function rearrangeWatchlistUpcoming(data) {
     if (!data || !Array.isArray(data.results)) return data;
-    var now = new Date();
-    var currentYear = now.getFullYear();
-    now.setHours(0, 0, 0, 0);
+    var currentYear = new Date().getFullYear();
     var released = [];
     var upcoming = [];
     data.results.forEach(function (item) {
       var itemYear = parseInt(item.release_date, 10) || 0;
-      if (itemYear > 0 && itemYear < currentYear) {
-        released.push(item);
-        return;
-      }
-      if (item && item.trakt_released) {
-        var d = new Date(item.trakt_released);
-        if (!isNaN(d.getTime()) && d > now) {
-          upcoming.push(item);
-          return;
-        }
-      } else if (itemYear > currentYear) {
+      if (itemYear > currentYear) {
         upcoming.push(item);
-        return;
+      } else {
+        released.push(item);
       }
-      released.push(item);
     });
     if (upcoming.length > 0) upcoming[0]._trakt_upcoming_first = true;
     return Object.assign({}, data, { results: released.concat(upcoming) });
@@ -10740,8 +10728,6 @@
       }
     });
   }
-  var LAMPA_CONTINUE_COMPS = ['continue', 'Continue'];
-  var LAMPA_RECOMEND_COMPS = ['recomend', 'recommend', 'Recomend'];
   function applyLampaHideClasses() {
     try {
       var body = document.body;
@@ -10751,24 +10737,49 @@
     } catch (err) {}
   }
   function registerLampaRowHider() {
-    Lampa.Listener.follow('line', function (e) {
-      if (!e || !e.type || !e.data || e.data.trakt_line) return;
-      if (e.type !== 'create' && e.type !== 'append') return;
-      if (!e.line || typeof e.line.render !== 'function') return;
-      var comp = e.data.component || e.data.name || '';
-      try {
-        if (LAMPA_CONTINUE_COMPS.indexOf(comp) >= 0 && Lampa.Storage.get('trakt_hide_lampa_continue')) {
-          e.line.render().hide();
-        } else if (LAMPA_RECOMEND_COMPS.indexOf(comp) >= 0 && Lampa.Storage.get('trakt_hide_lampa_recomend')) {
-          e.line.render().hide();
-        }
-      } catch (err) {}
+    var hideContinue = false;
+    var hideRecomend = false;
+
+    function isTraktRow(titleEl) {
+      return !!(titleEl && titleEl.querySelector('svg'));
+    }
+    function checkLine(lineEl) {
+      if (!lineEl || !hideContinue && !hideRecomend) return;
+      var titleEl = lineEl.querySelector && lineEl.querySelector('.items-line__title');
+      if (!titleEl || isTraktRow(titleEl)) return;
+      var text = (titleEl.textContent || titleEl.innerText || '').trim().toLowerCase();
+      if (!text) return;
+      if (hideContinue && (text.indexOf('продолж') >= 0 || text.indexOf('continue') >= 0)) {
+        lineEl.style.display = 'none';
+      } else if (hideRecomend && (text.indexOf('рекомендуем') >= 0 || text.indexOf('recommended') >= 0)) {
+        lineEl.style.display = 'none';
+      }
+    }
+    function scanLines() {
+      hideContinue = !!Lampa.Storage.get('trakt_hide_lampa_continue');
+      hideRecomend = !!Lampa.Storage.get('trakt_hide_lampa_recomend');
+      if (!hideContinue && !hideRecomend) return;
+      var lines = document.querySelectorAll('.items-line');
+      for (var i = 0; i < lines.length; i++) checkLine(lines[i]);
+    }
+    var scanTimer = null;
+    function deferScan() {
+      if (scanTimer) return;
+      scanTimer = setTimeout(function () { scanTimer = null; scanLines(); }, 200);
+    }
+    var observer = new MutationObserver(function (mutations) {
+      for (var i = 0; i < mutations.length; i++) {
+        if (mutations[i].addedNodes.length) { deferScan(); return; }
+      }
     });
+    observer.observe(document.documentElement, { childList: true, subtree: true });
+    setTimeout(scanLines, 800);
     if (Lampa.Storage && Lampa.Storage.listener && typeof Lampa.Storage.listener.follow === 'function') {
       Lampa.Storage.listener.follow('change', function (event) {
         var name = event && event.name ? String(event.name) : '';
         if (name === 'trakt_hide_lampa_continue' || name === 'trakt_hide_lampa_recomend') {
           applyLampaHideClasses();
+          deferScan();
         }
       });
     }
