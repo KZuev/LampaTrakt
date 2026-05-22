@@ -5977,7 +5977,7 @@
                 var lb = _lm[t.key];
                 return chip(t.color, lb ? (lb[_ll] || lb.en) : t.key);
               });
-              html_parts.push(chip('#FF9800', Lampa.Lang.translate('trakt_digital_release') || (_ll === 'ru' ? 'Цифровой релиз' : 'Digital release')));
+              html_parts.push(chip('#FF9800', Lampa.Lang.translate('trakt_digital_release') || (_ll === 'ru' ? 'Цифровой релиз фильма' : 'Digital film release')));
               html.append($('<div style="display:flex;flex-wrap:wrap;padding:.5em 1em .3em;font-size:.8em;opacity:.75;line-height:1.8;flex-shrink:0">' + html_parts.join('') + '</div>'));
             })();
 
