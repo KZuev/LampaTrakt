@@ -733,10 +733,12 @@
   }
   function buildRecommendationsUrl$1(type, limit, extraParams) {
     var ignoreWatchlisted = readBooleanStorage$2('trakt_source_ignore_watchlisted', false) ? 'true' : 'false';
+    var ignoreWatchedOverride = extraParams && typeof extraParams.ignoreWatched === 'boolean' ? extraParams.ignoreWatched : null;
+    var ignoreWatched = ignoreWatchedOverride !== null ? ignoreWatchedOverride : (readBooleanStorage$2('trakt_source_ignore_watched', false) || readBooleanStorage$2('trakt_recommendations_ignore_watched', false));
     var query = new URLSearchParams({
       extended: 'full,images',
       limit: String(Math.max(1, parseInt(limit, 10) || 36)),
-      ignore_watched: (readBooleanStorage$2('trakt_source_ignore_watched', false) || readBooleanStorage$2('trakt_recommendations_ignore_watched', false)) ? 'true' : 'false',
+      ignore_watched: ignoreWatched ? 'true' : 'false',
       ignore_watchlisted: ignoreWatchlisted,
       ignore_collected: ignoreWatchlisted
     });
@@ -2303,6 +2305,7 @@
       if (options.filterGenre) extraParams.genres = options.filterGenre;
       if (options.filterYear) extraParams.years = options.filterYear;
       if (options.filterCountry) extraParams.countries = options.filterCountry;
+      if (typeof options.ignoreWatched === 'boolean') extraParams.ignoreWatched = options.ignoreWatched;
       var moviesRequest = filterType === 'tv' ? Promise.resolve([]) : requestApi('GET', buildRecommendationsUrl$1('movies', fetchLimit, extraParams));
       var showsRequest = filterType === 'movie' ? Promise.resolve([]) : requestApi('GET', buildRecommendationsUrl$1('shows', fetchLimit, extraParams));
       return Promise.allSettled([moviesRequest, showsRequest]).then(function (responses) {
@@ -4753,6 +4756,7 @@
     function rebuildView() {
       if (currentView && currentView.destroy) currentView.destroy();
       body.empty();
+      var ignoreWatched = readBooleanStorage$2('trakt_source_ignore_watched', false) || readBooleanStorage$2('trakt_recommendations_ignore_watched', false);
       var viewObject = Object.assign({}, object, {
         page: 1,
         filterType: activeFilters.type,
@@ -4761,6 +4765,7 @@
         filterCountry: activeFilters.country,
         sortField: activeSort.field,
         sortOrder: activeSort.order,
+        ignoreWatched: ignoreWatched,
         onHead: function() { Lampa.Controller.toggle(REC_FILTER_CTRL); }
       });
       currentView = new baseRecommendations(viewObject);
