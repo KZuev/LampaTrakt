@@ -6641,12 +6641,9 @@
       var chip = document.createElement('div');
       chip.className = 'full-start-new__details trakt-digital-date';
       chip.textContent = label + ': ' + displayDate;
-      var anchor = renderRoot.find('.full-start-new__details:not(.trakt-digital-date)').last();
-      if (anchor.length) {
-        anchor.after(chip);
-      } else {
-        var rateLine = renderRoot.find('.full-start-new__rate-line');
-        if (rateLine.length) rateLine.before(chip);
+      var rateLine = renderRoot.find('.full-start-new__rate-line');
+      if (rateLine.length) {
+        rateLine.before(chip);
       }
     }
 
