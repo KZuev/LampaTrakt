@@ -10713,9 +10713,9 @@
     registerLineTitleDecorator();
     registerLampaRowHider();
     registerSourceFiltersCacheInvalidation();
+    registerRows();
     registerCalendarRows();
     registerDvdRows();
-    registerRows();
   }
   function registerSourceFiltersCacheInvalidation() {
     if (!Lampa || !Lampa.Storage || !Lampa.Storage.listener || typeof Lampa.Storage.listener.follow !== 'function') return;
@@ -10868,7 +10868,8 @@
     };
   }
   function registerRows() {
-    var rows = [{
+    // Main-screen rows registered in display order (all index:1 — sequence equals display order)
+    var mainRows = [{
       name: 'TraktUpNextRow',
       title: Lampa.Lang.translate('trakttv_row_upnext'),
       index: 1,
@@ -10885,24 +10886,9 @@
         return screen !== 'category' || params.url === 'tv';
       }
     }, {
-      name: 'TraktRecommendationsRow',
-      title: Lampa.Lang.translate('trakttv_row_recommendations_main'),
-      index: 3,
-      screen: ['main'],
-      displayTitle: Lampa.Lang.translate('trakttv_recommendations'),
-      apiMethod: 'recommendations',
-      component: 'trakttv_recommendations',
-      limit: 36,
-      displayLimit: 20,
-      topshelf: 'recommendations',
-      checkPermission: checkRecommendationsPermissions,
-      visibleOn: function visibleOn() {
-        return true;
-      }
-    }, {
       name: 'TraktWatchlistRow',
       title: Lampa.Lang.translate('trakttv_row_watchlist_main'),
-      index: 2,
+      index: 1,
       screen: ['main'],
       displayTitle: Lampa.Lang.translate('trakttv_watchlist'),
       apiMethod: 'watchlist',
@@ -10913,7 +10899,8 @@
       visibleOn: function visibleOn() {
         return true;
       }
-    }, {
+    }];
+    var catRows = [{
       name: 'TraktRecommendationsRowMovie',
       title: Lampa.Lang.translate('trakttv_row_recommendations_movie'),
       index: 2,
@@ -10948,7 +10935,46 @@
         return filterByContentType(results, 'tv');
       }
     }];
-    rows.forEach(function (row) {
+    // 1. Up Next, 2. Watchlist
+    mainRows.forEach(function (row) {
+      Lampa.ContentRows.add({
+        name: row.name,
+        title: row.title,
+        index: row.index,
+        screen: row.screen,
+        call: createRowCall(row)
+      });
+    });
+    // 3. Calendar (main only, index:1)
+    if (Api && typeof Api.get === 'function') {
+      Lampa.ContentRows.add({
+        name: 'TraktCalendarRow',
+        title: Lampa.Lang.translate('trakttv_row_calendar_main'),
+        index: 1,
+        screen: ['main'],
+        call: createCalendarCall(function () { return true; })
+      });
+    }
+    // 4. Recommendations (main, index:1)
+    Lampa.ContentRows.add({
+      name: 'TraktRecommendationsRow',
+      title: Lampa.Lang.translate('trakttv_row_recommendations_main'),
+      index: 1,
+      screen: ['main'],
+      call: createRowCall({
+        name: 'TraktRecommendationsRow',
+        displayTitle: Lampa.Lang.translate('trakttv_recommendations'),
+        apiMethod: 'recommendations',
+        component: 'trakttv_recommendations',
+        limit: 36,
+        displayLimit: 20,
+        topshelf: 'recommendations',
+        checkPermission: checkRecommendationsPermissions,
+        visibleOn: function visibleOn() { return true; }
+      })
+    });
+    // Category rows
+    catRows.forEach(function (row) {
       Lampa.ContentRows.add({
         name: row.name,
         title: row.title,
@@ -10963,14 +10989,8 @@
    * Register Calendar rows with Episode card format
    * (same look as title_upcoming_episodes / title_recent_episodes)
    */
-  function registerCalendarRows() {
-    if (!Api || typeof Api.get !== 'function') return;
-    var ROW_LIMIT = 20;
-
-    /**
-     * Build a calendar API call handler for a given screen filter
-     */
-    function createCalendarCall(screenFilter) {
+  var CALENDAR_ROW_LIMIT = 20;
+  function createCalendarCall(screenFilter) {
       return function (params, screen) {
         // Permission: needs Trakt auth
         if (!Lampa.Storage.get('trakt_token')) return;
@@ -11016,7 +11036,7 @@
             var EpisodeClass = Lampa.Maker && Lampa.Maker.get('Episode');
             var EpisodeModule = Lampa.Maker && Lampa.Maker.module('Episode');
             var moduleMask = EpisodeModule ? EpisodeModule.only('Card', 'Callback') : undefined;
-            var selectedShows = shows.slice(0, ROW_LIMIT);
+            var selectedShows = shows.slice(0, CALENDAR_ROW_LIMIT);
 
             // Build base episode-card items (still_path will be filled from TMDB)
             var baseResults = selectedShows.map(function (item) {
@@ -11171,22 +11191,13 @@
       };
     }
 
-    // Row: main screen (always visible when authed)
-    Lampa.ContentRows.add({
-      name: 'TraktCalendarRow',
-      title: Lampa.Lang.translate('trakttv_row_calendar_main'),
-      index: 3,
-      screen: ['main'],
-      call: createCalendarCall(function () {
-        return true;
-      })
-    });
-
-    // Row: category / tv screen (only on tv URL)
+  function registerCalendarRows() {
+    if (!Api || typeof Api.get !== 'function') return;
+    // Row: category / tv screen only (main screen Calendar is registered in registerRows)
     Lampa.ContentRows.add({
       name: 'TraktCalendarRowTv',
       title: Lampa.Lang.translate('trakttv_row_calendar_tv'),
-      index: 3,
+      index: 2,
       screen: ['category'],
       call: createCalendarCall(function (params) {
         return params && params.url === 'tv';
