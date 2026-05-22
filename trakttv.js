@@ -5895,16 +5895,26 @@
         nextStartDate = shiftDate(nextStartDate, CHUNK_DAYS);
         return appendChunk(chunkStart, CHUNK_DAYS, data);
       }).then(function () {
-        // Keep loadingMore=true until after the grid rebuild so the down handler
-        // cannot fire loadMoreDays again before positions are computed (Apple TV).
+        // Keep loadingMore=true until after the timeout so the down handler
+        // cannot re-trigger loadMoreDays before the grid is updated.
         setTimeout(function () {
           if (Lampa.Controller.enabled() !== 'content') { loadingMore = false; return; }
+          // Find the item after the current one and focus it directly by index,
+          // bypassing Navigator's spatial computation (stale on Apple TV).
+          var _items = body.find('.timetable__item.selector');
+          var _curIdx = -1;
+          if (last) {
+            for (var _i = 0; _i < _items.length; _i++) {
+              if (_items[_i] === last) { _curIdx = _i; break; }
+            }
+          }
+          var _nextItem = _curIdx >= 0 && _curIdx + 1 < _items.length
+            ? _items[_curIdx + 1]
+            : (last || (_items.length ? _items[0] : false));
           Lampa.Controller.collectionSet(scroll.render());
-          Lampa.Controller.collectionFocus(last || false, scroll.render());
+          Lampa.Controller.collectionFocus(_nextItem || false, scroll.render());
           loadingMore = false;
-          // No forced Navigator.move — the user stays on `last` and the rebuilt
-          // grid lets them press down naturally into the newly added rows.
-        }, 400);
+        }, 300);
       })['catch'](function () {
         loadingMore = false;
       });
@@ -6101,8 +6111,22 @@
           if (typeof Navigator !== 'undefined' && Navigator.canmove('up')) Navigator.move('up');else Lampa.Controller.toggle('head');
         },
         down: function down() {
+          // Find the current item's sequential index in the list
+          var _items = body.find('.timetable__item.selector');
+          var _curIdx = -1;
+          if (last) {
+            for (var _i = 0; _i < _items.length; _i++) {
+              if (_items[_i] === last) { _curIdx = _i; break; }
+            }
+          }
           if (typeof Navigator !== 'undefined' && Navigator.canmove('down')) {
+            // Navigator knows about the next item — use it normally
             Navigator.move('down');
+          } else if (_curIdx >= 0 && _curIdx < _items.length - 1) {
+            // Navigator's positions are stale (items just added) but the next
+            // item exists in the DOM — jump to it directly by index
+            Lampa.Controller.collectionSet(scroll.render());
+            Lampa.Controller.collectionFocus(_items[_curIdx + 1], scroll.render());
           } else {
             loadMoreDays();
           }
