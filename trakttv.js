@@ -11335,12 +11335,12 @@
                   poster: poster, image: image, source: 'tmdb', type: 'movie'
                 };
                 // Episode-card structure: horizontal backdrop top, small poster bottom, date badge.
-                // season/episode = 0 (non-null) so Episode module Card renderer accepts the item.
-                // onlyEnter still opens the movie page, not an episode page.
+                // season/episode = 1 (truthy) — Episode module Card does !season_number check,
+                // so null and 0 both get rejected. 1 passes. onlyEnter still opens movie page.
                 var epData = {
                   air_date: digitalDate,
-                  season_number: 0,
-                  episode_number: 0,
+                  season_number: 1,
+                  episode_number: 1,
                   name: title,
                   still_path: stillPath
                 };
@@ -11363,9 +11363,16 @@
                 return out;
               });
 
-              // Merge shows + movies, sort by air time, limit
+              // Merge shows + movies, sort by air time, deduplicate by type:id, limit
               var combined = showResults.concat(movieCards);
               combined.sort(function (a, b) { return (a.time || 0) - (b.time || 0); });
+              var _seenIds = {};
+              combined = combined.filter(function (item) {
+                var key = (item.isMovie ? 'movie:' : 'tv:') + item.id;
+                if (_seenIds[key]) return false;
+                _seenIds[key] = true;
+                return true;
+              });
               var baseResults = combined.slice(0, CALENDAR_ROW_LIMIT);
 
               // Fetch episode stills for shows (returns raw TMDB path or '' if none)
