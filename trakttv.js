@@ -11335,11 +11335,12 @@
                   poster: poster, image: image, source: 'tmdb', type: 'movie'
                 };
                 // Episode-card structure: horizontal backdrop top, small poster bottom, date badge.
-                // No moduleMask — let ContentRows detect episode format from the episode field.
+                // season/episode = 0 (non-null) so Episode module Card renderer accepts the item.
+                // onlyEnter still opens the movie page, not an episode page.
                 var epData = {
                   air_date: digitalDate,
-                  season_number: null,
-                  episode_number: null,
+                  season_number: 0,
+                  episode_number: 0,
                   name: title,
                   still_path: stillPath
                 };
@@ -11348,6 +11349,7 @@
                   id: tmdbId, ids: movie.ids, params: {},
                   air_date: digitalDate, still_path: stillPath, isMovie: true
                 };
+                if (moduleMask) out.params.module = moduleMask;
                 out.params.emit = {
                   onlyEnter: function onlyEnter() {
                     Lampa.Activity.push({ url: '', component: 'full', id: tmdbId, method: 'movie', card: card, source: 'tmdb' });
