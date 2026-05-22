@@ -6620,13 +6620,15 @@
 
   function showDigitalReleaseDate(data, element) {
     var movieId = data && data.id;
-    if (!movieId || !Lampa.TMDB || !Lampa.Reguest) return;
+    console.log('[trakt-digital] called, movieId=', movieId, 'release_date=', data && data.release_date, 'year=', data && data.year);
+    if (!movieId || !Lampa.TMDB || !Lampa.Reguest) { console.log('[trakt-digital] early exit: no movieId or TMDB/Reguest'); return; }
     var renderRoot = element && element.object && element.object.activity &&
       typeof element.object.activity.render === 'function'
       ? element.object.activity.render() : null;
-    if (!renderRoot) return;
+    if (!renderRoot) { console.log('[trakt-digital] early exit: no renderRoot'); return; }
 
     var releaseYear = String(data.release_date || data.year || '').replace(/\D/g, '').slice(0, 4);
+    console.log('[trakt-digital] releaseYear=', releaseYear);
     if (!releaseYear) return;
 
     function applyDate(isoDate) {
@@ -6635,12 +6637,14 @@
       if (parts.length !== 3 || !parts[1] || !parts[2]) return;
       var displayDate = parts[2] + '.' + parts[1] + '.' + parts[0];
       var yearRe = new RegExp('\\b' + releaseYear + '\\b');
-
-      renderRoot.find('.full-start-new__details:not(.trakt)').each(function() {
+      var details = renderRoot.find('.full-start-new__details:not(.trakt)');
+      console.log('[trakt-digital] applyDate', isoDate, 'details count=', details.length);
+      details.each(function() {
         if (this.querySelector('.trakt-digital-date')) return false;
         var clone = this.cloneNode(true);
         clone.querySelectorAll('svg').forEach(function(s) { s.remove(); });
         var text = (clone.textContent || '').replace(/\s+/g, ' ').trim();
+        console.log('[trakt-digital] detail text=', JSON.stringify(text), 'matches=', yearRe.test(text));
         if (text.length < 30 && yearRe.test(text)) {
           var span = document.createElement('span');
           span.className = 'trakt-digital-date';
@@ -6657,8 +6661,10 @@
     var isoCountry = countryMap[langCode] || 'US';
 
     var url = Lampa.TMDB.api('movie/' + movieId + '/release_dates?api_key=' + Lampa.TMDB.key());
+    console.log('[trakt-digital] fetching', url);
     var network = new Lampa.Reguest();
     network.silent(url, function(resp) {
+      console.log('[trakt-digital] resp ok, results=', resp && resp.results && resp.results.length);
       if (!resp || !Array.isArray(resp.results)) return;
       var exactDate = null, usDate = null, anyDate = null;
       resp.results.forEach(function(entry) {
@@ -6671,9 +6677,10 @@
           }
         });
       });
+      console.log('[trakt-digital] exactDate=', exactDate, 'usDate=', usDate, 'anyDate=', anyDate);
       var chosen = exactDate || usDate || anyDate;
       if (chosen) applyDate(chosen);
-    }, function() {});
+    }, function(err) { console.log('[trakt-digital] fetch error', err); });
   }
 
   /**
