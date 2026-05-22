@@ -3359,7 +3359,7 @@
           } else if ((type === 'list' || type === 'myListItems') && object.list_id) {
             params.id = object.list_id;
           }
-          params.limit = 36;
+          params.limit = type === 'watchlist' ? 500 : 36;
           params.page = params.page || 1;
           if (!Api$2) {
             logApiMissing$1();
@@ -3395,7 +3395,7 @@
             } else if ((type === 'list' || type === 'myListItems') && object.list_id) {
               params.id = object.list_id;
             }
-            params.limit = 36;
+            params.limit = type === 'watchlist' ? 500 : 36;
             if (!Api$2) {
               waitload = false;
               reject.call(this);
@@ -3406,7 +3406,7 @@
                 total_pages = data.total_pages;
                 _this2.total_pages = data.total_pages;
               }
-              if (type === 'watchlist') { data = applyWatchlistClientFilters(data, object); data = rearrangeWatchlistUpcoming(data); }
+              if (type === 'watchlist') { data = applyWatchlistClientFilters(data, object); }
               if (type === 'upnext') data = rearrangeUpnextNotStarted(data);
               resolve.call(_this2, data && _typeof(data) === 'object' && Array.isArray(data.results) ? data : {
                 results: []
@@ -4369,14 +4369,14 @@
     function isActive(val) { return !!val && val !== 'all'; }
 
     function getYearLabel() {
-      return activeFilters.year || tr('trakttv_filter_year', 'Год');
+      return activeFilters.year || tr('trakttv_filter_any_year', 'Год');
     }
     function getGenreLabel() {
-      if (!activeFilters.genre) return tr('trakttv_filter_genre', 'Жанр');
+      if (!activeFilters.genre) return tr('trakttv_filter_any_genre', 'Жанр');
       return TRAKT_GENRE_NAMES_RU[activeFilters.genre] || activeFilters.genre;
     }
     function getCountryLabel() {
-      if (!activeFilters.country) return tr('trakttv_filter_country', 'Страна');
+      if (!activeFilters.country) return tr('trakttv_filter_any_country', 'Страна');
       var c = TRAKT_RECS_COUNTRIES.find(function(x) { return x.slug === activeFilters.country; });
       return c ? c.ru : activeFilters.country;
     }
@@ -4537,7 +4537,7 @@
         controls = $('<div class="trakt-watchlist-hub__controls"></div>');
         body = $('<div class="trakt-watchlist-hub__body"></div>');
 
-        filtersRow = $('<div class="trakt-watchlist-hub__sorts"></div>');
+        filtersRow = $('<div class="trakt-watchlist-hub__sorts trakt-recs-hub__sorts"></div>');
         typeBtn = makeBtn(getTypeLabel());
         updateBtn(typeBtn, getTypeLabel(), isActive(activeFilters.type));
         typeBtn.on('hover:enter', function() { lastFilterFocus = typeBtn[0]; openTypeFilter(); });
