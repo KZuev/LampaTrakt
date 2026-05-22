@@ -6394,21 +6394,6 @@
         if (taglineElement.length) {
           renderRoot.find('.full-start-new__details.trakt').remove();
           taglineElement.after(targetEl);
-          if (isShow) {
-            setTimeout(function() {
-              var next = targetEl.nextElementSibling;
-              if (!next || !next.classList.contains('full-start-new__details') || next.classList.contains('trakt')) return;
-              var seasonWord = Lampa.Lang && typeof Lampa.Lang.translate === 'function' ? Lampa.Lang.translate('full_season') : '';
-              if (!seasonWord) return;
-              var clone = next.cloneNode(true);
-              clone.querySelectorAll('svg').forEach(function(s) { s.remove(); });
-              var text = (clone.textContent || '').replace(/\s+/g, ' ').trim();
-              if (text.length < 25 && text.indexOf(seasonWord) !== -1 && /\d/.test(text) &&
-                  text.replace(/\s*\d+\s*/g, '').trim() === seasonWord.trim()) {
-                next.style.display = 'none';
-              }
-            }, 0);
-          }
         }
       }
 
@@ -6641,7 +6626,7 @@
       ? element.object.activity.render() : null;
     if (!renderRoot) return;
 
-    var releaseYear = String(data.release_date || '').replace(/\D/g, '').slice(0, 4);
+    var releaseYear = String(data.release_date || data.year || '').replace(/\D/g, '').slice(0, 4);
     if (!releaseYear) return;
 
     function applyDate(isoDate) {
@@ -6649,13 +6634,14 @@
       var parts = datePart.split('-');
       if (parts.length !== 3 || !parts[1] || !parts[2]) return;
       var displayDate = parts[2] + '.' + parts[1] + '.' + parts[0];
+      var yearRe = new RegExp('\\b' + releaseYear + '\\b');
 
       renderRoot.find('.full-start-new__details:not(.trakt)').each(function() {
         if (this.querySelector('.trakt-digital-date')) return false;
         var clone = this.cloneNode(true);
         clone.querySelectorAll('svg').forEach(function(s) { s.remove(); });
-        var text = (clone.textContent || '').trim();
-        if (text === releaseYear) {
+        var text = (clone.textContent || '').replace(/\s+/g, ' ').trim();
+        if (text.length < 30 && yearRe.test(text)) {
           var span = document.createElement('span');
           span.className = 'trakt-digital-date';
           span.textContent = ' (' + displayDate + ')';
