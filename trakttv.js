@@ -5895,17 +5895,16 @@
         nextStartDate = shiftDate(nextStartDate, CHUNK_DAYS);
         return appendChunk(chunkStart, CHUNK_DAYS, data);
       }).then(function () {
-        loadingMore = false;
-        // Wait for browser to calculate positions of new elements,
-        // then refresh the Navigator grid and auto-move focus down
+        // Keep loadingMore=true until after the grid rebuild so the down handler
+        // cannot fire loadMoreDays again before positions are computed (Apple TV).
         setTimeout(function () {
-          if (Lampa.Controller.enabled() !== 'content') return;
+          if (Lampa.Controller.enabled() !== 'content') { loadingMore = false; return; }
           Lampa.Controller.collectionSet(scroll.render());
           Lampa.Controller.collectionFocus(last || false, scroll.render());
-          if (typeof Navigator !== 'undefined' && Navigator.canmove('down')) {
-            Navigator.move('down');
-          }
-        }, 150);
+          loadingMore = false;
+          // No forced Navigator.move — the user stays on `last` and the rebuilt
+          // grid lets them press down naturally into the newly added rows.
+        }, 400);
       })['catch'](function () {
         loadingMore = false;
       });
@@ -5943,6 +5942,33 @@
             nextStartDate = shiftDate(startDateStr, INITIAL_DAYS);
             scroll.onEnd = loadMoreDays;
             if (!hasAny) this.empty();
+
+            // Color legend
+            (function () {
+              var _ll = Lampa.Storage ? Lampa.Storage.get('language', 'ru') : 'ru';
+              var _lm = {
+                series_finale:       { ru: 'Финал сериала',    en: 'Series Finale' },
+                season_finale:       { ru: 'Финал сезона',     en: 'Season Finale' },
+                mid_season_finale:   { ru: 'Финал полусезона', en: 'Mid-Season Finale' },
+                series_premiere:     { ru: 'Премьера сериала', en: 'Series Premiere' },
+                season_premiere:     { ru: 'Премьера сезона',  en: 'Season Premiere' },
+                mid_season_premiere: { ru: 'Возобновление',    en: 'Mid-Season Return' },
+                standard:            { ru: 'Серия',            en: 'Episode' }
+              };
+              var dot = function (color) {
+                return '<span style="display:inline-block;width:.85em;height:.85em;border-radius:.2em;background:' + color + ';flex-shrink:0"></span>';
+              };
+              var chip = function (color, label) {
+                return '<span style="display:inline-flex;align-items:center;gap:.35em;margin-right:1em;white-space:nowrap">' + dot(color) + label + '</span>';
+              };
+              var html_parts = episodeTypes.map(function (t) {
+                var lb = _lm[t.key];
+                return chip(t.color, lb ? (lb[_ll] || lb.en) : t.key);
+              });
+              html_parts.push(chip('#FF9800', Lampa.Lang.translate('trakt_digital_release') || (_ll === 'ru' ? 'Цифровой релиз' : 'Digital release')));
+              body.prepend($('<div style="display:flex;flex-wrap:wrap;padding:.5em 1em .3em;font-size:.8em;opacity:.65;line-height:1.8">' + html_parts.join('') + '</div>'));
+            })();
+
             scroll.minus();
             scroll.append(body);
             html.append(scroll.render());
