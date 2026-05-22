@@ -10613,6 +10613,7 @@
   var initialized = false;
   var UI_DEADLINE_MAIN_MS = 2800;
   var UI_DEADLINE_CATEGORY_MS = 3200;
+  var STALE_PRESENT_DEADLINE_MS = 50;
   var STALE_CACHE_TTL_MS = 1000 * 60 * 60 * 6;
   var STORAGE_CACHE_PREFIX = 'trakttv_row_cache_v1_';
   var SOURCE_FILTER_FIELDS = ['trakt_source_ignore_watched', 'trakt_source_ignore_watchlisted'];
@@ -10766,7 +10767,6 @@
     // Cleanup deprecated cache keys
     Lampa.Storage.set('trakttv_cached_upnext', null);
     Lampa.Storage.set('trakttv_cached_recommendations', null);
-    clearAllRowCaches();
     registerLineTitleDecorator();
     registerLampaRowHider();
     registerSourceFiltersCacheInvalidation();
@@ -10881,7 +10881,7 @@
         }
         var cacheKey = buildRowCacheKey(config, params, screen);
         var staleLine = attachOnMore(loadRowFromCache(cacheKey), config);
-        var deadline = getUiDeadline(screen);
+        var deadline = staleLine ? STALE_PRESENT_DEADLINE_MS : getUiDeadline(screen);
         var done = false;
         var timeoutId = null;
         var finish = function finish(line) {
