@@ -10935,27 +10935,9 @@
         return filterByContentType(results, 'tv');
       }
     }];
-    // 1. Up Next, 2. Watchlist
-    mainRows.forEach(function (row) {
-      Lampa.ContentRows.add({
-        name: row.name,
-        title: row.title,
-        index: row.index,
-        screen: row.screen,
-        call: createRowCall(row)
-      });
-    });
-    // 3. Calendar (main only, index:1)
-    if (Api && typeof Api.get === 'function') {
-      Lampa.ContentRows.add({
-        name: 'TraktCalendarRow',
-        title: Lampa.Lang.translate('trakttv_row_calendar_main'),
-        index: 1,
-        screen: ['main'],
-        call: createCalendarCall(function () { return true; })
-      });
-    }
-    // 4. Recommendations (main, index:1)
+    // Lampa renders same-index rows in reverse registration order (LIFO),
+    // so register in reverse display order: Recommendations → Calendar → Watchlist → UpNext
+    // 4. Recommendations (registered first → shown last)
     Lampa.ContentRows.add({
       name: 'TraktRecommendationsRow',
       title: Lampa.Lang.translate('trakttv_row_recommendations_main'),
@@ -10972,6 +10954,26 @@
         checkPermission: checkRecommendationsPermissions,
         visibleOn: function visibleOn() { return true; }
       })
+    });
+    // 3. Calendar
+    if (Api && typeof Api.get === 'function') {
+      Lampa.ContentRows.add({
+        name: 'TraktCalendarRow',
+        title: Lampa.Lang.translate('trakttv_row_calendar_main'),
+        index: 1,
+        screen: ['main'],
+        call: createCalendarCall(function () { return true; })
+      });
+    }
+    // 2. Watchlist, 1. Up Next (registered last → shown first)
+    mainRows.slice().reverse().forEach(function (row) {
+      Lampa.ContentRows.add({
+        name: row.name,
+        title: row.title,
+        index: row.index,
+        screen: row.screen,
+        call: createRowCall(row)
+      });
     });
     // Category rows
     catRows.forEach(function (row) {
