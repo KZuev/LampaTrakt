@@ -10796,6 +10796,20 @@
     registerCalendarRows();
     registerDvdRows();
     prefetchMainRows();
+    registerMainScreenAutoLoad();
+  }
+  function registerMainScreenAutoLoad() {
+    Lampa.Listener.follow('line', function (e) {
+      if (!e || e.type !== 'create' || !e.data || e.data.trakt_row !== 'upnext') return;
+      setTimeout(function () {
+        try {
+          var active = Lampa.Activity && typeof Lampa.Activity.active === 'function' ? Lampa.Activity.active() : null;
+          var scrollEl = active && active.scroll && typeof active.scroll.render === 'function' ? active.scroll.render()[0] : null;
+          if (scrollEl) scrollEl.dispatchEvent(new Event('scroll', { bubbles: true }));
+          window.dispatchEvent(new Event('scroll'));
+        } catch (err) {}
+      }, 150);
+    });
   }
   function registerSourceFiltersCacheInvalidation() {
     if (!Lampa || !Lampa.Storage || !Lampa.Storage.listener || typeof Lampa.Storage.listener.follow !== 'function') return;
