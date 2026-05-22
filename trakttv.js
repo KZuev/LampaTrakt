@@ -10713,9 +10713,9 @@
     registerLineTitleDecorator();
     registerLampaRowHider();
     registerSourceFiltersCacheInvalidation();
+    registerRows();
     registerCalendarRows();
     registerDvdRows();
-    registerRows();
   }
   function registerSourceFiltersCacheInvalidation() {
     if (!Lampa || !Lampa.Storage || !Lampa.Storage.listener || typeof Lampa.Storage.listener.follow !== 'function') return;
@@ -10887,7 +10887,7 @@
     }, {
       name: 'TraktRecommendationsRow',
       title: Lampa.Lang.translate('trakttv_row_recommendations_main'),
-      index: 3,
+      index: 3.5,
       screen: ['main'],
       displayTitle: Lampa.Lang.translate('trakttv_recommendations'),
       apiMethod: 'recommendations',
