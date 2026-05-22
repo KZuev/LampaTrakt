@@ -11148,16 +11148,20 @@
               });
               if (!baseResults.length) return call();
               var calTitle = Lampa.Lang.translate('trakttv_calendar');
+              var calOnMore = function () {
+                Lampa.Activity.push({ title: calTitle, component: 'trakt_timetable_all', page: 1 });
+              };
               call({
                 results: baseResults,
                 title: calTitle,
+                source: 'tmdb',
+                page: 1,
+                total_pages: 2,
                 trakt_line: true,
                 trakt_line_title: calTitle,
                 trakt_more_component: 'trakt_timetable_all',
                 trakt_more_title: calTitle,
-                onMore: function () {
-                  Lampa.Activity.push({ title: calTitle, component: 'trakt_timetable_all', page: 1 });
-                }
+                onMore: calOnMore
               });
             });
           })["catch"](function () {
