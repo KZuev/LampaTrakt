@@ -6638,14 +6638,18 @@
       if (parts.length !== 3 || !parts[1] || !parts[2]) return;
       var displayDate = parts[2] + '.' + parts[1] + '.' + parts[0];
       var yearRe = new RegExp('\\b' + releaseYear + '\\b');
-      var details = renderRoot.find('.full-start-new__details:not(.trakt)');
-      var texts = [];
-      details.each(function() {
+      var found = [];
+      renderRoot.find('*').each(function() {
+        if (this.children.length > 2) return;
         var clone = this.cloneNode(true);
-        clone.querySelectorAll('svg').forEach(function(s) { s.remove(); });
-        texts.push((clone.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 20));
+        clone.querySelectorAll('svg,img').forEach(function(s) { s.remove(); });
+        var text = (clone.textContent || '').replace(/\s+/g, ' ').trim();
+        if (text.length < 40 && yearRe.test(text)) {
+          found.push((this.className || this.tagName).toString().slice(0, 25) + ':"' + text.slice(0, 15) + '"');
+        }
       });
-      _n('[dig] ' + details.length + ' details: ' + texts.join(' | '));
+      _n('[dig] year in: ' + (found.length ? found.slice(0, 3).join(' / ') : 'NOT FOUND'));
+      var details = renderRoot.find('.full-start-new__details:not(.trakt)');
       details.each(function() {
         if (this.querySelector('.trakt-digital-date')) return false;
         var clone = this.cloneNode(true);
