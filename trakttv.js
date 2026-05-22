@@ -3296,12 +3296,20 @@
   }
   function rearrangeWatchlistUpcoming(data) {
     if (!data || !Array.isArray(data.results)) return data;
-    var currentYear = new Date().getFullYear();
+    var today = new Date();
+    var todayStr = today.toISOString().slice(0, 10);
+    var currentYear = today.getFullYear();
     var released = [];
     var upcoming = [];
     data.results.forEach(function (item) {
-      var itemYear = parseInt(item.release_date, 10) || 0;
-      if (itemYear > currentYear) {
+      var isUpcoming = false;
+      var rel = item.trakt_released;
+      if (rel && /^\d{4}-\d{2}-\d{2}/.test(String(rel))) {
+        isUpcoming = String(rel).slice(0, 10) > todayStr;
+      } else {
+        isUpcoming = (parseInt(item.release_date, 10) || 0) > currentYear;
+      }
+      if (isUpcoming) {
         upcoming.push(item);
       } else {
         released.push(item);
@@ -4334,7 +4342,7 @@
     var currentView = null;
     var lastFilterFocus = null;
     var activeFilters = {
-      type: object.watchlistType || object.mediaType || object.type || 'movies',
+      type: object.watchlistType || object.mediaType || object.type || 'all',
       year: object.filterYear || '',
       genre: object.filterGenre || '',
       country: object.filterCountry || ''
@@ -4529,7 +4537,7 @@
         controls = $('<div class="trakt-watchlist-hub__controls"></div>');
         body = $('<div class="trakt-watchlist-hub__body"></div>');
 
-        filtersRow = $('<div class="trakt-watchlist-hub__sorts trakt-recs-hub__sorts"></div>');
+        filtersRow = $('<div class="trakt-watchlist-hub__sorts"></div>');
         typeBtn = makeBtn(getTypeLabel());
         updateBtn(typeBtn, getTypeLabel(), isActive(activeFilters.type));
         typeBtn.on('hover:enter', function() { lastFilterFocus = typeBtn[0]; openTypeFilter(); });
