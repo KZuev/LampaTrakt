@@ -6638,12 +6638,12 @@
       if (parts.length !== 3 || !parts[1] || !parts[2]) return;
       var displayDate = parts[2] + '.' + parts[1] + '.' + parts[0];
       var label = (Lampa.Lang && Lampa.Lang.translate('trakt_digital_release')) || 'Digital';
-      var chip = document.createElement('div');
-      chip.className = 'full-start-new__details trakt-digital-date';
-      chip.textContent = label + ': ' + displayDate;
-      var rateLine = renderRoot.find('.full-start-new__rate-line');
-      if (rateLine.length) {
-        rateLine.before(chip);
+      var detailsEl = renderRoot.find('.full-start-new__details:not(.trakt):not(.trakt-digital-date)').last();
+      if (detailsEl.length) {
+        var span = document.createElement('span');
+        span.className = 'trakt-digital-date';
+        span.textContent = ' • ' + label + ': ' + displayDate;
+        detailsEl[0].appendChild(span);
       }
     }
 
