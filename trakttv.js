@@ -6629,6 +6629,11 @@
         return fallback || key;
       }
     };
+    var ICO_WATCHLIST   = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/></svg>';
+    var ICO_UPNEXT      = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>';
+    var ICO_CALENDAR    = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3h-1V1h-2v2H8V1H6v2H5C3.9 3 3 3.9 3 5v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/></svg>';
+    var ICO_MYLISTS     = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>';
+    var ICO_LIKEDLISTS  = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>';
     var watchlistTitle = t('trakttv_watchlist', 'Watchlist');
     var upNextTitle = t('trakttv_upnext', 'Up Next');
     var calendarTitle = t('trakttv_calendar', 'Calendar');
@@ -6638,11 +6643,11 @@
     var likedListsTitle = t('trakt_liked_lists', 'Liked Lists');
     var historyTitle = t('trakt_watch_history', 'История просмотров');
     var collectionTitle = t('trakt_collection', 'Избранное');
-    var watchlist = $("<li class=\"menu__item selector\">\n        <div class=\"menu__ico\">".concat(icons.TRAKT_ICON, " </div>\n        <div class=\"menu__text\">").concat(watchlistTitle, "</div>\n    </li>"));
-    var upnext = $("<li class=\"menu__item selector\">\n        <div class=\"menu__ico\">".concat(icons.TRAKT_ICON, " </div>\n        <div class=\"menu__text\">").concat(upNextTitle, "</div>\n    </li>"));
-    var timetable = $("<li class=\"menu__item selector\">\n    <div class=\"menu__ico\">\n         <div class=\"menu__ico\">".concat(icons.TRAKT_ICON, " </div>\n    </div>\n    <div class=\"menu__text\">").concat(calendarTitle, "</div>\n    </li>"));
-    var myLists = $("<li class=\"menu__item selector\">\n        <div class=\"menu__ico\">".concat(icons.TRAKT_ICON, " </div>\n        <div class=\"menu__text\">").concat(myListsTitle, "</div>\n    </li>"));
-    var likedLists = $("<li class=\"menu__item selector\">\n        <div class=\"menu__ico\">".concat(icons.TRAKT_ICON, " </div>\n        <div class=\"menu__text\">").concat(likedListsTitle, "</div>\n    </li>"));
+    var watchlist = $("<li class=\"menu__item selector\">\n        <div class=\"menu__ico\">".concat(ICO_WATCHLIST, " </div>\n        <div class=\"menu__text\">").concat(watchlistTitle, "</div>\n    </li>"));
+    var upnext = $("<li class=\"menu__item selector\">\n        <div class=\"menu__ico\">".concat(ICO_UPNEXT, " </div>\n        <div class=\"menu__text\">").concat(upNextTitle, "</div>\n    </li>"));
+    var timetable = $("<li class=\"menu__item selector\">\n    <div class=\"menu__ico\">".concat(ICO_CALENDAR, "</div>\n    <div class=\"menu__text\">").concat(calendarTitle, "</div>\n    </li>"));
+    var myLists = $("<li class=\"menu__item selector\">\n        <div class=\"menu__ico\">".concat(ICO_MYLISTS, " </div>\n        <div class=\"menu__text\">").concat(myListsTitle, "</div>\n    </li>"));
+    var likedLists = $("<li class=\"menu__item selector\">\n        <div class=\"menu__ico\">".concat(ICO_LIKEDLISTS, " </div>\n        <div class=\"menu__text\">").concat(likedListsTitle, "</div>\n    </li>"));
     timetable.on('hover:enter', function () {
       Lampa.Activity.push({
         url: '',
