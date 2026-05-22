@@ -6394,6 +6394,21 @@
         if (taglineElement.length) {
           renderRoot.find('.full-start-new__details.trakt').remove();
           taglineElement.after(targetEl);
+          if (isShow) {
+            setTimeout(function() {
+              var next = targetEl.nextElementSibling;
+              if (!next || !next.classList.contains('full-start-new__details') || next.classList.contains('trakt')) return;
+              var seasonWord = Lampa.Lang && typeof Lampa.Lang.translate === 'function' ? Lampa.Lang.translate('full_season') : '';
+              if (!seasonWord) return;
+              var clone = next.cloneNode(true);
+              clone.querySelectorAll('svg').forEach(function(s) { s.remove(); });
+              var text = (clone.textContent || '').replace(/\s+/g, ' ').trim();
+              if (text.length < 25 && text.indexOf(seasonWord) !== -1 && /\d/.test(text) &&
+                  text.replace(/\s*\d+\s*/g, '').trim() === seasonWord.trim()) {
+                next.style.display = 'none';
+              }
+            }, 0);
+          }
         }
       }
 
@@ -6617,6 +6632,63 @@
       return button;
     }
   };
+
+  function showDigitalReleaseDate(data, element) {
+    var movieId = data && data.id;
+    if (!movieId || !Lampa.TMDB || !Lampa.Reguest) return;
+    var renderRoot = element && element.object && element.object.activity &&
+      typeof element.object.activity.render === 'function'
+      ? element.object.activity.render() : null;
+    if (!renderRoot) return;
+
+    var releaseYear = String(data.release_date || '').replace(/\D/g, '').slice(0, 4);
+    if (!releaseYear) return;
+
+    function applyDate(isoDate) {
+      var datePart = (isoDate || '').split('T')[0];
+      var parts = datePart.split('-');
+      if (parts.length !== 3 || !parts[1] || !parts[2]) return;
+      var displayDate = parts[2] + '.' + parts[1] + '.' + parts[0];
+
+      renderRoot.find('.full-start-new__details:not(.trakt)').each(function() {
+        if (this.querySelector('.trakt-digital-date')) return false;
+        var clone = this.cloneNode(true);
+        clone.querySelectorAll('svg').forEach(function(s) { s.remove(); });
+        var text = (clone.textContent || '').trim();
+        if (text === releaseYear) {
+          var span = document.createElement('span');
+          span.className = 'trakt-digital-date';
+          span.textContent = ' (' + displayDate + ')';
+          this.appendChild(span);
+          return false;
+        }
+      });
+    }
+
+    var lang = Lampa.Storage ? Lampa.Storage.get('language', 'ru') : 'ru';
+    var langCode = lang.slice(0, 2).toUpperCase();
+    var countryMap = { RU: 'RU', EN: 'US', UK: 'GB', DE: 'DE', FR: 'FR', ES: 'ES', IT: 'IT', PT: 'PT' };
+    var isoCountry = countryMap[langCode] || 'US';
+
+    var url = Lampa.TMDB.api('movie/' + movieId + '/release_dates?api_key=' + Lampa.TMDB.key());
+    var network = new Lampa.Reguest();
+    network.silent(url, function(resp) {
+      if (!resp || !Array.isArray(resp.results)) return;
+      var exactDate = null, usDate = null, anyDate = null;
+      resp.results.forEach(function(entry) {
+        if (!Array.isArray(entry.release_dates)) return;
+        entry.release_dates.forEach(function(rd) {
+          if (rd.type === 4 && rd.release_date) {
+            if (!anyDate) anyDate = rd.release_date;
+            if (entry.iso_3166_1 === 'US' && !usDate) usDate = rd.release_date;
+            if (entry.iso_3166_1 === isoCountry) exactDate = rd.release_date;
+          }
+        });
+      });
+      var chosen = exactDate || usDate || anyDate;
+      if (chosen) applyDate(chosen);
+    }, function() {});
+  }
 
   /**
    * Модуль для роботи з меню TraktTV
@@ -10295,6 +10367,9 @@
         if (showProgress === undefined || showProgress === true) {
           TraktHistory.showWatchProgress(e.data, e);
         }
+      }
+      if (e.object.method === 'movie') {
+        showDigitalReleaseDate(e.data, e);
       }
     }
   };
