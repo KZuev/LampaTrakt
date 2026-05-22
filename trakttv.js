@@ -11349,6 +11349,14 @@
                   id: tmdbId, ids: movie.ids, params: {},
                   air_date: digitalDate, still_path: stillPath, isMovie: true
                 };
+                if (EpisodeClass) {
+                  out.params.createInstance = function (data) {
+                    var merged = _typeof(data) === 'object' && data !== null
+                      ? Object.assign({}, data, data.episode || {}, { card: data.card || data })
+                      : {};
+                    return new EpisodeClass(merged);
+                  };
+                }
                 if (moduleMask) out.params.module = moduleMask;
                 out.params.emit = {
                   onlyEnter: function onlyEnter() {
