@@ -11147,13 +11147,17 @@
                 }
               });
               if (!baseResults.length) return call();
+              var calTitle = Lampa.Lang.translate('trakttv_calendar');
               call({
                 results: baseResults,
-                title: Lampa.Lang.translate('trakttv_calendar'),
+                title: calTitle,
                 trakt_line: true,
-                trakt_line_title: Lampa.Lang.translate('trakttv_calendar'),
+                trakt_line_title: calTitle,
                 trakt_more_component: 'trakt_timetable_all',
-                trakt_more_title: Lampa.Lang.translate('trakttv_calendar')
+                trakt_more_title: calTitle,
+                onMore: function () {
+                  Lampa.Activity.push({ title: calTitle, component: 'trakt_timetable_all', page: 1 });
+                }
               });
             });
           })["catch"](function () {
