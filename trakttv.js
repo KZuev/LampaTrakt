@@ -5012,7 +5012,8 @@
         ru: "минут",
       },
       trakttv_no_series: {
-        ru: "Нет сериалов",
+        ru: "Нет релизов",
+        en: "No releases",
       },
       trakttv_episodes_on: {
         ru: "Серии на",
@@ -5697,6 +5698,7 @@
     var CHUNK_DAYS = 14;
     var nextStartDate = null;
     var loadingMore = false;
+    var movieDateCache = null;
     function dateToString(d) {
       return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
     }
@@ -5704,6 +5706,53 @@
       var d = new Date(dateStr);
       d.setDate(d.getDate() + n);
       return dateToString(d);
+    }
+    function fetchWatchlistMoviesForCalendar() {
+      if (!api$1 || typeof api$1.watchlistMovies !== 'function') return Promise.resolve({});
+      if (!Lampa.TMDB || !Lampa.Reguest) return Promise.resolve({});
+      var lang = Lampa.Storage ? Lampa.Storage.get('language', 'ru') : 'ru';
+      var langCode = lang.slice(0, 2);
+      return api$1.watchlistMovies().then(function (items) {
+        if (!Array.isArray(items)) return {};
+        var movies = items.map(function (item) {
+          var m = item && item.movie;
+          if (!m || !m.ids || !m.ids.tmdb) return null;
+          return { tmdbId: m.ids.tmdb, title: m.title || '' };
+        }).filter(Boolean);
+        if (!movies.length) return {};
+        var promises = movies.map(function (movie) {
+          return new Promise(function (resolve) {
+            var url = Lampa.TMDB.api('movie/' + movie.tmdbId + '?append_to_response=release_dates&api_key=' + Lampa.TMDB.key() + '&language=' + langCode);
+            var network = new Lampa.Reguest();
+            network.silent(url, function (d) {
+              if (!d || !d.release_dates || !Array.isArray(d.release_dates.results)) { resolve(null); return; }
+              var digitalDate = null, usDate = null;
+              d.release_dates.results.forEach(function (entry) {
+                if (!Array.isArray(entry.release_dates)) return;
+                entry.release_dates.forEach(function (rd) {
+                  if (rd.type === 4 && rd.release_date) {
+                    if (!digitalDate) digitalDate = rd.release_date;
+                    if (entry.iso_3166_1 === 'US' && !usDate) usDate = rd.release_date;
+                  }
+                });
+              });
+              var chosen = (usDate || digitalDate || '').slice(0, 10);
+              if (!chosen) { resolve(null); return; }
+              var posterUrl = d.poster_path ? 'https://image.tmdb.org/t/p/w500' + d.poster_path : '';
+              resolve({ date: chosen, card: { id: movie.tmdbId, name: d.title || movie.title, poster: posterUrl, source: 'tmdb', isMovie: true } });
+            }, function () { resolve(null); });
+          });
+        });
+        return Promise.all(promises).then(function (results) {
+          var byDate = {};
+          results.forEach(function (r) {
+            if (!r) return;
+            if (!byDate[r.date]) byDate[r.date] = [];
+            byDate[r.date].push(r.card);
+          });
+          return byDate;
+        });
+      })['catch'](function () { return {}; });
     }
     var episodeTypes = [{
       key: 'series_finale',
@@ -5863,16 +5912,18 @@
     }
     this.create = /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
       var _this = this;
-      var startDateStr, traktData, episodes, hasAny;
+      var startDateStr, results, traktData, episodes, hasAny;
       return _regenerator().w(function (_context) {
         while (1) switch (_context.n) {
           case 0:
             if (this.activity) this.activity.loader(true);
             startDateStr = getTodayString();
             _context.n = 1;
-            return fetchCalendarChunk(startDateStr, INITIAL_DAYS);
+            return Promise.all([fetchCalendarChunk(startDateStr, INITIAL_DAYS), fetchWatchlistMoviesForCalendar()]);
           case 1:
-            traktData = _context.v;
+            results = _context.v;
+            traktData = results[0];
+            movieDateCache = results[1];
             episodes = prepareTimetableData(traktData);
             _context.n = 2;
             return enrichTimetableCards(episodes);
@@ -5884,7 +5935,8 @@
                 var d = new Date(startDateStr);
                 d.setDate(d.getDate() + i);
                 var dateStr = dateToString(d);
-                if ((grouped[dateStr] || []).length) hasAny = true;
+                var dayMovies = (movieDateCache && movieDateCache[dateStr]) || [];
+                if ((grouped[dateStr] || []).length || dayMovies.length) hasAny = true;
                 _this.append(dateStr, grouped[dateStr] || []);
               }
             })();
@@ -5918,8 +5970,9 @@
       if (_this2.activity) _this2.activity.loader(false);
     };
     this.append = function (date, eps) {
+      var movies = (movieDateCache && movieDateCache[date]) || [];
       var item = $("\n            <div class=\"timetable__item selector\">\n                <div class=\"timetable__inner\">\n                    <div class=\"timetable__date\">".concat(date, "</div>\n                    <div class=\"timetable__body\"></div>\n                </div>\n            </div>\n        "));
-      if (eps.length) {
+      if (eps.length || movies.length) {
         var byShow = groupEpisodesByShow(eps);
         Object.values(byShow).forEach(function (show) {
           var card = show.card;
@@ -5933,27 +5986,31 @@
           var mainTypeColor = foundType.color;
           item.find('.timetable__body').append("\n                    <div>\n                        <span title=\"".concat(mainTypeKey, "\" style=\"display:inline-block;width:0.9em;height:0.9em;border-radius:0.2em;margin-right:0.3em;background:").concat(mainTypeColor, ";vertical-align:middle\"></span>\n                        ").concat(card.name || '', "\n                    </div>\n                "));
         });
+        movies.forEach(function (card) {
+          item.find('.timetable__body').append("<div><span style=\"display:inline-block;width:0.9em;height:0.9em;border-radius:0.2em;margin-right:0.3em;background:#FF9800;vertical-align:middle\" title=\"movie\"></span>".concat(card.name || '', "</div>"));
+        });
         item.addClass('timetable__item--any');
       } else {
         item.find('.timetable__body').append("<div class=\"timetable__empty\">".concat(Lampa.Lang.translate('trakttv_no_series'), "</div>"));
       }
       item.on('hover:focus', function () {
         last = $(this)[0];
-        scroll.update($(this)); // ВАЖЛИВО! Оновлення скролу
+        scroll.update($(this));
       }).on('hover:hover', function () {
         last = $(this)[0];
       }).on('hover:enter', function () {
         last = $(this)[0];
+        if (!eps.length && !movies.length) return;
+        var modal = $('<div></div>');
         if (eps.length) {
           var _byShow = groupEpisodesByShow(eps);
-          var modal = $('<div></div>');
           Object.values(_byShow).forEach(function (show) {
             var card = show.card;
             var noty = Template.get('notice_card', {
               time: date,
               title: card.name,
               descr: show.episodes.map(function (ep) {
-                return "S: <b>".concat(ep.season_number, "</b> E: <b>").concat(ep.episode_number, "</b> \u2014 ").concat(ep.name);
+                return "S: <b>".concat(ep.season_number, "</b> E: <b>").concat(ep.episode_number, "</b> — ").concat(ep.name);
               }).join('<br>')
             });
             noty.find('.notice__img').remove();
@@ -5963,27 +6020,34 @@
             }
             noty.on('hover:enter', function () {
               Modal.close();
-              Activity.push({
-                url: '',
-                component: 'full',
-                id: card.id,
-                method: 'tv',
-                card: card,
-                source: card.source
-              });
+              Activity.push({ url: '', component: 'full', id: card.id, method: 'tv', card: card, source: card.source });
             });
             modal.append(noty);
           });
-          Modal.open({
-            title: "".concat(Lampa.Lang.translate('trakttv_episodes_on'), " ").concat(date),
-            size: 'medium',
-            html: modal,
-            onBack: function onBack() {
-              Modal.close();
-              Lampa.Controller.toggle('content');
-            }
-          });
         }
+        movies.forEach(function (card) {
+          var noty = Template.get('notice_card', {
+            time: date,
+            title: card.name,
+            descr: Lampa.Lang.translate('trakt_digital_release') || 'Digital release'
+          });
+          noty.find('.notice__img').remove();
+          if (card.poster) {
+            noty.find('.notice__left').css('margin-right', '5em');
+            noty.find('.notice__left').prepend("<img src=\"".concat(card.poster, "\" style=\"max-width:120px;max-height:170px;display:block;margin-bottom:1em;\">"));
+          }
+          noty.on('hover:enter', function () {
+            Modal.close();
+            Activity.push({ url: '', component: 'full', id: card.id, method: 'movie', card: card, source: card.source });
+          });
+          modal.append(noty);
+        });
+        Modal.open({
+          title: "".concat(Lampa.Lang.translate('trakttv_episodes_on'), " ").concat(date),
+          size: 'medium',
+          html: modal,
+          onBack: function onBack() { Modal.close(); Lampa.Controller.toggle('content'); }
+        });
       });
       body.append(item);
     };
