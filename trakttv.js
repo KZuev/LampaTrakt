@@ -6621,8 +6621,8 @@
   function showDigitalReleaseDate(data, element) {
     var _n = function(msg) { try { Lampa.Noty.show(msg); } catch(e) {} };
     var movieId = data && data.id;
-    _n('[dig] id=' + movieId + ' rd=' + (data && data.release_date) + ' y=' + (data && data.year));
     if (!movieId || !Lampa.TMDB || !Lampa.Reguest) { _n('[dig] exit: no id/TMDB/Reguest'); return; }
+    _n('[dig] keys: ' + (data ? Object.keys(data).join(',') : 'null'));
     var renderRoot = element && element.object && element.object.activity &&
       typeof element.object.activity.render === 'function'
       ? element.object.activity.render() : null;
