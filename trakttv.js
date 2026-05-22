@@ -10368,6 +10368,7 @@
           TraktHistory.showWatchProgress(e.data, e);
         }
       }
+      try { Lampa.Noty.show('[card] method=' + (e.object && e.object.method) + ' id=' + (e.data && e.data.id)); } catch(x) {}
       if (e.object.method === 'movie') {
         showDigitalReleaseDate(e.data, e);
       }
