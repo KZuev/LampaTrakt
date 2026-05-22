@@ -6619,16 +6619,17 @@
   };
 
   function showDigitalReleaseDate(data, element) {
+    var _n = function(msg) { try { Lampa.Noty.show(msg); } catch(e) {} };
     var movieId = data && data.id;
-    console.log('[trakt-digital] called, movieId=', movieId, 'release_date=', data && data.release_date, 'year=', data && data.year);
-    if (!movieId || !Lampa.TMDB || !Lampa.Reguest) { console.log('[trakt-digital] early exit: no movieId or TMDB/Reguest'); return; }
+    _n('[dig] id=' + movieId + ' rd=' + (data && data.release_date) + ' y=' + (data && data.year));
+    if (!movieId || !Lampa.TMDB || !Lampa.Reguest) { _n('[dig] exit: no id/TMDB/Reguest'); return; }
     var renderRoot = element && element.object && element.object.activity &&
       typeof element.object.activity.render === 'function'
       ? element.object.activity.render() : null;
-    if (!renderRoot) { console.log('[trakt-digital] early exit: no renderRoot'); return; }
+    if (!renderRoot) { _n('[dig] exit: no renderRoot'); return; }
 
     var releaseYear = String(data.release_date || data.year || '').replace(/\D/g, '').slice(0, 4);
-    console.log('[trakt-digital] releaseYear=', releaseYear);
+    _n('[dig] year=' + releaseYear);
     if (!releaseYear) return;
 
     function applyDate(isoDate) {
@@ -6638,18 +6639,24 @@
       var displayDate = parts[2] + '.' + parts[1] + '.' + parts[0];
       var yearRe = new RegExp('\\b' + releaseYear + '\\b');
       var details = renderRoot.find('.full-start-new__details:not(.trakt)');
-      console.log('[trakt-digital] applyDate', isoDate, 'details count=', details.length);
+      var texts = [];
+      details.each(function() {
+        var clone = this.cloneNode(true);
+        clone.querySelectorAll('svg').forEach(function(s) { s.remove(); });
+        texts.push((clone.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 20));
+      });
+      _n('[dig] ' + details.length + ' details: ' + texts.join(' | '));
       details.each(function() {
         if (this.querySelector('.trakt-digital-date')) return false;
         var clone = this.cloneNode(true);
         clone.querySelectorAll('svg').forEach(function(s) { s.remove(); });
         var text = (clone.textContent || '').replace(/\s+/g, ' ').trim();
-        console.log('[trakt-digital] detail text=', JSON.stringify(text), 'matches=', yearRe.test(text));
         if (text.length < 30 && yearRe.test(text)) {
           var span = document.createElement('span');
           span.className = 'trakt-digital-date';
           span.textContent = ' (' + displayDate + ')';
           this.appendChild(span);
+          _n('[dig] applied: ' + displayDate);
           return false;
         }
       });
@@ -6661,10 +6668,10 @@
     var isoCountry = countryMap[langCode] || 'US';
 
     var url = Lampa.TMDB.api('movie/' + movieId + '/release_dates?api_key=' + Lampa.TMDB.key());
-    console.log('[trakt-digital] fetching', url);
     var network = new Lampa.Reguest();
     network.silent(url, function(resp) {
-      console.log('[trakt-digital] resp ok, results=', resp && resp.results && resp.results.length);
+      var cnt = resp && resp.results && resp.results.length;
+      _n('[dig] TMDB ok, ' + cnt + ' countries');
       if (!resp || !Array.isArray(resp.results)) return;
       var exactDate = null, usDate = null, anyDate = null;
       resp.results.forEach(function(entry) {
@@ -6677,10 +6684,10 @@
           }
         });
       });
-      console.log('[trakt-digital] exactDate=', exactDate, 'usDate=', usDate, 'anyDate=', anyDate);
+      _n('[dig] exact=' + exactDate + ' us=' + usDate + ' any=' + anyDate);
       var chosen = exactDate || usDate || anyDate;
       if (chosen) applyDate(chosen);
-    }, function(err) { console.log('[trakt-digital] fetch error', err); });
+    }, function(err) { _n('[dig] TMDB error: ' + JSON.stringify(err)); });
   }
 
   /**
