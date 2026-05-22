@@ -11334,8 +11334,17 @@
                   original_title: movie.title || title, original_name: title, name: title,
                   poster: poster, image: image, source: 'tmdb', type: 'movie'
                 };
+                // Episode-card structure: horizontal backdrop top, small poster bottom, date badge.
+                // No moduleMask — let ContentRows detect episode format from the episode field.
+                var epData = {
+                  air_date: digitalDate,
+                  season_number: null,
+                  episode_number: null,
+                  name: title,
+                  still_path: stillPath
+                };
                 var out = {
-                  card: card, time: airTime, title: title,
+                  card: card, episode: epData, time: airTime, title: title,
                   id: tmdbId, ids: movie.ids, params: {},
                   air_date: digitalDate, still_path: stillPath, isMovie: true
                 };
@@ -11357,7 +11366,7 @@
               combined.sort(function (a, b) { return (a.time || 0) - (b.time || 0); });
               var baseResults = combined.slice(0, CALENDAR_ROW_LIMIT);
 
-              // Fetch episode stills for shows; fall back to season poster when episode has no still
+              // Fetch episode stills for shows (returns raw TMDB path or '' if none)
               var stillPromises = baseResults.map(function (out) {
                 if (out.isMovie) return Promise.resolve('');
                 var showTmdbId = out.id;
@@ -11370,22 +11379,13 @@
                     var url = Lampa.TMDB.api('tv/' + showTmdbId + '/season/' + seasonNum + '/episode/' + epNum + '?api_key=' + Lampa.TMDB.key() + '&language=' + lang);
                     var network = new Lampa.Reguest();
                     network.silent(url, function (data) {
-                      if (data && data.still_path) {
-                        resolve(String(data.still_path));
-                      } else {
-                        // No episode still — fall back to season poster
-                        var seasonUrl = Lampa.TMDB.api('tv/' + showTmdbId + '/season/' + seasonNum + '?api_key=' + Lampa.TMDB.key() + '&language=' + lang);
-                        var network2 = new Lampa.Reguest();
-                        network2.silent(seasonUrl, function (sd) {
-                          resolve(sd && sd.poster_path ? String(sd.poster_path) : '');
-                        }, function () { resolve(''); });
-                      }
+                      resolve(data && data.still_path ? String(data.still_path) : '');
                     }, function () { resolve(''); });
                   } catch (e) { resolve(''); }
                 });
               });
 
-              // Fetch locale enrichment for shows
+              // Fetch locale enrichment for shows; also stores raw backdrop_path for still fallback
               var _calLang = Lampa.Storage ? Lampa.Storage.get('language', 'ru') : 'ru';
               var enrichPromises = baseResults.map(function (out) {
                 if (out.isMovie) return Promise.resolve();
@@ -11397,6 +11397,7 @@
                   if (cached.title) { out.title = cached.title; if (out.card) { out.card.title = cached.title; out.card.name = cached.title; } }
                   if (cached.poster && out.card) out.card.poster = cached.poster;
                   if (cached.image && out.card) out.card.image = cached.image;
+                  if (cached.backdrop_path) out._backdropRaw = cached.backdrop_path;
                   return Promise.resolve();
                 }
                 return new Promise(function (resolve) {
@@ -11407,7 +11408,13 @@
                     var localTitle = d && (d.title || d.name);
                     if (localTitle) { out.title = localTitle; if (out.card) { out.card.title = localTitle; out.card.name = localTitle; } entry.title = localTitle; }
                     if (d && d.poster_path) { var calPoster = 'https://image.tmdb.org/t/p/w500' + d.poster_path; if (out.card) out.card.poster = calPoster; entry.poster = calPoster; }
-                    if (d && d.backdrop_path) { var calImage = 'https://image.tmdb.org/t/p/w1280' + d.backdrop_path; if (out.card) out.card.image = calImage; entry.image = calImage; }
+                    if (d && d.backdrop_path) {
+                      var calImage = 'https://image.tmdb.org/t/p/w1280' + d.backdrop_path;
+                      if (out.card) out.card.image = calImage;
+                      entry.image = calImage;
+                      entry.backdrop_path = d.backdrop_path;
+                      out._backdropRaw = d.backdrop_path;
+                    }
                     _tmdbLocaleCache[cacheKey] = entry;
                     resolve();
                   }, function () { resolve(); });
@@ -11418,7 +11425,15 @@
                 var stillPaths = res[0];
                 baseResults.forEach(function (out, index) {
                   var path = stillPaths[index];
-                  if (path) { out.still_path = path; if (out.episode) out.episode.still_path = path; }
+                  if (path) {
+                    out.still_path = path;
+                    if (out.episode) out.episode.still_path = path;
+                  } else if (!out.isMovie && out._backdropRaw) {
+                    // No episode still — use the show's horizontal backdrop as fallback
+                    out.still_path = out._backdropRaw;
+                    if (out.episode) out.episode.still_path = out._backdropRaw;
+                  }
+                  delete out._backdropRaw;
                 });
                 if (!baseResults.length) return call();
                 var calTitle = Lampa.Lang.translate('trakttv_calendar');
