@@ -5891,10 +5891,13 @@
         nextStartDate = shiftDate(nextStartDate, CHUNK_DAYS);
         return appendChunk(chunkStart, CHUNK_DAYS, data);
       }).then(function () {
-        // Keep loadingMore=true until after the timeout so the down handler
-        // cannot re-trigger loadMoreDays before the new items are in the DOM.
-        // Let Lampa's scroll/Navigator handle refocusing after new items paint.
-        loadingMore = false;
+        // Wait for browser to paint new items before rebuilding the Navigator
+        // grid. No explicit collectionFocus — the user's next DOWN press will
+        // move into the newly visible items via Navigator.move('down').
+        setTimeout(function () {
+          Lampa.Controller.collectionSet(scroll.render());
+          loadingMore = false;
+        }, 300);
       })['catch'](function () {
         loadingMore = false;
       });
@@ -6085,15 +6088,14 @@
           else Lampa.Controller.toggle('head');
         },
         down: function down() {
+          Lampa.Controller.collectionSet(scroll.render());
           if (typeof Navigator !== 'undefined' && Navigator.canmove('down')) Navigator.move('down');
         },
         left: function left() {
           if (typeof Navigator !== 'undefined' && Navigator.canmove('left')) Navigator.move('left');
           else Lampa.Controller.toggle('menu');
         },
-        right: function right() {
-          if (typeof Navigator !== 'undefined' && Navigator.canmove('right')) Navigator.move('right');
-        },
+        right: function right() {},
         back: this.back
       });
       Lampa.Controller.toggle('content');
