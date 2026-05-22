@@ -5680,17 +5680,15 @@
 
   function TraktTimetableAll() {
     var _this2 = this;
-    var Scroll = Lampa.Scroll;
     var Activity = Lampa.Activity;
     var Modal = Lampa.Modal;
     var Template = Lampa.Template;
     var Empty = Lampa.Empty;
     this.activity = null;
-    var scroll = new Scroll({
-      mask: true,
-      over: true,
-      step: 300
-    });
+    // scroll is set to this.activity.scroll inside create() so Lampa manages
+    // navigation (including Apple TV). A hand-rolled new Lampa.Scroll() is not
+    // registered with the activity and breaks spatial navigation on tvOS.
+    var scroll;
     var html = $('<div></div>');
     var body = $('<div class="timetable"></div>');
     var last;
@@ -5897,24 +5895,8 @@
       }).then(function () {
         // Keep loadingMore=true until after the timeout so the down handler
         // cannot re-trigger loadMoreDays before the new items are in the DOM.
-        setTimeout(function () {
-          if (Lampa.Controller.enabled() !== 'content') { loadingMore = false; return; }
-          var _items = body.find('.timetable__item.selector');
-          var _curIdx = -1;
-          if (last) {
-            for (var _i = 0; _i < _items.length; _i++) {
-              if (_items[_i] === last) { _curIdx = _i; break; }
-            }
-          }
-          var _nextIdx = _curIdx >= 0 && _curIdx + 1 < _items.length ? _curIdx + 1 : -1;
-          if (_nextIdx >= 0 && _items[_nextIdx]) {
-            // Rebuild collection to include newly appended items, then focus.
-            // 500 ms gives Apple TV's WebKit time to paint and compute positions.
-            Lampa.Controller.collectionSet(scroll.render());
-            Lampa.Controller.collectionFocus(_items[_nextIdx], scroll.render());
-          }
-          loadingMore = false;
-        }, 500);
+        // Let Lampa's scroll/Navigator handle refocusing after new items paint.
+        loadingMore = false;
       })['catch'](function () {
         loadingMore = false;
       });
@@ -5926,6 +5908,9 @@
         while (1) switch (_context.n) {
           case 0:
             if (this.activity) this.activity.loader(true);
+            // Use the activity's own scroll so Lampa handles Apple TV navigation.
+            scroll = this.activity.scroll;
+            scroll.onEnd = loadMoreDays;
             startDateStr = getTodayString();
             _context.n = 1;
             return Promise.all([fetchCalendarChunk(startDateStr, INITIAL_DAYS), fetchWatchlistMoviesForCalendar()]);
@@ -5950,10 +5935,8 @@
               }
             })();
             nextStartDate = shiftDate(startDateStr, INITIAL_DAYS);
-            scroll.onEnd = loadMoreDays;
             if (!hasAny) this.empty();
 
-            scroll.minus();
             scroll.append(body);
 
             // Color legend — added to html outside the scroll so it never scrolls away
@@ -6096,34 +6079,23 @@
       Lampa.Controller.add('content', {
         link: this,
         toggle: function toggle() {
-          // Build the Navigator grid once per activation.
-          // Do NOT rebuild inside the down/up handlers — rebuilding on every
-          // keypress causes stale positions that make Navigator drift sideways.
           Lampa.Controller.collectionSet(scroll.render());
           if (!last) last = body.find('.timetable__item.selector').get(0);
           Lampa.Controller.collectionFocus(last || false, scroll.render());
-        },
-        left: function left() {
-          if (typeof Navigator !== 'undefined' && Navigator.canmove('left')) Navigator.move('left');
-          else Lampa.Controller.toggle('menu');
-        },
-        right: function right() {
-          // Intentionally empty: prevent accidental Siri-Remote swipes from
-          // drifting the selection into adjacent UI elements.
         },
         up: function up() {
           if (typeof Navigator !== 'undefined' && Navigator.canmove('up')) Navigator.move('up');
           else Lampa.Controller.toggle('head');
         },
         down: function down() {
-          // Use Navigator.move for spatial navigation (not index-based) so the
-          // frame moves in the correct visual direction. collectionSet is NOT
-          // called here — rebuilding the grid on every keypress caused drift.
-          if (typeof Navigator !== 'undefined' && Navigator.canmove('down')) {
-            Navigator.move('down');
-          } else {
-            loadMoreDays();
-          }
+          if (typeof Navigator !== 'undefined' && Navigator.canmove('down')) Navigator.move('down');
+        },
+        left: function left() {
+          if (typeof Navigator !== 'undefined' && Navigator.canmove('left')) Navigator.move('left');
+          else Lampa.Controller.toggle('menu');
+        },
+        right: function right() {
+          if (typeof Navigator !== 'undefined' && Navigator.canmove('right')) Navigator.move('right');
         },
         back: this.back
       });
@@ -6135,7 +6107,6 @@
       return html;
     };
     this.destroy = function () {
-      scroll.destroy();
       html.remove();
     };
   }
