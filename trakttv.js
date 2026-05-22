@@ -6620,16 +6620,16 @@
 
   function showDigitalReleaseDate(data, element) {
     var _n = function(msg) { try { Lampa.Noty.show(msg); } catch(e) {} };
-    var movieId = data && data.id;
+    var movieData = (data && data.movie) || data || {};
+    var movieId = movieData.id || (data && data.id);
     if (!movieId || !Lampa.TMDB || !Lampa.Reguest) { _n('[dig] exit: no id/TMDB/Reguest'); return; }
-    _n('[dig] keys: ' + (data ? Object.keys(data).join(',') : 'null'));
     var renderRoot = element && element.object && element.object.activity &&
       typeof element.object.activity.render === 'function'
       ? element.object.activity.render() : null;
     if (!renderRoot) { _n('[dig] exit: no renderRoot'); return; }
 
-    var releaseYear = String(data.release_date || data.year || '').replace(/\D/g, '').slice(0, 4);
-    _n('[dig] year=' + releaseYear);
+    var releaseYear = String(movieData.release_date || movieData.year || data.release_date || data.year || '').replace(/\D/g, '').slice(0, 4);
+    _n('[dig] id=' + movieId + ' year=' + releaseYear + ' rd=' + (movieData.release_date || data.release_date));
     if (!releaseYear) return;
 
     function applyDate(isoDate) {
