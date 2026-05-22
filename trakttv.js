@@ -5907,8 +5907,11 @@
             }
           }
           var _nextIdx = _curIdx >= 0 && _curIdx + 1 < _items.length ? _curIdx + 1 : _curIdx;
-          if (_items[_nextIdx] && last) $(last).trigger('hover:blur');
-          if (_items[_nextIdx]) { last = _items[_nextIdx]; $(last).trigger('hover:focus'); }
+          if (_items[_nextIdx]) {
+            last = _items[_nextIdx];
+            Lampa.Controller.collectionSet(body);
+            Lampa.Controller.collectionFocus(last, body);
+          }
           loadingMore = false;
         }, 200);
       })['catch'](function () {
@@ -6092,11 +6095,13 @@
       Lampa.Controller.add('content', {
         link: this,
         toggle: function toggle() {
-          Lampa.Controller.collectionSet(scroll.render());
+          // Scope collection to body (only timetable rows) to prevent Navigator
+          // from including scroll-UI elements that could cause rightward drift.
+          Lampa.Controller.collectionSet(body);
           if (!last) {
             last = body.find('.timetable__item.selector').get(0);
           }
-          Lampa.Controller.collectionFocus(last || false, scroll.render());
+          Lampa.Controller.collectionFocus(last || false, body);
         },
         left: function left() {
           if (typeof Navigator !== 'undefined' && Navigator.canmove('left')) Navigator.move('left');else Lampa.Controller.toggle('menu');
@@ -6108,10 +6113,6 @@
           if (typeof Navigator !== 'undefined' && Navigator.canmove('up')) Navigator.move('up');else Lampa.Controller.toggle('head');
         },
         down: function down() {
-          // Fully index-based: never use Navigator.canmove/move for vertical
-          // movement in the calendar list. Navigator rebuilds on every collectionSet
-          // call and can drift focus right. Direct hover events are reliable on
-          // Apple TV regardless of whether element positions are computed yet.
           var _items = body.find('.timetable__item.selector');
           var _curIdx = -1;
           if (last) {
@@ -6120,9 +6121,9 @@
             }
           }
           if (_curIdx >= 0 && _curIdx < _items.length - 1) {
-            if (last) $(last).trigger('hover:blur');
             last = _items[_curIdx + 1];
-            $(last).trigger('hover:focus');
+            Lampa.Controller.collectionSet(body);
+            Lampa.Controller.collectionFocus(last, body);
           } else {
             loadMoreDays();
           }
