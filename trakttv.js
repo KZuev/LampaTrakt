@@ -5634,8 +5634,8 @@
         ru: "Не просмотрено",
       },
       trakt_digital_release: {
-        ru: "Цифровой релиз",
-        en: "Digital release",
+        ru: "Цифровой релиз фильма",
+        en: "Digital film release",
       },
       trakttv_na: {
         ru: "на",
@@ -5908,9 +5908,9 @@
           }
           var _nextIdx = _curIdx >= 0 && _curIdx + 1 < _items.length ? _curIdx + 1 : -1;
           if (_nextIdx >= 0 && _items[_nextIdx]) {
-            if (last) $(_items[_curIdx]).trigger('hover:blur');
-            last = _items[_nextIdx];
-            $(last).trigger('hover:focus');
+            var _nextEl = _items[_nextIdx];
+            if (typeof Navigator !== 'undefined' && Navigator.focus) Navigator.focus(_nextEl);
+            else { if (last) $(last).trigger('hover:blur'); last = _nextEl; $(_nextEl).trigger('hover:focus'); }
           }
           loadingMore = false;
         }, 200);
@@ -6095,19 +6095,20 @@
       Lampa.Controller.add('content', {
         link: this,
         toggle: function toggle() {
-          // Scope Navigator to body once so pressing right won't drift into
-          // unrelated elements from a previous page.
-          Lampa.Controller.collectionSet(body);
+          // Build Navigator collection once per activation so the frame
+          // renderer knows the coordinate space of this view.
+          Lampa.Controller.collectionSet(scroll.render());
           if (!last) last = body.find('.timetable__item.selector').get(0);
-          // Trigger directly — collectionFocus can silently fail on Apple TV
-          // when Navigator hasn't computed element positions yet.
-          if (last) $(last).trigger('hover:focus');
+          if (last) {
+            if (typeof Navigator !== 'undefined' && Navigator.focus) Navigator.focus(last);
+            else Lampa.Controller.collectionFocus(last, scroll.render());
+          }
         },
         left: function left() {
           Lampa.Controller.toggle('menu');
         },
         right: function right() {
-          // Nothing to the right in this view.
+          // Vertical-only list — no rightward movement.
         },
         up: function up() {
           var _items = body.find('.timetable__item.selector');
@@ -6118,9 +6119,9 @@
             }
           }
           if (_curIdx > 0) {
-            $(last).trigger('hover:blur');
-            last = _items[_curIdx - 1];
-            $(last).trigger('hover:focus');
+            var prevEl = _items[_curIdx - 1];
+            if (typeof Navigator !== 'undefined' && Navigator.focus) Navigator.focus(prevEl);
+            else { $(last).trigger('hover:blur'); last = prevEl; $(prevEl).trigger('hover:focus'); }
           } else {
             Lampa.Controller.toggle('head');
           }
@@ -6134,9 +6135,9 @@
             }
           }
           if (_curIdx >= 0 && _curIdx < _items.length - 1) {
-            $(last).trigger('hover:blur');
-            last = _items[_curIdx + 1];
-            $(last).trigger('hover:focus');
+            var nextEl = _items[_curIdx + 1];
+            if (typeof Navigator !== 'undefined' && Navigator.focus) Navigator.focus(nextEl);
+            else { $(last).trigger('hover:blur'); last = nextEl; $(nextEl).trigger('hover:focus'); }
           } else {
             loadMoreDays();
           }
