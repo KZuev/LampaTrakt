@@ -5693,7 +5693,18 @@
     var html = $('<div></div>');
     var body = $('<div class="timetable"></div>');
     var last;
-    var DAYS = 31;
+    var INITIAL_DAYS = 14;
+    var CHUNK_DAYS = 14;
+    var nextStartDate = null;
+    var loadingMore = false;
+    function dateToString(d) {
+      return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    }
+    function shiftDate(dateStr, n) {
+      var d = new Date(dateStr);
+      d.setDate(d.getDate() + n);
+      return dateToString(d);
+    }
     var episodeTypes = [{
       key: 'series_finale',
       color: '#8d6e63'
@@ -5809,72 +5820,73 @@
       });
       return Promise.all(promises).then(function () { return episodes; });
     }
-    function fetchTraktCalendar() {
-      return _fetchTraktCalendar.apply(this, arguments);
+    function fetchCalendarChunk(startDateStr, days) {
+      return api$1.get("/calendars/my/shows/".concat(startDateStr, "/").concat(days, "?extended=images,full"))['catch'](function () {
+        Lampa.Bell.push({ text: Lampa.Lang.translate('trakttv_calendar_error') });
+        return [];
+      });
     }
-    function _fetchTraktCalendar() {
-      _fetchTraktCalendar = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2() {
-        var dateString;
-        return _regenerator().w(function (_context2) {
-          while (1) switch (_context2.n) {
-            case 0:
-              dateString = getTodayString();
-              _context2.p = 1;
-              _context2.n = 2;
-              return api$1.get("/calendars/my/shows/".concat(dateString, "/").concat(DAYS, "?extended=images,full"));
-            case 2:
-              return _context2.a(2, _context2.v);
-            case 3:
-              _context2.p = 3;
-              _context2.v;
-              Lampa.Bell.push({
-                text: Lampa.Lang.translate('trakttv_calendar_error')
-              });
-              return _context2.a(2, []);
-          }
-        }, _callee2, null, [[1, 3]]);
-      }));
-      return _fetchTraktCalendar.apply(this, arguments);
+    function appendChunk(startDateStr, days, traktData) {
+      var episodes = prepareTimetableData(traktData);
+      return enrichTimetableCards(episodes).then(function (enriched) {
+        var grouped = groupEpisodesByDate(enriched);
+        for (var i = 0; i < days; i++) {
+          var d = new Date(startDateStr);
+          d.setDate(d.getDate() + i);
+          var dateStr = dateToString(d);
+          _this2.append(dateStr, grouped[dateStr] || []);
+        }
+      });
+    }
+    function loadMoreDays() {
+      if (loadingMore || !nextStartDate) return;
+      loadingMore = true;
+      fetchCalendarChunk(nextStartDate, CHUNK_DAYS).then(function (data) {
+        var chunkStart = nextStartDate;
+        nextStartDate = shiftDate(nextStartDate, CHUNK_DAYS);
+        return appendChunk(chunkStart, CHUNK_DAYS, data);
+      }).then(function () {
+        loadingMore = false;
+      })['catch'](function () {
+        loadingMore = false;
+      });
     }
     this.create = /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
       var _this = this;
-      var traktData, episodes, groupedByDate, startDate, dates, i, d, y, m, day, hasAny;
+      var startDateStr, traktData, episodes, hasAny;
       return _regenerator().w(function (_context) {
         while (1) switch (_context.n) {
           case 0:
             if (this.activity) this.activity.loader(true);
+            startDateStr = getTodayString();
             _context.n = 1;
-            return fetchTraktCalendar();
+            return fetchCalendarChunk(startDateStr, INITIAL_DAYS);
           case 1:
             traktData = _context.v;
             episodes = prepareTimetableData(traktData);
             _context.n = 2;
             return enrichTimetableCards(episodes);
           case 2:
-            groupedByDate = groupEpisodesByDate(episodes);
-            startDate = new Date();
-            dates = [];
-            for (i = 0; i < DAYS; i++) {
-              d = new Date(startDate);
-              d.setDate(startDate.getDate() + i);
-              y = d.getFullYear();
-              m = String(d.getMonth() + 1).padStart(2, '0');
-              day = String(d.getDate()).padStart(2, '0');
-              dates.push("".concat(y, "-").concat(m, "-").concat(day));
-            }
             hasAny = false;
-            dates.forEach(function (date) {
-              if ((groupedByDate[date] || []).length) hasAny = true;
-              _this.append(date, groupedByDate[date] || []);
-            });
+            (function () {
+              var grouped = groupEpisodesByDate(episodes);
+              for (var i = 0; i < INITIAL_DAYS; i++) {
+                var d = new Date(startDateStr);
+                d.setDate(d.getDate() + i);
+                var dateStr = dateToString(d);
+                if ((grouped[dateStr] || []).length) hasAny = true;
+                _this.append(dateStr, grouped[dateStr] || []);
+              }
+            })();
+            nextStartDate = shiftDate(startDateStr, INITIAL_DAYS);
+            scroll.onEnd = loadMoreDays;
             if (!hasAny) this.empty();
-            scroll.minus(); // scroll готовий до рендеру
-            scroll.append(body); // додаємо body в scroll
-            html.append(scroll.render()); // додаємо scroll в html
+            scroll.minus();
+            scroll.append(body);
+            html.append(scroll.render());
 
             if (this.activity) this.activity.loader(false);
 
-            // Зберігаємо посилання для контролера
             this.body = body;
             this.scroll = scroll;
             this.html = html;
@@ -10801,19 +10813,15 @@
   function registerMainScreenAutoLoad() {
     Lampa.Listener.follow('line', function (e) {
       if (!e || e.type !== 'create' || !e.data || e.data.trakt_row !== 'upnext') return;
-      // Run after current event settles but before next paint
       setTimeout(function () {
         try {
           var active = Lampa.Activity && typeof Lampa.Activity.active === 'function' ? Lampa.Activity.active() : null;
           var scrollEl = active && active.scroll && typeof active.scroll.render === 'function' ? active.scroll.render()[0] : null;
           if (!scrollEl) return;
-          // Both assignments happen in the same JS execution — browser never
-          // renders the intermediate state, but ContentRows' synchronous scroll
-          // listener fires for scrollTop = scrollHeight and triggers all rows.
           scrollEl.scrollTop = scrollEl.scrollHeight;
-          scrollEl.scrollTop = 0;
+          setTimeout(function () { scrollEl.scrollTop = 0; }, 150);
         } catch (err) {}
-      }, 0);
+      }, 200);
     });
   }
   function registerSourceFiltersCacheInvalidation() {
