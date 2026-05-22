@@ -11334,24 +11334,11 @@
                   original_title: movie.title || title, original_name: title, name: title,
                   poster: poster, image: image, source: 'tmdb', type: 'movie'
                 };
-                // Use episode-card structure so the row renders movies identically to TV shows
-                // (horizontal backdrop at top, small poster at bottom, date badge)
-                var epData = {
-                  air_date: digitalDate,
-                  season_number: null,
-                  episode_number: null,
-                  name: '',
-                  still_path: stillPath
-                };
                 var out = {
-                  card: card, episode: epData, time: airTime, title: title,
+                  card: card, time: airTime, title: title,
                   id: tmdbId, ids: movie.ids, params: {},
-                  still_path: stillPath, isMovie: true
+                  air_date: digitalDate, still_path: stillPath, isMovie: true
                 };
-                Lampa.Arrays && Lampa.Arrays.extend
-                  ? Lampa.Arrays.extend(out, epData)
-                  : Object.keys(epData).forEach(function (k) { out[k] = epData[k]; });
-                if (moduleMask) out.params.module = moduleMask;
                 out.params.emit = {
                   onlyEnter: function onlyEnter() {
                     Lampa.Activity.push({ url: '', component: 'full', id: tmdbId, method: 'movie', card: card, source: 'tmdb' });
@@ -11370,7 +11357,7 @@
               combined.sort(function (a, b) { return (a.time || 0) - (b.time || 0); });
               var baseResults = combined.slice(0, CALENDAR_ROW_LIMIT);
 
-              // Fetch episode stills for shows (silent, fails to empty string)
+              // Fetch episode stills for shows; fall back to season poster when episode has no still
               var stillPromises = baseResults.map(function (out) {
                 if (out.isMovie) return Promise.resolve('');
                 var showTmdbId = out.id;
@@ -11379,10 +11366,20 @@
                 if (!showTmdbId || seasonNum == null || epNum == null) return Promise.resolve('');
                 return new Promise(function (resolve) {
                   try {
-                    var url = Lampa.TMDB.api('tv/' + showTmdbId + '/season/' + seasonNum + '/episode/' + epNum + '?api_key=' + Lampa.TMDB.key() + '&language=' + Lampa.Storage.get('language', 'en'));
+                    var lang = Lampa.Storage.get('language', 'en');
+                    var url = Lampa.TMDB.api('tv/' + showTmdbId + '/season/' + seasonNum + '/episode/' + epNum + '?api_key=' + Lampa.TMDB.key() + '&language=' + lang);
                     var network = new Lampa.Reguest();
                     network.silent(url, function (data) {
-                      resolve(data && data.still_path ? String(data.still_path) : '');
+                      if (data && data.still_path) {
+                        resolve(String(data.still_path));
+                      } else {
+                        // No episode still — fall back to season poster
+                        var seasonUrl = Lampa.TMDB.api('tv/' + showTmdbId + '/season/' + seasonNum + '?api_key=' + Lampa.TMDB.key() + '&language=' + lang);
+                        var network2 = new Lampa.Reguest();
+                        network2.silent(seasonUrl, function (sd) {
+                          resolve(sd && sd.poster_path ? String(sd.poster_path) : '');
+                        }, function () { resolve(''); });
+                      }
                     }, function () { resolve(''); });
                   } catch (e) { resolve(''); }
                 });
