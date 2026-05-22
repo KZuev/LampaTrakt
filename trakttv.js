@@ -10613,7 +10613,7 @@
   var initialized = false;
   var UI_DEADLINE_MAIN_MS = 2800;
   var UI_DEADLINE_CATEGORY_MS = 3200;
-  var STALE_PRESENT_DEADLINE_MS = 50;
+  var STALE_PRESENT_DEADLINE_MS = 0;
   var STALE_CACHE_TTL_MS = 1000 * 60 * 60 * 6;
   var STORAGE_CACHE_PREFIX = 'trakttv_row_cache_v1_';
   var SOURCE_FILTER_FIELDS = ['trakt_source_ignore_watched', 'trakt_source_ignore_watchlisted'];
@@ -10725,6 +10725,28 @@
       });
     }
   }
+  function prefetchMainRows() {
+    if (!Api) return;
+    var configs = [];
+    if (checkUpNextPermissions()) {
+      configs.push({ name: 'TraktUpNextRow', apiMethod: 'upnext', limit: 36, displayLimit: 20, traktRow: 'upnext' });
+      configs.push({ name: 'TraktWatchlistRow', apiMethod: 'watchlist', limit: 36, displayLimit: 20 });
+    }
+    if (checkRecommendationsPermissions()) {
+      configs.push({ name: 'TraktRecommendationsRow', apiMethod: 'recommendations', limit: 36, displayLimit: 20 });
+    }
+    configs.forEach(function (config) {
+      if (typeof Api[config.apiMethod] !== 'function') return;
+      var cacheKey = buildRowCacheKey(config, {}, 'main');
+      if (loadRowFromCache(cacheKey)) return;
+      Api[config.apiMethod]({ limit: config.limit, page: 1 }).then(function (data) {
+        var results = data && Array.isArray(data.results) ? data.results : [];
+        if (!results.length) return;
+        var limited = config.displayLimit > 0 ? results.slice(0, config.displayLimit) : results;
+        saveRowToCache(cacheKey, createRowPayload(config, data, normalizeContentData(limited)));
+      })['catch'](function () {});
+    });
+  }
   function createOnMoreHandler(config) {
     return function () {
       Lampa.Activity.push({
@@ -10773,6 +10795,7 @@
     registerRows();
     registerCalendarRows();
     registerDvdRows();
+    prefetchMainRows();
   }
   function registerSourceFiltersCacheInvalidation() {
     if (!Lampa || !Lampa.Storage || !Lampa.Storage.listener || typeof Lampa.Storage.listener.follow !== 'function') return;
