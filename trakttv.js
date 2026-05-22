@@ -10805,10 +10805,13 @@
         try {
           var active = Lampa.Activity && typeof Lampa.Activity.active === 'function' ? Lampa.Activity.active() : null;
           var scrollEl = active && active.scroll && typeof active.scroll.render === 'function' ? active.scroll.render()[0] : null;
-          if (scrollEl) scrollEl.dispatchEvent(new Event('scroll', { bubbles: true }));
-          window.dispatchEvent(new Event('scroll'));
+          if (!scrollEl) return;
+          // Physically scroll to bottom so ContentRows triggers all below-fold rows,
+          // then snap back to top. Rows will be ready in DOM when user scrolls.
+          scrollEl.scrollTop = scrollEl.scrollHeight;
+          setTimeout(function () { scrollEl.scrollTop = 0; }, 150);
         } catch (err) {}
-      }, 150);
+      }, 200);
     });
   }
   function registerSourceFiltersCacheInvalidation() {
