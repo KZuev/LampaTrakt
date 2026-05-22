@@ -5680,15 +5680,13 @@
 
   function TraktTimetableAll() {
     var _this2 = this;
+    var Scroll = Lampa.Scroll;
     var Activity = Lampa.Activity;
     var Modal = Lampa.Modal;
     var Template = Lampa.Template;
     var Empty = Lampa.Empty;
     this.activity = null;
-    // scroll is set to this.activity.scroll inside create() so Lampa manages
-    // navigation (including Apple TV). A hand-rolled new Lampa.Scroll() is not
-    // registered with the activity and breaks spatial navigation on tvOS.
-    var scroll;
+    var scroll = new Scroll({ mask: true, over: true, step: 300 });
     var html = $('<div></div>');
     var body = $('<div class="timetable"></div>');
     var last;
@@ -5908,9 +5906,6 @@
         while (1) switch (_context.n) {
           case 0:
             if (this.activity) this.activity.loader(true);
-            // Use the activity's own scroll so Lampa handles Apple TV navigation.
-            scroll = this.activity.scroll;
-            scroll.onEnd = loadMoreDays;
             startDateStr = getTodayString();
             _context.n = 1;
             return Promise.all([fetchCalendarChunk(startDateStr, INITIAL_DAYS), fetchWatchlistMoviesForCalendar()]);
@@ -5935,8 +5930,10 @@
               }
             })();
             nextStartDate = shiftDate(startDateStr, INITIAL_DAYS);
+            scroll.onEnd = loadMoreDays;
             if (!hasAny) this.empty();
 
+            scroll.minus();
             scroll.append(body);
 
             // Color legend — added to html outside the scroll so it never scrolls away
@@ -6107,6 +6104,7 @@
       return html;
     };
     this.destroy = function () {
+      scroll.destroy();
       html.remove();
     };
   }
