@@ -5906,11 +5906,11 @@
               if (_items[_i] === last) { _curIdx = _i; break; }
             }
           }
-          var _nextIdx = _curIdx >= 0 && _curIdx + 1 < _items.length ? _curIdx + 1 : _curIdx;
-          if (_items[_nextIdx]) {
+          var _nextIdx = _curIdx >= 0 && _curIdx + 1 < _items.length ? _curIdx + 1 : -1;
+          if (_nextIdx >= 0 && _items[_nextIdx]) {
+            if (last) $(_items[_curIdx]).trigger('hover:blur');
             last = _items[_nextIdx];
-            Lampa.Controller.collectionSet(body);
-            Lampa.Controller.collectionFocus(last, body);
+            $(last).trigger('hover:focus');
           }
           loadingMore = false;
         }, 200);
@@ -6095,22 +6095,35 @@
       Lampa.Controller.add('content', {
         link: this,
         toggle: function toggle() {
-          // Scope collection to body (only timetable rows) to prevent Navigator
-          // from including scroll-UI elements that could cause rightward drift.
+          // Scope Navigator to body once so pressing right won't drift into
+          // unrelated elements from a previous page.
           Lampa.Controller.collectionSet(body);
-          if (!last) {
-            last = body.find('.timetable__item.selector').get(0);
-          }
-          Lampa.Controller.collectionFocus(last || false, body);
+          if (!last) last = body.find('.timetable__item.selector').get(0);
+          // Trigger directly — collectionFocus can silently fail on Apple TV
+          // when Navigator hasn't computed element positions yet.
+          if (last) $(last).trigger('hover:focus');
         },
         left: function left() {
-          if (typeof Navigator !== 'undefined' && Navigator.canmove('left')) Navigator.move('left');else Lampa.Controller.toggle('menu');
+          Lampa.Controller.toggle('menu');
         },
         right: function right() {
-          if (typeof Navigator !== 'undefined' && Navigator.canmove('right')) Navigator.move('right');else Navigator.move('right');
+          // Nothing to the right in this view.
         },
         up: function up() {
-          if (typeof Navigator !== 'undefined' && Navigator.canmove('up')) Navigator.move('up');else Lampa.Controller.toggle('head');
+          var _items = body.find('.timetable__item.selector');
+          var _curIdx = -1;
+          if (last) {
+            for (var _i = 0; _i < _items.length; _i++) {
+              if (_items[_i] === last) { _curIdx = _i; break; }
+            }
+          }
+          if (_curIdx > 0) {
+            $(last).trigger('hover:blur');
+            last = _items[_curIdx - 1];
+            $(last).trigger('hover:focus');
+          } else {
+            Lampa.Controller.toggle('head');
+          }
         },
         down: function down() {
           var _items = body.find('.timetable__item.selector');
@@ -6121,9 +6134,9 @@
             }
           }
           if (_curIdx >= 0 && _curIdx < _items.length - 1) {
+            $(last).trigger('hover:blur');
             last = _items[_curIdx + 1];
-            Lampa.Controller.collectionSet(body);
-            Lampa.Controller.collectionFocus(last, body);
+            $(last).trigger('hover:focus');
           } else {
             loadMoreDays();
           }
