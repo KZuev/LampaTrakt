@@ -10801,17 +10801,19 @@
   function registerMainScreenAutoLoad() {
     Lampa.Listener.follow('line', function (e) {
       if (!e || e.type !== 'create' || !e.data || e.data.trakt_row !== 'upnext') return;
+      // Run after current event settles but before next paint
       setTimeout(function () {
         try {
           var active = Lampa.Activity && typeof Lampa.Activity.active === 'function' ? Lampa.Activity.active() : null;
           var scrollEl = active && active.scroll && typeof active.scroll.render === 'function' ? active.scroll.render()[0] : null;
           if (!scrollEl) return;
-          // Physically scroll to bottom so ContentRows triggers all below-fold rows,
-          // then snap back to top. Rows will be ready in DOM when user scrolls.
+          // Both assignments happen in the same JS execution — browser never
+          // renders the intermediate state, but ContentRows' synchronous scroll
+          // listener fires for scrollTop = scrollHeight and triggers all rows.
           scrollEl.scrollTop = scrollEl.scrollHeight;
-          setTimeout(function () { scrollEl.scrollTop = 0; }, 150);
+          scrollEl.scrollTop = 0;
         } catch (err) {}
-      }, 200);
+      }, 0);
     });
   }
   function registerSourceFiltersCacheInvalidation() {
