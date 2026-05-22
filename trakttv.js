@@ -10887,7 +10887,7 @@
     }, {
       name: 'TraktRecommendationsRow',
       title: Lampa.Lang.translate('trakttv_row_recommendations_main'),
-      index: 2,
+      index: 4,
       screen: ['main'],
       displayTitle: Lampa.Lang.translate('trakttv_recommendations'),
       apiMethod: 'recommendations',
@@ -10902,7 +10902,7 @@
     }, {
       name: 'TraktWatchlistRow',
       title: Lampa.Lang.translate('trakttv_row_watchlist_main'),
-      index: 4,
+      index: 2,
       screen: ['main'],
       displayTitle: Lampa.Lang.translate('trakttv_watchlist'),
       apiMethod: 'watchlist',
@@ -11151,7 +11151,9 @@
                 results: baseResults,
                 title: Lampa.Lang.translate('trakttv_calendar'),
                 trakt_line: true,
-                trakt_line_title: Lampa.Lang.translate('trakttv_calendar')
+                trakt_line_title: Lampa.Lang.translate('trakttv_calendar'),
+                trakt_more_component: 'trakt_timetable_all',
+                trakt_more_title: Lampa.Lang.translate('trakttv_calendar')
               });
             });
           })["catch"](function () {
