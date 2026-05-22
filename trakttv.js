@@ -4312,299 +4312,199 @@
     if (tabId === 'shows') return t$3('trakttv_watchlist_tab_shows', 'Shows');
     return t$3('trakttv_watchlist_tab_movies', 'Movies');
   }
-  function watchlistHub() {
-    var object = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-    var activity;
-    var html;
-    var controls;
-    var navigation;
-    var sortNavigation;
-    var moreSortButton;
-    var body;
-    var views = {};
-    var lastControlsFocus = null;
-    var activeTab = normalizeWatchlistTab(object.watchlistType || object.mediaType || object.type);
-    var vipEnabled = Lampa && Lampa.Storage && Lampa.Storage.get('trakt_token') ? getTraktVipStatusCached() : false;
-    var activeSort = sanitizeWatchlistSortForVip(object.watchlistSort || object.sort, vipEnabled);
+  function watchlistHub(object) {
+    var WL_FILTER_CTRL = 'trakt_watchlist_controls';
+    var activity, html, controls, filtersRow, body;
+    var currentView = null;
+    var lastFilterFocus = null;
+    var activeFilters = {
+      type: object.watchlistType || object.mediaType || object.type || 'all',
+      year: object.filterYear || '',
+      genre: object.filterGenre || '',
+      country: object.filterCountry || ''
+    };
+    var activeSort = sanitizeWatchlistSortForVip(
+      object.watchlistSort || object.sort || 'added/desc',
+      getTraktVipStatusCached()
+    );
     var activeSortField = activeSort.field;
     var activeSortOrder = activeSort.order;
-    var tabs = [{
-      id: 'movies'
-    }, {
-      id: 'shows'
-    }];
-    var sortFields = getWatchlistSortFields();
-    var quickSortFields = getQuickWatchlistSortFields(sortFields);
-    var hiddenSortFields = getHiddenWatchlistSortFields(sortFields);
-    function rememberControlsFocus(element) {
-      if (!element) return;
-      lastControlsFocus = element && element.jquery ? element[0] : element;
+    var vipEnabled = getTraktVipStatusCached();
+    var typeBtn, yearBtn, genreBtn, countryBtn, sortBtn;
+
+    function tr(key, fallback) {
+      try { return Lampa.Lang.translate(key) || fallback || key; } catch(e) { return fallback || key; }
     }
-    function getCurrentSortValue() {
-      return buildWatchlistSortValue(activeSortField, activeSortOrder);
+    function notify$w(text) { try { Lampa.Bell.push({ text: text }); } catch(e) {} }
+
+    function getTypeLabel() {
+      if (activeFilters.type === 'movies') return tr('trakttv_watchlist_tab_movies', 'Фильмы');
+      if (activeFilters.type === 'shows') return tr('trakttv_watchlist_tab_shows', 'Сериалы');
+      return tr('trakttv_filter_all', 'Все');
     }
-    function isHiddenSortField(field) {
-      return hiddenSortFields.indexOf((field || '').toString().trim().toLowerCase()) > -1;
+    function isActive(val) { return !!val && val !== 'all'; }
+
+    function getYearLabel() {
+      return activeFilters.year || tr('trakttv_filter_year', 'Год');
     }
-    function restoreControls() {
-      var delay = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 0;
-      setTimeout(function () {
-        Lampa.Controller.toggle('trakt_watchlist_controls');
-      }, delay);
+    function getGenreLabel() {
+      if (!activeFilters.genre) return tr('trakttv_filter_genre', 'Жанр');
+      return TRAKT_GENRE_NAMES_RU[activeFilters.genre] || activeFilters.genre;
     }
-    function syncObjectState() {
-      object.watchlistType = activeTab;
-      object.mediaType = activeTab;
-      object.type = activeTab;
-      object.watchlistSort = getCurrentSortValue();
-      object.sort = object.watchlistSort;
+    function getCountryLabel() {
+      if (!activeFilters.country) return tr('trakttv_filter_country', 'Страна');
+      var c = TRAKT_RECS_COUNTRIES.find(function(x) { return x.slug === activeFilters.country; });
+      return c ? c.ru : activeFilters.country;
     }
-    function buildTabs() {
-      navigation = $('<div class="trakt-watchlist-hub__tabs"></div>');
-      tabs.forEach(function (tab) {
-        var button = $("<div class=\"simple-button simple-button--filter simple-button--invisible selector trakt-watchlist__tab\" data-tab=\"".concat(tab.id, "\">") + "<div>".concat(buildWatchlistTabTitle(tab.id), "</div>") + "</div>");
-        if (tab.id === activeTab) button.addClass('active');
-        button.on('hover:focus', function () {
-          rememberControlsFocus(button);
-        });
-        button.on('hover:enter', function () {
-          rememberControlsFocus(button);
-          switchTab(tab.id);
-        });
-        navigation.append(button);
-      });
+    function getSortLabel() {
+      var f = activeSortField;
+      if (!f || f === 'random') return '…';
+      return formatWatchlistSortLabel(f) + ' ' + formatWatchlistSortArrow(activeSortOrder);
     }
-    function updateTabs() {
-      navigation.find('.trakt-watchlist__tab').removeClass('active');
-      var activeButton = navigation.find(".trakt-watchlist__tab[data-tab=\"".concat(activeTab, "\"]"));
-      if (activeButton.length) activeButton.addClass('active');
+    function updateBtn(btn, label, active) {
+      if (!btn) return;
+      btn.find('.trakt-watchlist__sort-label').text(label);
+      btn.toggleClass('trakt-watchlist__sort--active', !!active);
     }
-    function buildSorts() {
-      sortNavigation = $('<div class="trakt-watchlist-hub__sorts"></div>');
-      quickSortFields.forEach(function (field) {
-        var button = $("<div class=\"simple-button simple-button--filter simple-button--invisible selector trakt-watchlist__sort\" data-sort-field=\"".concat(field, "\">") + "<div class=\"trakt-watchlist__sort-label\">".concat(formatWatchlistSortLabel(field), "</div>") + "<div class=\"trakt-watchlist__sort-state\"></div>" + "</div>");
-        button.on('hover:focus', function () {
-          rememberControlsFocus(button);
-        });
-        button.on('hover:enter', function () {
-          rememberControlsFocus(button);
-          switchSort(field);
-        });
-        sortNavigation.append(button);
-      });
-      if (hiddenSortFields.length) {
-        moreSortButton = $("<div class=\"simple-button simple-button--filter simple-button--invisible selector trakt-watchlist__sort trakt-watchlist__sort--more\" data-sort-field=\"__more__\">" + "<div class=\"trakt-watchlist__sort-label\">".concat(t$3('trakttv_watchlist_sort_more', 'More'), "</div>") + "<div class=\"trakt-watchlist__sort-state\"></div>" + "</div>");
-        moreSortButton.on('hover:focus', function () {
-          rememberControlsFocus(moreSortButton);
-        });
-        moreSortButton.on('hover:enter', function () {
-          rememberControlsFocus(moreSortButton);
-          openMoreSorts();
-        });
-        sortNavigation.append(moreSortButton);
-      }
-      updateSorts();
-    }
-    function updateSorts() {
-      if (!sortNavigation) return;
-      sortNavigation.find('.trakt-watchlist__sort').each(function (index, element) {
-        var button = $(element);
-        var field = (button.attr('data-sort-field') || '').toString();
-        var isMoreButton = field === '__more__';
-        var isActive = field === activeSortField;
-        var state = button.find('.trakt-watchlist__sort-state');
-        var label = button.find('.trakt-watchlist__sort-label');
-        button.removeClass('active trakt-watchlist__sort--active trakt-watchlist__sort--asc trakt-watchlist__sort--desc trakt-watchlist__sort--vip trakt-watchlist__sort--locked');
-        if (isMoreButton) {
-          var hiddenActive = isHiddenSortField(activeSortField);
-          var activeHiddenVip = hiddenActive && isWatchlistVipSortField(activeSortField);
-          label.text(hiddenActive ? formatWatchlistSortLabel(activeSortField) : t$3('trakttv_watchlist_sort_more', 'More'));
-          if (activeHiddenVip) button.addClass('trakt-watchlist__sort--vip');
-          if (hiddenActive) {
-            button.addClass('active trakt-watchlist__sort--active');
-            button.addClass(activeSortOrder === 'asc' ? 'trakt-watchlist__sort--asc' : 'trakt-watchlist__sort--desc');
-            state.text(formatWatchlistSortArrow(activeSortOrder));
-          } else {
-            state.text('');
-          }
-          return;
-        }
-        label.text(formatWatchlistSortLabel(field));
-        if (isActive) {
-          button.addClass('active trakt-watchlist__sort--active');
-          button.addClass(activeSortOrder === 'asc' ? 'trakt-watchlist__sort--asc' : 'trakt-watchlist__sort--desc');
-          state.text(formatWatchlistSortArrow(activeSortOrder));
-        } else {
-          state.text('');
-        }
-      });
-    }
-    function buildMoreSortItems() {
-      return hiddenSortFields.map(function (field) {
-        var vipOnly = isWatchlistVipSortField(field);
-        var isActive = field === activeSortField;
-        var arrow = isActive ? " ".concat(formatWatchlistSortArrow(activeSortOrder)) : '';
-        return {
-          title: "".concat(formatWatchlistSortLabel(field)).concat(arrow),
-          subtitle: vipOnly ? t$3('trakttv_vip_status', 'VIP') : '',
-          selected: isActive,
-          ghost: vipOnly && !vipEnabled,
-          field: field
-        };
-      });
-    }
-    function createViewObject(tabId) {
-      syncObjectState();
-      return _objectSpread2(_objectSpread2({}, object), {}, {
+    function restoreFilters() { Lampa.Controller.toggle(WL_FILTER_CTRL); }
+
+    function getCurrentSortValue() { return buildWatchlistSortValue(activeSortField, activeSortOrder); }
+
+    function rebuildView() {
+      if (currentView && currentView.destroy) currentView.destroy();
+      body.empty();
+      var mediaType = activeFilters.type === 'all' ? 'movies,shows' : (activeFilters.type === 'movies' ? 'movies' : 'shows');
+      var viewObject = Object.assign({}, object, {
         page: 1,
-        watchlistType: tabId,
-        mediaType: tabId,
-        type: tabId,
+        watchlistType: mediaType,
+        mediaType: mediaType,
+        type: mediaType,
         watchlistSort: getCurrentSortValue(),
         sort: getCurrentSortValue(),
-        onHead: function onHead() {
-          Lampa.Controller.toggle('trakt_watchlist_controls');
-        }
+        filterYear: activeFilters.year,
+        filterGenre: activeFilters.genre,
+        filterCountry: activeFilters.country,
+        onHead: function() { Lampa.Controller.toggle(WL_FILTER_CTRL); }
+      });
+      currentView = new baseComponent(viewObject, 'watchlist');
+      currentView.activity = activity;
+      currentView.create();
+      body.append(currentView.render());
+      if (currentView.start) currentView.start();
+    }
+
+    function makeBtn(label) {
+      return $('<div class="simple-button simple-button--filter simple-button--invisible selector trakt-watchlist__sort">' +
+        '<div class="trakt-watchlist__sort-label">' + label + '</div>' +
+        '<div class="trakt-watchlist__sort-state"></div></div>');
+    }
+
+    function openTypeFilter() {
+      Lampa.Select.show({
+        title: tr('trakttv_filter_type_title', 'Тип контента'),
+        items: [
+          { title: tr('trakttv_filter_all', 'Все'), value: 'all', selected: activeFilters.type === 'all' },
+          { title: tr('trakttv_watchlist_tab_movies', 'Фильмы'), value: 'movies', selected: activeFilters.type === 'movies' },
+          { title: tr('trakttv_watchlist_tab_shows', 'Сериалы'), value: 'shows', selected: activeFilters.type === 'shows' }
+        ],
+        onSelect: function(item) {
+          activeFilters.type = item.value || 'all';
+          updateBtn(typeBtn, getTypeLabel(), isActive(activeFilters.type));
+          rebuildView(); restoreFilters();
+        },
+        onBack: restoreFilters
       });
     }
-    function makeTabView(tabId) {
-      var viewObject = createViewObject(tabId);
-      var view = new baseComponent(viewObject, 'watchlist');
-      view.activity = activity;
-      view.create();
-      var render = view.render(true);
-      render.classList.add('trakt-watchlist__view');
-      render.classList.add("trakt-watchlist__view--".concat(tabId));
-      if (tabId !== activeTab) render.classList.add('hide');
-      body.append(render);
-      views[tabId] = view;
-      return view;
-    }
-    function getView(tabId) {
-      if (views[tabId]) return views[tabId];
-      return makeTabView(tabId);
-    }
-    function destroyView(tabId) {
-      var view = views[tabId];
-      if (!view) return;
-      if (view.destroy) view.destroy();
-      delete views[tabId];
-    }
-    function rebuildViews() {
-      Object.keys(views).forEach(function (tabId) {
-        destroyView(tabId);
+
+    function openYearFilter() {
+      var cur = new Date().getFullYear();
+      var items = [{ title: tr('trakttv_filter_all', 'Любой'), value: '', selected: !activeFilters.year }];
+      for (var y = cur; y >= 1990; y--) items.push({ title: String(y), value: String(y), selected: activeFilters.year === String(y) });
+      items.push({ title: '1980-е', value: '1980-1989', selected: activeFilters.year === '1980-1989' });
+      items.push({ title: '1970-е', value: '1970-1979', selected: activeFilters.year === '1970-1979' });
+      items.push({ title: 'до 1970', value: '1920-1969', selected: activeFilters.year === '1920-1969' });
+      Lampa.Select.show({
+        title: tr('trakttv_filter_year_title', 'Год выпуска'),
+        items: items,
+        onSelect: function(item) {
+          activeFilters.year = item.value;
+          updateBtn(yearBtn, getYearLabel(), !!activeFilters.year);
+          rebuildView(); restoreFilters();
+        },
+        onBack: restoreFilters
       });
-      if (body) body.empty();
-      showView(getView(activeTab));
     }
-    function hideView(view) {
-      if (!view) return;
-      var render = view.render(true);
-      render.classList.add('hide');
-      if (view.pause) view.pause();
+
+    function openGenreFilter() {
+      var genres = typeof TRAKT_GENRE_NAMES_RU !== 'undefined' ? Object.keys(TRAKT_GENRE_NAMES_RU) : [];
+      var items = [{ title: tr('trakttv_filter_all', 'Любой'), value: '', selected: !activeFilters.genre }];
+      genres.forEach(function(g) {
+        items.push({ title: TRAKT_GENRE_NAMES_RU[g] || g, value: g, selected: activeFilters.genre === g });
+      });
+      Lampa.Select.show({
+        title: tr('trakttv_filter_genre_title', 'Жанр'),
+        items: items,
+        onSelect: function(item) {
+          activeFilters.genre = item.value;
+          updateBtn(genreBtn, getGenreLabel(), !!activeFilters.genre);
+          rebuildView(); restoreFilters();
+        },
+        onBack: restoreFilters
+      });
     }
-    function showView(view) {
-      if (!view) return;
-      var render = view.render(true);
-      render.classList.remove('hide');
-      if (view.start) view.start();
+
+    function openCountryFilter() {
+      var items = [{ title: tr('trakttv_filter_all', 'Любая'), value: '', selected: !activeFilters.country }];
+      TRAKT_RECS_COUNTRIES.forEach(function(c) {
+        items.push({ title: c.ru, value: c.slug, selected: activeFilters.country === c.slug });
+      });
+      Lampa.Select.show({
+        title: tr('trakttv_filter_country_title', 'Страна'),
+        items: items,
+        onSelect: function(item) {
+          activeFilters.country = item.value;
+          updateBtn(countryBtn, getCountryLabel(), !!activeFilters.country);
+          rebuildView(); restoreFilters();
+        },
+        onBack: restoreFilters
+      });
     }
-    function switchTab(tabId) {
-      if (!tabId || tabId === activeTab) {
-        Lampa.Controller.toggle('content');
-        return;
-      }
-      hideView(views[activeTab]);
-      activeTab = tabId;
-      syncObjectState();
-      updateTabs();
-      showView(getView(tabId));
-    }
-    function applySort(field, order) {
+
+    function applySortAndUpdate(field, order) {
       activeSortField = field;
-      activeSortOrder = order === 'asc' ? 'asc' : 'desc';
-      syncObjectState();
-      updateSorts();
-      rebuildViews();
+      activeSortOrder = order;
+      updateBtn(sortBtn, getSortLabel(), field !== 'added');
+      rebuildView(); restoreFilters();
     }
+
     function switchSort(field) {
       var vipOnly = isWatchlistVipSortField(field);
-      var nextOrder = field === activeSortField ? activeSortOrder === 'desc' ? 'asc' : 'desc' : 'desc';
-      if (!vipOnly) {
-        applySort(field, nextOrder);
-        return Promise.resolve(true);
-      }
-      return loadTraktVipStatus().then(function (status) {
+      var nextOrder = field === activeSortField ? (activeSortOrder === 'desc' ? 'asc' : 'desc') : 'desc';
+      if (!vipOnly) { applySortAndUpdate(field, nextOrder); return; }
+      loadTraktVipStatus().then(function(status) {
         vipEnabled = !!status;
-        updateSorts();
-        if (!vipEnabled) {
-          notify$1(t$3('trakttv_watchlist_sort_vip_required', 'This sort is available only for Trakt VIP users'));
-          return false;
-        }
-        applySort(field, nextOrder);
-        return true;
-      })["catch"](function () {
-        vipEnabled = getTraktVipStatusCached();
-        updateSorts();
-        notify$1(t$3('trakttv_watchlist_sort_vip_required', 'This sort is available only for Trakt VIP users'));
-        return false;
-      });
+        if (!vipEnabled) { notify$w(tr('trakttv_watchlist_sort_vip_required', '')); restoreFilters(); return; }
+        applySortAndUpdate(field, nextOrder);
+      }).catch(function() { vipEnabled = getTraktVipStatusCached(); notify$w(tr('trakttv_watchlist_sort_vip_required', '')); restoreFilters(); });
     }
-    function openMoreSorts() {
-      if (!hiddenSortFields.length) {
-        restoreControls();
-        return;
-      }
+
+    function openSortMenu() {
+      var fields = getWatchlistSortFields();
+      var items = [];
+      fields.forEach(function(field) {
+        var vipOnly = isWatchlistVipSortField(field);
+        var isAct = field === activeSortField;
+        var arrow = isAct ? ' ' + formatWatchlistSortArrow(activeSortOrder) : '';
+        items.push({ title: formatWatchlistSortLabel(field) + arrow, subtitle: vipOnly ? tr('trakttv_vip_status', 'VIP') : '', selected: isAct, ghost: vipOnly && !vipEnabled, field: field });
+      });
       Lampa.Select.show({
-        title: t$3('trakttv_watchlist_sort_more_title', 'More sorting'),
-        items: buildMoreSortItems(),
-        onSelect: function onSelect(item) {
-          if (!item || !item.field) {
-            restoreControls();
-            return;
-          }
-          Promise.resolve(switchSort(item.field))["finally"](function () {
-            restoreControls();
-          });
-        },
-        onBack: function onBack() {
-          restoreControls();
-        }
+        title: tr('trakttv_watchlist_sort_more_title', 'Сортировка'),
+        items: items,
+        onSelect: function(item) { if (!item || !item.field) { restoreFilters(); return; } switchSort(item.field); },
+        onBack: restoreFilters
       });
     }
-    function getControlsFocusTarget() {
-      if (lastControlsFocus && typeof document !== 'undefined' && document.body && document.body.contains(lastControlsFocus)) {
-        return lastControlsFocus;
-      }
-      var activeSortButton = sortNavigation ? sortNavigation.find(".trakt-watchlist__sort[data-sort-field=\"".concat(activeSortField, "\"]"))[0] : null;
-      var moreButtonNode = moreSortButton ? moreSortButton[0] : null;
-      var activeTabButton = navigation ? navigation.find(".trakt-watchlist__tab[data-tab=\"".concat(activeTab, "\"]"))[0] : null;
-      var fallbackButton = controls ? controls.find('.selector')[0] : null;
-      return activeSortButton || (isHiddenSortField(activeSortField) ? moreButtonNode : null) || activeTabButton || fallbackButton || false;
-    }
-    function ensureControlsController() {
-      Lampa.Controller.add('trakt_watchlist_controls', {
-        toggle: function toggle() {
-          Lampa.Controller.collectionSet(controls);
-          Lampa.Controller.collectionFocus(getControlsFocusTarget(), controls);
-        },
-        right: function right() {
-          if (typeof Navigator !== 'undefined') Navigator.move('right');
-        },
-        left: function left() {
-          if (typeof Navigator !== 'undefined' && Navigator.canmove('left')) Navigator.move('left');else Lampa.Controller.toggle('menu');
-        },
-        down: function down() {
-          if (typeof Navigator !== 'undefined' && Navigator.canmove('down')) Navigator.move('down');else Lampa.Controller.toggle('content');
-        },
-        up: function up() {
-          if (typeof Navigator !== 'undefined' && Navigator.canmove('up')) Navigator.move('up');else Lampa.Controller.toggle('head');
-        },
-        back: function back() {
-          Lampa.Activity.backward();
-        }
-      });
-    }
+
     return {
       create: function create() {
         activity = this.activity;
@@ -4612,50 +4512,72 @@
         html = $('<div class="trakt-watchlist-hub"></div>');
         controls = $('<div class="trakt-watchlist-hub__controls"></div>');
         body = $('<div class="trakt-watchlist-hub__body"></div>');
-        buildTabs();
-        buildSorts();
-        controls.append(navigation, sortNavigation);
+
+        filtersRow = $('<div class="trakt-watchlist-hub__sorts trakt-recs-hub__sorts"></div>');
+        typeBtn = makeBtn(getTypeLabel());
+        updateBtn(typeBtn, getTypeLabel(), isActive(activeFilters.type));
+        typeBtn.on('hover:enter', function() { lastFilterFocus = typeBtn[0]; openTypeFilter(); });
+        yearBtn = makeBtn(getYearLabel());
+        updateBtn(yearBtn, getYearLabel(), !!activeFilters.year);
+        yearBtn.on('hover:enter', function() { lastFilterFocus = yearBtn[0]; openYearFilter(); });
+        genreBtn = makeBtn(getGenreLabel());
+        updateBtn(genreBtn, getGenreLabel(), !!activeFilters.genre);
+        genreBtn.on('hover:enter', function() { lastFilterFocus = genreBtn[0]; openGenreFilter(); });
+        countryBtn = makeBtn(getCountryLabel());
+        updateBtn(countryBtn, getCountryLabel(), !!activeFilters.country);
+        countryBtn.on('hover:enter', function() { lastFilterFocus = countryBtn[0]; openCountryFilter(); });
+        sortBtn = makeBtn(getSortLabel());
+        updateBtn(sortBtn, getSortLabel(), activeSortField !== 'added');
+        sortBtn.on('hover:enter', function() { lastFilterFocus = sortBtn[0]; openSortMenu(); });
+        filtersRow.append(typeBtn, yearBtn, genreBtn, countryBtn, sortBtn);
+        controls.append(filtersRow);
         html.append(controls, body);
-        ensureControlsController();
-        syncObjectState();
-        showView(getView(activeTab));
-        loadTraktVipStatus({
-          force: true
-        }).then(function (status) {
+
+        Lampa.Controller.add(WL_FILTER_CTRL, {
+          toggle: function toggle() {
+            Lampa.Controller.collectionSet(controls);
+            var focus = lastFilterFocus && document.body && document.body.contains(lastFilterFocus) ? lastFilterFocus : filtersRow.find('.selector')[0];
+            Lampa.Controller.collectionFocus(focus || false, controls);
+          },
+          right: function right() { if (typeof Navigator !== 'undefined') Navigator.move('right'); },
+          left: function left() {
+            if (typeof Navigator !== 'undefined' && Navigator.canmove('left')) Navigator.move('left');
+            else Lampa.Controller.toggle('menu');
+          },
+          down: function down() {
+            if (typeof Navigator !== 'undefined' && Navigator.canmove('down')) Navigator.move('down');
+            else Lampa.Controller.toggle('content');
+          },
+          up: function up() {
+            if (typeof Navigator !== 'undefined' && Navigator.canmove('up')) Navigator.move('up');
+            else Lampa.Controller.toggle('head');
+          },
+          back: function back() { Lampa.Activity.backward(); }
+        });
+
+        rebuildView();
+
+        loadTraktVipStatus({ force: true }).then(function(status) {
           vipEnabled = !!status;
           var safeSort = sanitizeWatchlistSortForVip(getCurrentSortValue(), vipEnabled);
-          var hasChanged = safeSort.field !== activeSortField || safeSort.order !== activeSortOrder;
-          activeSortField = safeSort.field;
-          activeSortOrder = safeSort.order;
-          syncObjectState();
-          updateSorts();
-          if (hasChanged) {
-            rebuildViews();
+          if (safeSort.field !== activeSortField || safeSort.order !== activeSortOrder) {
+            activeSortField = safeSort.field;
+            activeSortOrder = safeSort.order;
+            updateBtn(sortBtn, getSortLabel(), activeSortField !== 'added');
+            rebuildView();
           }
-        })["catch"](function () {
-          vipEnabled = getTraktVipStatusCached();
-          updateSorts();
-        });
+        }).catch(function() { vipEnabled = getTraktVipStatusCached(); });
+
         return this.render();
       },
-      render: function render(js) {
-        return js ? html[0] : html;
-      },
-      start: function start() {
-        var current = getView(activeTab);
-        if (current && current.start) current.start();
-      },
-      pause: function pause() {
-        var current = views[activeTab];
-        if (current && current.pause) current.pause();
-      },
+      render: function render(js) { return js ? html[0] : html; },
+      start: function start() { Lampa.Controller.toggle(WL_FILTER_CTRL); },
+      pause: function pause() {},
+      stop: function stop() {},
       destroy: function destroy() {
-        Object.keys(views).forEach(function (tabId) {
-          destroyView(tabId);
-        });
+        if (currentView && currentView.destroy) currentView.destroy();
         if (html) html.remove();
-        views = {};
-        lastControlsFocus = null;
+        currentView = null;
       }
     };
   }
