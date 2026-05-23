@@ -2515,11 +2515,27 @@
       var page = Math.max(1, parseInt(params && params.page, 10) || 1);
       var limit = 36;
       var activeStatuses = ['returning series', 'in production', 'planned', 'pilot'];
-      return requestApi('GET', '/sync/watched/shows?extended=full', {}, false, 300).then(function(items) {
+      var watchedPromise = requestApi('GET', '/sync/watched/shows?extended=full', {}, false, 300);
+      var hiddenPromise = requestApi('GET', '/users/me/hidden/progress_watched?type=show&limit=500', {}, false, 300).then(function(h) {
+        var set = {};
+        if (Array.isArray(h)) h.forEach(function(entry) {
+          var ids = entry && entry.show && entry.show.ids;
+          if (ids) {
+            if (ids.trakt) set['trakt_' + ids.trakt] = true;
+            if (ids.tmdb) set['tmdb_' + ids.tmdb] = true;
+          }
+        });
+        return set;
+      })['catch'](function() { return {}; });
+      return Promise.all([watchedPromise, hiddenPromise]).then(function(results) {
+        var items = results[0];
+        var hiddenSet = results[1];
         if (!Array.isArray(items)) return { results: [], total: 0, total_pages: 1, page: 1, limit: limit };
         var filtered = items.filter(function(item) {
           var show = item && item.show;
           if (!show || !show.ids || !show.ids.tmdb) return false;
+          var ids = show.ids;
+          if (hiddenSet['trakt_' + ids.trakt] || hiddenSet['tmdb_' + ids.tmdb]) return false;
           var status = (show.status || '').toLowerCase();
           return activeStatuses.some(function(s) { return status === s; });
         });
@@ -2531,7 +2547,7 @@
         var total = filtered.length;
         var start = (page - 1) * limit;
         var pageItems = filtered.slice(start, start + limit);
-        var results = pageItems.map(function(item) {
+        var mapped = pageItems.map(function(item) {
           var show = item.show;
           return {
             component: 'full',
@@ -2546,7 +2562,7 @@
           };
         });
         return enrichWithTmdbLocale({
-          results: results,
+          results: mapped,
           total: total,
           total_pages: Math.max(1, Math.ceil(total / limit)),
           page: page,
