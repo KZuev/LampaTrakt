@@ -2511,6 +2511,49 @@
         return enrichWithTmdbLocale(base);
       });
     },
+    watching: function(params) {
+      var page = Math.max(1, parseInt(params && params.page, 10) || 1);
+      var limit = 36;
+      var activeStatuses = ['returning series', 'in production', 'planned', 'pilot'];
+      return requestApi('GET', '/sync/watched/shows?extended=full', {}, false, 300).then(function(items) {
+        if (!Array.isArray(items)) return { results: [], total: 0, total_pages: 1, page: 1, limit: limit };
+        var filtered = items.filter(function(item) {
+          var show = item && item.show;
+          if (!show || !show.ids || !show.ids.tmdb) return false;
+          var status = (show.status || '').toLowerCase();
+          return activeStatuses.some(function(s) { return status === s; });
+        });
+        filtered.sort(function(a, b) {
+          var da = a.last_watched_at || '';
+          var db = b.last_watched_at || '';
+          return da > db ? -1 : da < db ? 1 : 0;
+        });
+        var total = filtered.length;
+        var start = (page - 1) * limit;
+        var pageItems = filtered.slice(start, start + limit);
+        var results = pageItems.map(function(item) {
+          var show = item.show;
+          return {
+            component: 'full',
+            id: show.ids.tmdb,
+            ids: show.ids,
+            title: show.title,
+            original_title: show.title,
+            release_date: show.year ? String(show.year) : '',
+            vote_average: Number(show.rating || 0),
+            method: 'tv',
+            card_type: 'tv'
+          };
+        });
+        return enrichWithTmdbLocale({
+          results: results,
+          total: total,
+          total_pages: Math.max(1, Math.ceil(total / limit)),
+          page: page,
+          limit: limit
+        });
+      });
+    },
     removeFromHistory: function(element) {
       if (!element) return Promise.reject(new Error('No element'));
       var body;
@@ -4941,6 +4984,10 @@
     if (!object.page) object.page = 1;
     return new baseComponent(object, 'collection');
   }
+  function watching(object) {
+    if (!object.page) object.page = 1;
+    return new baseComponent(object, 'watching');
+  }
   var Catalog = {
     watchlist: watchlist$1,
     upnext: upnext,
@@ -4952,7 +4999,8 @@
     my_list_detail: my_list_detail,
     trakt_list_detail: trakt_list_detail,
     history: history,
-    collection: collection
+    collection: collection,
+    watching: watching
   };
 
   function Main() {
@@ -5092,6 +5140,14 @@
       },
       trakttv_calendar: {
         ru: "Календарь",
+      },
+      trakt_watching: {
+        ru: "Смотрю сериалы",
+        en: "Watching Shows",
+      },
+      trakt_watching_empty: {
+        ru: "Нет незавершённых сериалов с ожидаемыми эпизодами",
+        en: "No ongoing shows with upcoming episodes",
       },
       trakttv_menu_title: {
         ru: "Trakt.TV",
@@ -6798,6 +6854,8 @@
     var likedListsTitle = t('trakt_liked_lists', 'Liked Lists');
     var historyTitle = t('trakt_watch_history', 'История просмотров');
     var collectionTitle = t('trakt_collection', 'Избранное');
+    var watchingTitle = t('trakt_watching', 'Смотрю сериалы');
+    var watchingItem = $("<li class=\"menu__item selector\">\n        <div class=\"menu__ico\">".concat(icons.TRAKT_ICON, " </div>\n        <div class=\"menu__text\">").concat(watchingTitle, "</div>\n    </li>"));
     var watchlist = $("<li class=\"menu__item selector\">\n        <div class=\"menu__ico\">".concat(icons.TRAKT_ICON, " </div>\n        <div class=\"menu__text\">").concat(watchlistTitle, "</div>\n    </li>"));
     var upnext = $("<li class=\"menu__item selector\">\n        <div class=\"menu__ico\">".concat(icons.TRAKT_ICON, " </div>\n        <div class=\"menu__text\">").concat(upNextTitle, "</div>\n    </li>"));
     var timetable = $("<li class=\"menu__item selector\">\n    <div class=\"menu__ico\">".concat(icons.TRAKT_ICON, "</div>\n    <div class=\"menu__text\">").concat(calendarTitle, "</div>\n    </li>"));
@@ -6809,6 +6867,14 @@
         title: calendarTitle,
         component: 'trakt_timetable_all',
         id: 'trakt_timetable_all'
+      });
+    });
+    watchingItem.on('hover:enter', function () {
+      Lampa.Activity.push({
+        url: '',
+        title: watchingTitle,
+        component: 'trakt_watching',
+        page: 1
       });
     });
     watchlist.on('hover:enter', function () {
@@ -6849,6 +6915,9 @@
       title: upNextTitle,
       component: 'trakt_upnext'
     }, {
+      title: watchingTitle,
+      component: 'trakt_watching'
+    }, {
       title: watchlistTitle,
       component: 'trakt_watchlist'
     }, {
@@ -6879,6 +6948,7 @@
     var sideMenuMap = {
       trakt_watchlist: watchlist,
       trakt_upnext: upnext,
+      trakt_watching: watchingItem,
       trakt_timetable_all: timetable,
       trakt_my_lists: myLists,
       trakt_lists: likedLists
@@ -12662,6 +12732,9 @@
     });
     Lampa.Component.add('trakt_history', function (object) {
       return new Catalog.history(object);
+    });
+    Lampa.Component.add('trakt_watching', function (object) {
+      return new Catalog.watching(object);
     });
     Lampa.Component.add('trakt_collection', function (object) {
       return new Catalog.collection(object);
