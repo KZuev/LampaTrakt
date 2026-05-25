@@ -392,6 +392,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
+  var PLUGIN_VERSION = '1.2.0';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -673,13 +674,22 @@
   // ── Multi-Account Storage Layer ──────────────────────────────────────────
   var MULTI_MAX_SLOTS = 5;
   function multiAccountGetAll() {
+    try {
+      var raw = localStorage.getItem('trakt_accounts');
+      if (raw && raw !== 'null') return JSON.parse(raw) || [];
+    } catch (e) {}
     try { return JSON.parse(Lampa.Storage.get('trakt_accounts') || '[]'); } catch (e) { return []; }
   }
   function multiAccountSaveAll(slots) {
-    Lampa.Storage.set('trakt_accounts', JSON.stringify(slots));
+    var json = JSON.stringify(slots);
+    try { localStorage.setItem('trakt_accounts', json); } catch (e) {}
+    Lampa.Storage.set('trakt_accounts', json);
   }
   function multiAccountGetActiveSlot() {
-    return parseInt(Lampa.Storage.get('trakt_active_slot') || '0', 10) || 0;
+    var raw;
+    try { raw = localStorage.getItem('trakt_active_slot'); } catch (e) {}
+    raw = raw || Lampa.Storage.get('trakt_active_slot') || '0';
+    return parseInt(raw, 10) || 0;
   }
   function multiAccountGetSlot(slotIndex) {
     return multiAccountGetAll().find(function (s) { return s.slot === slotIndex; }) || null;
@@ -705,6 +715,7 @@
     multiAccountSnapshotActive();
     var data = multiAccountGetSlot(slotIndex);
     Lampa.Storage.set('trakt_active_slot', slotIndex);
+    try { localStorage.setItem('trakt_active_slot', slotIndex); } catch (e) {}
     Lampa.Storage.set('trakt_token', (data && data.token) || null);
     Lampa.Storage.set('trakt_refresh_token', (data && data.refresh_token) || null);
     Lampa.Storage.set('trakt_token_expires_at', (data && data.expires_at) || null);
@@ -743,6 +754,7 @@
         label: '…'
       });
       Lampa.Storage.set('trakt_active_slot', 0);
+      try { localStorage.setItem('trakt_active_slot', 0); } catch (e) {}
     }
     // Use the full api$1 which handles token refresh, fall back to raw request
     var fetchPromise = (typeof api$1 !== 'undefined' && api$1 && api$1.get)
@@ -7949,7 +7961,7 @@
       },
       onRender: function onRender(item) {
         item.empty();
-        item.append('<div class="settings-param__value" style="opacity:.6;font-size:.9em">Основан на плагине <a href="https://lampame.github.io/main/trakttv.js" style="color:inherit">lampame.github.io/main/trakttv.js</a></div>');
+        item.append('<div class="settings-param__value" style="opacity:.6;font-size:.9em">v' + PLUGIN_VERSION + ' · Основан на плагине <a href="https://lampame.github.io/main/trakttv.js" style="color:inherit">lampame.github.io/main/trakttv.js</a></div>');
       }
     });
 
@@ -7991,9 +8003,8 @@
       },
       onRender: function onRender(item) {
         var val = Lampa.Storage.get('trakt_client_id') || '';
-        item.find('.settings-param__value').text(
-          val ? t$1('trakt_client_id_set', 'ID указан') : t$1('trakt_client_id_description', 'Введите ID')
-        );
+        var status = val ? t$1('trakt_client_id_set', 'ID указан') : t$1('trakt_client_id_description', 'Введите ID');
+        item.find('.settings-param__name').text(t$1('trakt_client_id_label', 'Client ID') + '  ·  ' + status);
       },
       onChange: function onChange() {
         Lampa.Input.edit({
@@ -8019,9 +8030,8 @@
       },
       onRender: function onRender(item) {
         var val = Lampa.Storage.get('trakt_client_secret') || '';
-        item.find('.settings-param__value').text(
-          val ? t$1('trakt_client_secret_set', 'Secret указан') : t$1('trakt_client_secret_description', 'Введите Secret')
-        );
+        var status = val ? t$1('trakt_client_secret_set', 'Secret указан') : t$1('trakt_client_secret_description', 'Введите Secret');
+        item.find('.settings-param__name').text(t$1('trakt_client_secret_label', 'Client Secret') + '  ·  ' + status);
       },
       onChange: function onChange() {
         Lampa.Input.edit({
@@ -8181,8 +8191,11 @@
           onChange: function () {
             var d = multiAccountGetSlot(slotIndex);
             var active = multiAccountGetActiveSlot();
+            // For slot 0: use flat trakt_token as fallback if multiacccount storage isn't populated yet
+            var flatToken = (slotIndex === 0 && active === 0) ? (Lampa.Storage.get('trakt_token') || null) : null;
+            var hasToken = !!(d && d.token) || !!flatToken;
             var menuItems = [];
-            if (d && d.token) {
+            if (hasToken) {
               if (slotIndex !== active) menuItems.push({ title: t$1('trakt_account_switch', 'Сделать активным'), action: 'switch' });
               menuItems.push({ title: t$1('trakt_account_rename', 'Переименовать'), action: 'rename' });
               menuItems.push({ title: t$1('trakt_account_link_profile', 'Привязать к профилю Lampa'), action: 'link_profile' });
@@ -8190,7 +8203,7 @@
             }
             menuItems.push({ title: t$1('trakt_account_login_slot', 'Войти в этот аккаунт'), action: 'login' });
             Lampa.Select.show({
-              title: (slotIndex + 1) + '. ' + ((d && d.label) || t$1('trakt_account_slot_empty', 'Не привязан')),
+              title: (slotIndex + 1) + '. ' + ((d && d.label) || (flatToken ? '...' : t$1('trakt_account_slot_empty', 'Не привязан'))),
               items: menuItems,
               onSelect: function (a) {
                 if (a.action === 'switch') {
