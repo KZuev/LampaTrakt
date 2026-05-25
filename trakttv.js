@@ -731,26 +731,38 @@
     var token = Lampa.Storage.get('trakt_token');
     if (!token) return;
     var slot0 = multiAccountGetSlot(0);
-    if (slot0 && slot0.label) return;
-    multiAccountUpdateSlot(0, {
-      token: token,
-      refresh_token: Lampa.Storage.get('trakt_refresh_token') || null,
-      expires_at: Lampa.Storage.get('trakt_token_expires_at') || null,
-      created_at: Lampa.Storage.get('trakt_token_created_at') || null,
-      expires_in: Lampa.Storage.get('trakt_token_expires_in') || null,
-      label: '…'
-    });
-    Lampa.Storage.set('trakt_active_slot', 0);
-    requestApiWithToken(token, 'GET', '/users/me').then(function (user) {
+    // Skip only if we already have a real (non-placeholder) label
+    if (slot0 && slot0.label && slot0.label !== '…') return;
+    if (!slot0 || !slot0.token) {
+      multiAccountUpdateSlot(0, {
+        token: token,
+        refresh_token: Lampa.Storage.get('trakt_refresh_token') || null,
+        expires_at: Lampa.Storage.get('trakt_token_expires_at') || null,
+        created_at: Lampa.Storage.get('trakt_token_created_at') || null,
+        expires_in: Lampa.Storage.get('trakt_token_expires_in') || null,
+        label: '…'
+      });
+      Lampa.Storage.set('trakt_active_slot', 0);
+    }
+    // Use the full api$1 which handles token refresh, fall back to raw request
+    var fetchPromise = (typeof api$1 !== 'undefined' && api$1 && api$1.get)
+      ? api$1.get('/users/me')
+      : requestApiWithToken(token, 'GET', '/users/me');
+    fetchPromise.then(function (user) {
       if (user && user.username) {
         multiAccountUpdateSlot(0, {
           label: user.username,
           avatar: (user.images && user.images.avatar && user.images.avatar.full) || '',
           vip: !!(user.vip)
         });
-        // UI refreshes on next settings open via onRender check
+      } else {
+        // Reset so the next settings open can retry
+        multiAccountUpdateSlot(0, { label: null });
       }
-    }).catch(function () {});
+    }).catch(function () {
+      // Reset label so the next settings open can retry
+      multiAccountUpdateSlot(0, { label: null });
+    });
   }
   // ─────────────────────────────────────────────────────────────────────────
 
@@ -7970,7 +7982,8 @@
         type: 'button'
       },
       field: {
-        name: t$1('trakt_client_id_label', 'Client ID')
+        name: t$1('trakt_client_id_label', 'Client ID'),
+        description: t$1('trakt_client_id_description', 'Введите ID')
       },
       onRender: function onRender(item) {
         var val = Lampa.Storage.get('trakt_client_id') || '';
@@ -7998,7 +8011,8 @@
         type: 'button'
       },
       field: {
-        name: t$1('trakt_client_secret_label', 'Client Secret')
+        name: t$1('trakt_client_secret_label', 'Client Secret'),
+        description: t$1('trakt_client_secret_description', 'Введите Secret')
       },
       onRender: function onRender(item) {
         var val = Lampa.Storage.get('trakt_client_secret') || '';
@@ -8112,10 +8126,10 @@
           param: { name: 'trakt_account_slot_' + slotIndex, type: 'button' },
           field: { name: t$1('trakt_account_slot_empty', 'Не привязан') },
           onRender: function (item) {
-            // Trigger migration if slot 0 has a token but no label
+            // Trigger migration if slot 0 has a token but no real label yet
             if (slotIndex === 0 && Lampa.Storage.get('trakt_token')) {
               var s0 = multiAccountGetSlot(0);
-              if (!s0 || !s0.label) multiAccountMigrateIfNeeded();
+              if (!s0 || !s0.label || s0.label === '…') multiAccountMigrateIfNeeded();
             }
             var d = multiAccountGetSlot(slotIndex);
             var active = multiAccountGetActiveSlot();
