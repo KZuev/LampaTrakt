@@ -748,6 +748,7 @@
           avatar: (user.images && user.images.avatar && user.images.avatar.full) || '',
           vip: !!(user.vip)
         });
+        Lampa.Settings.update();
       }
     }).catch(function () {});
   }
@@ -5822,17 +5823,49 @@
       trakttv_check_now: {
         ru: "Проверить",
       },
+      trakt_api_section: {
+        ru: "Trakt.TV API",
+        en: "Trakt.TV API",
+      },
       trakt_client_id_label: {
-        ru: "Client ID приложения Trakt",
+        ru: "Client ID",
+        en: "Client ID",
       },
       trakt_client_id_description: {
         ru: "Введите ID",
+        en: "Enter ID",
+      },
+      trakt_client_id_set: {
+        ru: "ID указан",
+        en: "ID is set",
       },
       trakt_client_secret_label: {
-        ru: "Client Secret приложения Trakt",
+        ru: "Client Secret",
+        en: "Client Secret",
       },
       trakt_client_secret_description: {
         ru: "Введите Secret",
+        en: "Enter Secret",
+      },
+      trakt_client_secret_set: {
+        ru: "Secret указан",
+        en: "Secret is set",
+      },
+      trakt_api_help_btn: {
+        ru: "Как получить Client ID и Secret?",
+        en: "How to get Client ID and Secret?",
+      },
+      trakt_api_help_title: {
+        ru: "Получение API ключей Trakt.TV",
+        en: "Getting Trakt.TV API Keys",
+      },
+      trakt_reset_all: {
+        ru: "Сброс всех настроек плагина Trakt.TV",
+        en: "Reset all Trakt.TV plugin settings",
+      },
+      trakt_reset_all_descr: {
+        ru: "Удалит все токены, настройки и данные аккаунтов",
+        en: "Deletes all tokens, settings and account data",
       },
       trakt_watched_now: {
         ru: "Просмотрено сейчас",
@@ -7918,6 +7951,17 @@
       }
     });
 
+    // ── Секция: Trakt.TV API ──────────────────────────────────────
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: { name: 'trakt_api_section', type: 'static' },
+      field: { name: '' },
+      onRender: function (item) {
+        item.empty();
+        item.append('<div class="settings-param__name"><b>' + t$1('trakt_api_section', 'Trakt.TV API') + '</b></div>');
+      }
+    });
+
     // Client ID и Client Secret
     Lampa.SettingsApi.addParam({
       component: 'trakt',
@@ -7926,16 +7970,17 @@
         type: 'button'
       },
       field: {
-        name: Lampa.Lang.translate('trakt_client_id_label'),
-        description: Lampa.Lang.translate('trakt_client_id_description')
+        name: t$1('trakt_client_id_label', 'Client ID'),
+        description: t$1('trakt_client_id_description', 'Введите ID')
       },
       onRender: function onRender(item) {
         var val = Lampa.Storage.get('trakt_client_id') || '';
         item.find('.settings-param__value').text(val ? val.slice(0, 8) + '...' : Lampa.Lang.translate('trakt_not_set'));
+        item.find('.settings-param__descr').text(val ? t$1('trakt_client_id_set', 'ID указан') : t$1('trakt_client_id_description', 'Введите ID'));
       },
       onChange: function onChange() {
         Lampa.Input.edit({
-          title: Lampa.Lang.translate('trakt_client_id_label'),
+          title: t$1('trakt_client_id_label', 'Client ID'),
           value: Lampa.Storage.get('trakt_client_id') || '',
           free: true,
           nosave: true,
@@ -7953,16 +7998,17 @@
         type: 'button'
       },
       field: {
-        name: Lampa.Lang.translate('trakt_client_secret_label'),
-        description: Lampa.Lang.translate('trakt_client_secret_description')
+        name: t$1('trakt_client_secret_label', 'Client Secret'),
+        description: t$1('trakt_client_secret_description', 'Введите Secret')
       },
       onRender: function onRender(item) {
         var val = Lampa.Storage.get('trakt_client_secret') || '';
         item.find('.settings-param__value').text(val ? '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022' : Lampa.Lang.translate('trakt_not_set'));
+        item.find('.settings-param__descr').text(val ? t$1('trakt_client_secret_set', 'Secret указан') : t$1('trakt_client_secret_description', 'Введите Secret'));
       },
       onChange: function onChange() {
         Lampa.Input.edit({
-          title: Lampa.Lang.translate('trakt_client_secret_label'),
+          title: t$1('trakt_client_secret_label', 'Client Secret'),
           value: Lampa.Storage.get('trakt_client_secret') || '',
           free: true,
           nosave: true,
@@ -7970,6 +8016,28 @@
         }, function (val) {
           Lampa.Storage.set('trakt_client_secret', (val || '').trim());
           Lampa.Settings.update();
+        });
+      }
+    });
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: { name: 'trakt_api_help', type: 'button' },
+      field: { name: t$1('trakt_api_help_btn', 'Как получить Client ID и Secret?') },
+      onRender: function (item) { item.show(); },
+      onChange: function () {
+        var html = $('<div class="about" style="max-width:520px">'
+          + '<div class="about__text"><b>1.</b> Откройте trakt.tv &rarr; Settings &rarr; Your API Apps</div>'
+          + '<div class="about__text"><b>2.</b> Нажмите <b>New Application</b></div>'
+          + '<div class="about__text"><b>3.</b> Name: любое название (например: Lampa)</div>'
+          + '<div class="about__text"><b>4.</b> Redirect URI: <code>urn:ietf:wg:oauth:2.0:oob</code></div>'
+          + '<div class="about__text"><b>5.</b> Нажмите <b>Save App</b></div>'
+          + '<div class="about__text"><b>6.</b> Скопируйте <b>Client ID</b> и <b>Client Secret</b> в настройки плагина</div>'
+          + '</div>');
+        Lampa.Modal.open({
+          title: t$1('trakt_api_help_title', 'Получение API ключей Trakt.TV'),
+          html: html,
+          size: 'medium',
+          onBack: function () { Lampa.Modal.close(); Lampa.Controller.toggle('settings_component'); }
         });
       }
     });
@@ -8024,40 +8092,6 @@
       }
     });
 
-    // Кнопка повного очищення Trakt
-    Lampa.SettingsApi.addParam({
-      component: 'trakt',
-      param: {
-        name: 'trakt_full_clear',
-        type: 'button'
-      },
-      field: {
-        name: Lampa.Lang.translate('trakttvFullClear')
-      },
-      onRender: function onRender(item) {
-        item.show();
-      },
-      onChange: function onChange() {
-        Object.keys(localStorage).forEach(function (key) {
-          if (key.toLowerCase().includes('trakt')) {
-            localStorage.removeItem(key);
-          }
-        });
-        if (typeof Lampa.Storage.set === 'function') {
-          Lampa.Storage.set('trakt_token', null);
-          Lampa.Storage.set('trakt_refresh_token', null);
-          Lampa.Storage.set('trakt_token_created_at', null);
-          Lampa.Storage.set('trakt_token_expires_in', null);
-          Lampa.Storage.set('trakt_token_expires_at', null);
-          Lampa.Storage.set('trakt_active_device_auth', false);
-          Lampa.Storage.set('trakt_active_device_auth_started_at', null);
-        }
-        Lampa.Bell.push({
-          text: Lampa.Lang.translate('trakttvFullClearNoty')
-        });
-        Lampa.Settings.update();
-      }
-    });
 
     // ── Секция: Мультиаккаунт ───────────────────────────────────────────────
     Lampa.SettingsApi.addParam({
@@ -8508,6 +8542,41 @@
       field: {
         name: Lampa.Lang.translate('trakttv_enable_logging'),
         description: Lampa.Lang.translate('trakttv_enable_logging_descr')
+      }
+
+    // ── Сброс всех настроек ───────────────────────────────────────────────────
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: { name: 'trakt_full_clear', type: 'button' },
+      field: {
+        name: t$1('trakt_reset_all', 'Сброс всех настроек плагина Trakt.TV'),
+        description: t$1('trakt_reset_all_descr', 'Удалит все токены, настройки и данные аккаунтов')
+      },
+      onRender: function onRender(item) { item.show(); },
+      onChange: function onChange() {
+        Object.keys(localStorage).forEach(function (key) {
+          if (key.toLowerCase().includes('trakt')) {
+            localStorage.removeItem(key);
+          }
+        });
+        if (typeof Lampa.Storage.set === 'function') {
+          Lampa.Storage.set('trakt_token', null);
+          Lampa.Storage.set('trakt_refresh_token', null);
+          Lampa.Storage.set('trakt_token_created_at', null);
+          Lampa.Storage.set('trakt_token_expires_in', null);
+          Lampa.Storage.set('trakt_token_expires_at', null);
+          Lampa.Storage.set('trakt_active_device_auth', false);
+          Lampa.Storage.set('trakt_active_device_auth_started_at', null);
+          Lampa.Storage.set('trakt_accounts', null);
+          Lampa.Storage.set('trakt_active_slot', null);
+          Lampa.Storage.set('trakt_multiwatch_slots', null);
+          Lampa.Storage.set('trakt_multiwatch_enabled', null);
+          Lampa.Storage.set('trakt_profile_slots', null);
+        }
+        Lampa.Bell.push({
+          text: Lampa.Lang.translate('trakttvFullClearNoty')
+        });
+        Lampa.Settings.update();
       }
     });
   }
