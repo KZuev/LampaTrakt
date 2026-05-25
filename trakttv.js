@@ -748,7 +748,6 @@
           avatar: (user.images && user.images.avatar && user.images.avatar.full) || '',
           vip: !!(user.vip)
         });
-        Lampa.Settings.update();
       }
     }).catch(function () {});
   }
@@ -7975,8 +7974,7 @@
       },
       onRender: function onRender(item) {
         var val = Lampa.Storage.get('trakt_client_id') || '';
-        item.find('.settings-param__value').text(val ? val.slice(0, 8) + '...' : Lampa.Lang.translate('trakt_not_set'));
-        item.find('.settings-param__descr').text(val ? t$1('trakt_client_id_set', 'ID указан') : t$1('trakt_client_id_description', 'Введите ID'));
+        item.find('.settings-param__value').text(val ? t$1('trakt_client_id_set', 'ID указан') : t$1('trakt_client_id_description', 'Введите ID'));
       },
       onChange: function onChange() {
         Lampa.Input.edit({
@@ -8003,8 +8001,7 @@
       },
       onRender: function onRender(item) {
         var val = Lampa.Storage.get('trakt_client_secret') || '';
-        item.find('.settings-param__value').text(val ? '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022' : Lampa.Lang.translate('trakt_not_set'));
-        item.find('.settings-param__descr').text(val ? t$1('trakt_client_secret_set', 'Secret указан') : t$1('trakt_client_secret_description', 'Введите Secret'));
+        item.find('.settings-param__value').text(val ? t$1('trakt_client_secret_set', 'Secret указан') : t$1('trakt_client_secret_description', 'Введите Secret'));
       },
       onChange: function onChange() {
         Lampa.Input.edit({
