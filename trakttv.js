@@ -748,6 +748,7 @@
           avatar: (user.images && user.images.avatar && user.images.avatar.full) || '',
           vip: !!(user.vip)
         });
+        setTimeout(function () { Lampa.Settings.update(); }, 0);
       }
     }).catch(function () {});
   }
@@ -7969,12 +7970,15 @@
         type: 'button'
       },
       field: {
-        name: t$1('trakt_client_id_label', 'Client ID'),
-        description: t$1('trakt_client_id_description', 'Введите ID')
+        name: t$1('trakt_client_id_label', 'Client ID')
       },
       onRender: function onRender(item) {
         var val = Lampa.Storage.get('trakt_client_id') || '';
-        item.find('.settings-param__value').text(val ? t$1('trakt_client_id_set', 'ID указан') : t$1('trakt_client_id_description', 'Введите ID'));
+        item.find('.settings-param__value').text(val ? val.slice(0, 8) + '...' : '');
+        item.find('.trakt-cid-hint').remove();
+        item.append('<div class="trakt-cid-hint" style="font-size:0.8em;opacity:0.6;margin-top:1px">'
+          + (val ? t$1('trakt_client_id_set', 'ID указан') : t$1('trakt_client_id_description', 'Введите ID'))
+          + '</div>');
       },
       onChange: function onChange() {
         Lampa.Input.edit({
@@ -7996,12 +8000,15 @@
         type: 'button'
       },
       field: {
-        name: t$1('trakt_client_secret_label', 'Client Secret'),
-        description: t$1('trakt_client_secret_description', 'Введите Secret')
+        name: t$1('trakt_client_secret_label', 'Client Secret')
       },
       onRender: function onRender(item) {
         var val = Lampa.Storage.get('trakt_client_secret') || '';
-        item.find('.settings-param__value').text(val ? t$1('trakt_client_secret_set', 'Secret указан') : t$1('trakt_client_secret_description', 'Введите Secret'));
+        item.find('.settings-param__value').text(val ? '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022' : '');
+        item.find('.trakt-cs-hint').remove();
+        item.append('<div class="trakt-cs-hint" style="font-size:0.8em;opacity:0.6;margin-top:1px">'
+          + (val ? t$1('trakt_client_secret_set', 'Secret указан') : t$1('trakt_client_secret_description', 'Введите Secret'))
+          + '</div>');
       },
       onChange: function onChange() {
         Lampa.Input.edit({
@@ -8029,6 +8036,7 @@
           + '<div class="about__text"><b>4.</b> Redirect URI: <code>urn:ietf:wg:oauth:2.0:oob</code></div>'
           + '<div class="about__text"><b>5.</b> Нажмите <b>Save App</b></div>'
           + '<div class="about__text"><b>6.</b> Скопируйте <b>Client ID</b> и <b>Client Secret</b> в настройки плагина</div>'
+          + '<div class="about__text" style="margin-top:8px;opacity:0.7">Это приложение поддерживает Scrobble и Check In — отдельных шагов не требуется.</div>'
           + '</div>');
         Lampa.Modal.open({
           title: t$1('trakt_api_help_title', 'Получение API ключей Trakt.TV'),
@@ -8108,15 +8116,24 @@
           param: { name: 'trakt_account_slot_' + slotIndex, type: 'button' },
           field: { name: t$1('trakt_account_slot_empty', 'Не привязан') },
           onRender: function (item) {
-            // Trigger migration if slot 0 has a token but no label (race condition fix)
+            // Trigger migration if slot 0 has a token but no label
             if (slotIndex === 0 && Lampa.Storage.get('trakt_token')) {
               var s0 = multiAccountGetSlot(0);
               if (!s0 || !s0.label) multiAccountMigrateIfNeeded();
             }
             var d = multiAccountGetSlot(slotIndex);
             var active = multiAccountGetActiveSlot();
-            var label = (d && d.label && d.label !== '…') ? d.label : t$1('trakt_account_slot_empty', 'Не привязан');
-            if (d && d.label === '…') label = '…';
+            var label;
+            if (!d || !d.token) {
+              // No slot data — if token exists in flat storage, show loading indicator
+              label = (slotIndex === 0 && Lampa.Storage.get('trakt_token'))
+                ? '...'
+                : t$1('trakt_account_slot_empty', 'Не привязан');
+            } else if (!d.label || d.label === '…') {
+              label = '...';
+            } else {
+              label = d.label;
+            }
             if (slotIndex === active && d && d.token) label += ' ' + t$1('trakt_account_slot_active', '(активен)');
             if (d && d.lampa_profile_name) label += ' · ' + t$1('trakt_account_profile_bound', 'Профиль:') + ' ' + d.lampa_profile_name;
             item.find('.settings-param__name').text((slotIndex + 1) + '. ' + label);
