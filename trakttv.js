@@ -8543,6 +8543,7 @@
         name: Lampa.Lang.translate('trakttv_enable_logging'),
         description: Lampa.Lang.translate('trakttv_enable_logging_descr')
       }
+    });
 
     // ── Сброс всех настроек ───────────────────────────────────────────────────
     Lampa.SettingsApi.addParam({
