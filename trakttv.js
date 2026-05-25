@@ -8592,11 +8592,6 @@
       },
       onRender: function onRender(item) { item.show(); },
       onChange: function onChange() {
-        Object.keys(localStorage).forEach(function (key) {
-          if (key.toLowerCase().includes('trakt')) {
-            localStorage.removeItem(key);
-          }
-        });
         if (typeof Lampa.Storage.set === 'function') {
           Lampa.Storage.set('trakt_token', null);
           Lampa.Storage.set('trakt_refresh_token', null);
