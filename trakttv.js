@@ -748,7 +748,7 @@
           avatar: (user.images && user.images.avatar && user.images.avatar.full) || '',
           vip: !!(user.vip)
         });
-        setTimeout(function () { Lampa.Settings.update(); }, 0);
+        // UI refreshes on next settings open via onRender check
       }
     }).catch(function () {});
   }
@@ -7974,11 +7974,9 @@
       },
       onRender: function onRender(item) {
         var val = Lampa.Storage.get('trakt_client_id') || '';
-        item.find('.settings-param__value').text(val ? val.slice(0, 8) + '...' : '');
-        item.find('.trakt-cid-hint').remove();
-        item.append('<div class="trakt-cid-hint" style="font-size:0.8em;opacity:0.6;margin-top:1px">'
-          + (val ? t$1('trakt_client_id_set', 'ID указан') : t$1('trakt_client_id_description', 'Введите ID'))
-          + '</div>');
+        item.find('.settings-param__value').text(
+          val ? t$1('trakt_client_id_set', 'ID указан') : t$1('trakt_client_id_description', 'Введите ID')
+        );
       },
       onChange: function onChange() {
         Lampa.Input.edit({
@@ -8004,11 +8002,9 @@
       },
       onRender: function onRender(item) {
         var val = Lampa.Storage.get('trakt_client_secret') || '';
-        item.find('.settings-param__value').text(val ? '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022' : '');
-        item.find('.trakt-cs-hint').remove();
-        item.append('<div class="trakt-cs-hint" style="font-size:0.8em;opacity:0.6;margin-top:1px">'
-          + (val ? t$1('trakt_client_secret_set', 'Secret указан') : t$1('trakt_client_secret_description', 'Введите Secret'))
-          + '</div>');
+        item.find('.settings-param__value').text(
+          val ? t$1('trakt_client_secret_set', 'Secret указан') : t$1('trakt_client_secret_description', 'Введите Secret')
+        );
       },
       onChange: function onChange() {
         Lampa.Input.edit({
@@ -8034,9 +8030,9 @@
           + '<div class="about__text"><b>2.</b> Нажмите <b>New Application</b></div>'
           + '<div class="about__text"><b>3.</b> Name: любое название (например: Lampa)</div>'
           + '<div class="about__text"><b>4.</b> Redirect URI: <code>urn:ietf:wg:oauth:2.0:oob</code></div>'
-          + '<div class="about__text"><b>5.</b> Нажмите <b>Save App</b></div>'
-          + '<div class="about__text"><b>6.</b> Скопируйте <b>Client ID</b> и <b>Client Secret</b> в настройки плагина</div>'
-          + '<div class="about__text" style="margin-top:8px;opacity:0.7">Это приложение поддерживает Scrobble и Check In — отдельных шагов не требуется.</div>'
+          + '<div class="about__text"><b>5.</b> Permissions: отметьте <b>/checkin</b> и <b>/scrobble</b></div>'
+          + '<div class="about__text"><b>6.</b> Нажмите <b>Save App</b></div>'
+          + '<div class="about__text"><b>7.</b> Скопируйте <b>Client ID</b> и <b>Client Secret</b> в настройки плагина</div>'
           + '</div>');
         Lampa.Modal.open({
           title: t$1('trakt_api_help_title', 'Получение API ключей Trakt.TV'),
