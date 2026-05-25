@@ -756,12 +756,17 @@
           vip: !!(user.vip)
         });
       } else {
-        // Reset so the next settings open can retry
-        multiAccountUpdateSlot(0, { label: null });
+        var cur = multiAccountGetSlot(0);
+        if (!cur || !cur.label || cur.label === '…') {
+          multiAccountUpdateSlot(0, { label: null });
+        }
       }
     }).catch(function () {
-      // Reset label so the next settings open can retry
-      multiAccountUpdateSlot(0, { label: null });
+      // Reset only if label is still the placeholder (not overwritten by a concurrent auth success)
+      var cur = multiAccountGetSlot(0);
+      if (!cur || !cur.label || cur.label === '…') {
+        multiAccountUpdateSlot(0, { label: null });
+      }
     });
   }
   // ─────────────────────────────────────────────────────────────────────────
@@ -7982,8 +7987,7 @@
         type: 'button'
       },
       field: {
-        name: t$1('trakt_client_id_label', 'Client ID'),
-        description: t$1('trakt_client_id_description', 'Введите ID')
+        name: t$1('trakt_client_id_label', 'Client ID')
       },
       onRender: function onRender(item) {
         var val = Lampa.Storage.get('trakt_client_id') || '';
@@ -8011,8 +8015,7 @@
         type: 'button'
       },
       field: {
-        name: t$1('trakt_client_secret_label', 'Client Secret'),
-        description: t$1('trakt_client_secret_description', 'Введите Secret')
+        name: t$1('trakt_client_secret_label', 'Client Secret')
       },
       onRender: function onRender(item) {
         var val = Lampa.Storage.get('trakt_client_secret') || '';
@@ -8126,10 +8129,10 @@
           param: { name: 'trakt_account_slot_' + slotIndex, type: 'button' },
           field: { name: t$1('trakt_account_slot_empty', 'Не привязан') },
           onRender: function (item) {
-            // Trigger migration if slot 0 has a token but no real label yet
+            // Trigger migration only for legacy flat-token case (slot has no token yet)
             if (slotIndex === 0 && Lampa.Storage.get('trakt_token')) {
               var s0 = multiAccountGetSlot(0);
-              if (!s0 || !s0.label || s0.label === '…') multiAccountMigrateIfNeeded();
+              if (!s0 || !s0.token) multiAccountMigrateIfNeeded();
             }
             var d = multiAccountGetSlot(slotIndex);
             var active = multiAccountGetActiveSlot();
@@ -9007,6 +9010,8 @@
     }
     pendingLoginSlot = null;
     var activeSlotForSave = multiAccountGetActiveSlot();
+    // Set placeholder immediately so the slot shows '...' instead of 'Не привязан'
+    multiAccountUpdateSlot(activeSlotForSave, { label: '…' });
     requestApiWithToken(response.access_token || Lampa.Storage.get('trakt_token'), 'GET', '/users/me').then(function (user) {
       if (user && user.username) {
         multiAccountUpdateSlot(activeSlotForSave, {
