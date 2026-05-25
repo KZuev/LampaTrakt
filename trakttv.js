@@ -668,7 +668,82 @@
       clearAuthBlocked();
       clearAuthRateLimitCooldown();
     }
+    multiAccountSnapshotActive();
   }
+  // ── Multi-Account Storage Layer ──────────────────────────────────────────
+  var MULTI_MAX_SLOTS = 5;
+  function multiAccountGetAll() {
+    try { return JSON.parse(Lampa.Storage.get('trakt_accounts') || '[]'); } catch (e) { return []; }
+  }
+  function multiAccountSaveAll(slots) {
+    Lampa.Storage.set('trakt_accounts', JSON.stringify(slots));
+  }
+  function multiAccountGetActiveSlot() {
+    return parseInt(Lampa.Storage.get('trakt_active_slot') || '0', 10) || 0;
+  }
+  function multiAccountGetSlot(slotIndex) {
+    return multiAccountGetAll().find(function (s) { return s.slot === slotIndex; }) || null;
+  }
+  function multiAccountUpdateSlot(slotIndex, patch) {
+    var slots = multiAccountGetAll();
+    var idx = slots.findIndex(function (s) { return s.slot === slotIndex; });
+    if (idx >= 0) Object.assign(slots[idx], patch);
+    else slots.push(Object.assign({ slot: slotIndex }, patch));
+    multiAccountSaveAll(slots);
+  }
+  function multiAccountSnapshotActive() {
+    var slotIndex = multiAccountGetActiveSlot();
+    multiAccountUpdateSlot(slotIndex, {
+      token: Lampa.Storage.get('trakt_token') || null,
+      refresh_token: Lampa.Storage.get('trakt_refresh_token') || null,
+      expires_at: Lampa.Storage.get('trakt_token_expires_at') || null,
+      created_at: Lampa.Storage.get('trakt_token_created_at') || null,
+      expires_in: Lampa.Storage.get('trakt_token_expires_in') || null
+    });
+  }
+  function multiAccountActivateSlot(slotIndex) {
+    multiAccountSnapshotActive();
+    var data = multiAccountGetSlot(slotIndex);
+    Lampa.Storage.set('trakt_active_slot', slotIndex);
+    Lampa.Storage.set('trakt_token', (data && data.token) || null);
+    Lampa.Storage.set('trakt_refresh_token', (data && data.refresh_token) || null);
+    Lampa.Storage.set('trakt_token_expires_at', (data && data.expires_at) || null);
+    Lampa.Storage.set('trakt_token_created_at', (data && data.created_at) || null);
+    Lampa.Storage.set('trakt_token_expires_in', (data && data.expires_in) || null);
+    clearAuthBlocked();
+    clearAuthRateLimitCooldown();
+  }
+  function multiAccountGetMultiwatchTokens() {
+    var enabled = readBooleanStorage$2('trakt_multiwatch_enabled', false);
+    if (!enabled) return [];
+    var selected;
+    try { selected = JSON.parse(Lampa.Storage.get('trakt_multiwatch_slots') || '[]'); } catch (e) { selected = []; }
+    var active = multiAccountGetActiveSlot();
+    return selected
+      .filter(function (s) { return s !== active; })
+      .map(function (slotIndex) {
+        var d = multiAccountGetSlot(slotIndex);
+        return d && d.token ? { slot: slotIndex, token: d.token, label: d.label || ('Account ' + (slotIndex + 1)) } : null;
+      })
+      .filter(Boolean);
+  }
+  function multiAccountMigrateIfNeeded() {
+    var accounts = multiAccountGetAll();
+    var token = Lampa.Storage.get('trakt_token');
+    if (token && accounts.length === 0) {
+      multiAccountUpdateSlot(0, {
+        token: token,
+        refresh_token: Lampa.Storage.get('trakt_refresh_token') || null,
+        expires_at: Lampa.Storage.get('trakt_token_expires_at') || null,
+        created_at: Lampa.Storage.get('trakt_token_created_at') || null,
+        expires_in: Lampa.Storage.get('trakt_token_expires_in') || null,
+        label: 'Account 1'
+      });
+      Lampa.Storage.set('trakt_active_slot', 0);
+    }
+  }
+  // ─────────────────────────────────────────────────────────────────────────
+
   function getTokenExpiryMeta() {
     var createdAt = getStorageNumber('trakt_token_created_at');
     var expiresIn = getStorageNumber('trakt_token_expires_in');
@@ -989,6 +1064,30 @@
       // Якщо тип вмісту не визначено, повертаємо помилку
       return Promise.reject(new Error(Lampa.Lang.translate('trakttv_unknown_content')));
     }
+  }
+
+  function markWatchedAllAccounts(data) {
+    var secondaryAccounts = multiAccountGetMultiwatchTokens();
+    if (!secondaryAccounts.length) return Promise.resolve({ succeeded: 0, failed: 0 });
+    var body = { movies: [], shows: [] };
+    if (data.method === 'movie') {
+      body.movies.push({ ids: { tmdb: data.id }, watched_at: new Date().toISOString() });
+    } else {
+      body.shows.push({ ids: { tmdb: data.id }, watched_at: new Date().toISOString() });
+    }
+    var tasks = secondaryAccounts.map(function (acc) {
+      return requestApiWithToken(acc.token, 'POST', '/sync/history', body)
+        .then(function () { return { ok: true, label: acc.label }; })
+        .catch(function (err) {
+          logWarn('Multi-watch failed for account ' + acc.label, { status: err && err.status }, { debugOnly: true });
+          return { ok: false, label: acc.label };
+        });
+    });
+    return Promise.all(tasks).then(function (results) {
+      var succeeded = results.filter(function (r) { return r.ok; }).length;
+      var failed = results.filter(function (r) { return !r.ok; }).length;
+      return { succeeded: succeeded, failed: failed, total: secondaryAccounts.length };
+    });
   }
 
   // Функція для отримання інформації про серіал з TMDB або Trakt
@@ -1841,6 +1940,38 @@
           originalError: jqXHR || {}
         }));
       });
+    });
+  }
+
+  function requestApiWithToken(overrideToken, method, endpoint, data) {
+    var headers = {
+      'Content-Type': 'application/json',
+      'trakt-api-version': '2',
+      'trakt-api-key': getClientId(),
+      'Authorization': 'Bearer ' + overrideToken
+    };
+    var reqUrl = API_URL + endpoint;
+    var ajaxParams = {
+      url: reqUrl,
+      timeout: 15000,
+      headers: headers,
+      type: method,
+      dataType: 'json',
+      crossDomain: true
+    };
+    if (method === 'POST' || method === 'PUT') {
+      ajaxParams.data = JSON.stringify(data || {});
+      ajaxParams.contentType = 'application/json';
+      ajaxParams.processData = false;
+    }
+    return new Promise(function (resolve, reject) {
+      $.ajax(ajaxParams)
+        .done(resolve)
+        .fail(function (jqXHR) {
+          reject(Object.assign(new Error('TraktTV secondary account error'), {
+            status: jqXHR && jqXHR.status || 0
+          }));
+        });
     });
   }
 
@@ -5165,6 +5296,22 @@
         ru: "Нет незавершённых сериалов с ожидаемыми эпизодами",
         en: "No ongoing shows with upcoming episodes",
       },
+      trakt_multi_account_section: { ru: "Мультиаккаунт", en: "Multi-account" },
+      trakt_account_slot_empty: { ru: "Не привязан", en: "Not linked" },
+      trakt_account_slot_active: { ru: "(активен)", en: "(active)" },
+      trakt_account_switch: { ru: "Сделать активным", en: "Set as active" },
+      trakt_account_login_slot: { ru: "Войти в этот аккаунт", en: "Login to this account" },
+      trakt_account_rename: { ru: "Переименовать", en: "Rename" },
+      trakt_account_logout_slot: { ru: "Выйти из аккаунта", en: "Logout this account" },
+      trakt_account_link_profile: { ru: "Привязать к профилю Lampa", en: "Link to Lampa profile" },
+      trakt_multiwatch_section: { ru: "Семейный просмотр", en: "Family Watch" },
+      trakt_multiwatch_enabled: { ru: "Мультипросмотр", en: "Multi-watch" },
+      trakt_multiwatch_enabled_descr: { ru: "Отмечать просмотренное сразу во всех выбранных аккаунтах", en: "Mark watched in all selected accounts" },
+      trakt_multiwatch_accounts: { ru: "Аккаунты мультипросмотра", en: "Multi-watch accounts" },
+      trakt_multiwatch_btn: { ru: "Смотрели вместе", en: "Watched together" },
+      trakt_multiwatch_done: { ru: "Отмечено в аккаунтах: {ok}/{total}", en: "Marked in accounts: {ok}/{total}" },
+      trakt_multiwatch_error: { ru: "Ошибка в одном из аккаунтов", en: "Error in one of the accounts" },
+      trakt_profile_map_edit: { ru: "Привязка к профилям Lampa", en: "Lampa profile mapping" },
       trakttv_menu_title: {
         ru: "Trakt.TV",
       },
@@ -7662,6 +7809,66 @@
   function logApiMissing() {
     logDebugOnce(API_MISSING_LOG_KEY$1, 'API bridge is unavailable in config');
   }
+
+  function startDeviceAuthForSlot(targetSlot) {
+    if (!getClientId() || !getClientSecret()) {
+      Lampa.Noty.show('Сначала введите Client ID и Client Secret в настройках Trakt');
+      return;
+    }
+    if (!Api$1) { logApiMissing(); return; }
+    pendingLoginSlot = (typeof targetSlot === 'number') ? targetSlot : multiAccountGetActiveSlot();
+    (Api$1.auth.device.login()).then(function (data) {
+      if (!data || !data.user_code || !data.verification_url) {
+        pendingLoginSlot = null;
+        Lampa.Bell.push({ text: Lampa.Lang.translate('trakttvAuthError') });
+        return;
+      }
+      var safeVerification = String(data.verification_url || '');
+      var safeUserCode = String(data.user_code || '');
+      var activateUrl = data.verification_url_complete || ('https://trakt.tv/activate/' + safeUserCode);
+      try { window.open(activateUrl, '_blank'); } catch (e) {}
+      var qrCodeUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=420x420&data=' + encodeURIComponent(activateUrl);
+      var modal = $('<div class="about trakt-device-auth"><div class="trakt-device-auth__inner"><div class="trakt-device-auth__qr-col"><div class="trakt-device-auth__qr-container"><a href="' + activateUrl + '" target="_blank" rel="noopener noreferrer" class="trakt-device-auth__qr-link"><img src="' + qrCodeUrl + '" alt="Trakt.TV QR Code" class="trakt-device-auth__qr-image"></a><div class="trakt-device-auth__qr-caption">' + Lampa.Lang.translate('trakttv_scan_qr_code') + '</div></div></div><div class="trakt-device-auth__info-col"><div class="about__text trakt-device-auth__verification">' + safeVerification + '</div><div class="about__text trakt-device-auth__code">' + Lampa.Lang.translate('trakttv_code') + ': <strong>' + safeUserCode + '</strong></div><div class="modal__button selector trakt-check-btn">' + Lampa.Lang.translate('trakttv_check_now') + '</div></div></div></div>');
+      modal.find('.trakt-device-auth__qr-image').on('error', function () {
+        modal.find('.trakt-device-auth__qr-container').addClass('trakt-device-auth__qr-container--hidden');
+      });
+      Lampa.Modal.open({
+        title: Lampa.Lang.translate('trakttv_auth'),
+        html: modal,
+        size: Lampa.Platform.screen('mobile') ? 'medium' : 'small',
+        select: modal.find('.trakt-check-btn')[0],
+        onSelect: function () { if (checkNowHandler) checkNowHandler(); },
+        scroll: { nopadding: true },
+        onBack: function () {
+          pendingLoginSlot = null;
+          if (currentPollTimeoutId) { clearTimeout(currentPollTimeoutId); currentPollTimeoutId = null; }
+          Lampa.Storage.set('trakt_active_device_auth', false);
+          Lampa.Storage.set('trakt_active_device_auth_started_at', null);
+          Lampa.Modal.close();
+          Lampa.Controller.toggle('settings_component');
+        }
+      });
+      if (Lampa.Storage.get('trakt_active_device_auth') === true) {
+        var startedAt = Number(Lampa.Storage.get('trakt_active_device_auth_started_at') || 0);
+        var isStale = !startedAt || Date.now() - startedAt > 20 * 60 * 1000;
+        if (isStale) {
+          Lampa.Storage.set('trakt_active_device_auth', false);
+          Lampa.Storage.set('trakt_active_device_auth_started_at', null);
+        } else {
+          logDebug('Device auth already active, skip duplicate start');
+          return;
+        }
+      }
+      Lampa.Storage.set('trakt_active_device_auth', true);
+      Lampa.Storage.set('trakt_active_device_auth_started_at', Date.now());
+      pollAuth(data, Lampa.Modal);
+    })['catch'](function (error) {
+      pendingLoginSlot = null;
+      logError('Device auth init failed', error, { debugOnly: true });
+      Lampa.Bell.push({ text: Lampa.Lang.translate('trakttvAuthError') });
+    });
+  }
+
   function main() {
     // Додаємо компонент Trakt.TV у налаштування
     Lampa.SettingsApi.addComponent({
@@ -7793,80 +8000,7 @@
         item.show();
       },
       onChange: function onChange() {
-        if (!getClientId() || !getClientSecret()) {
-          Lampa.Noty.show('Сначала введите Client ID и Client Secret в настройках Trakt');
-          return;
-        }
-        if (!Api$1) {
-          logApiMissing();
-          return;
-        }
-        (Api$1 && Api$1.auth.device.login()).then(function (data) {
-          // Expect raw body: { device_code, user_code, verification_url, interval, expires_in }
-          if (!data || !data.user_code || !data.verification_url) {
-            Lampa.Bell.push({
-              text: Lampa.Lang.translate('trakttvAuthError')
-            });
-            return;
-          }
-          var safeVerification = String(data.verification_url || '');
-          var safeUserCode = String(data.user_code || '');
-          var activateUrl = data.verification_url_complete || "https://trakt.tv/activate/".concat(safeUserCode);
-          try { window.open(activateUrl, '_blank'); } catch(e) {}
-          var qrCodeUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=420x420&data=' + encodeURIComponent(activateUrl);
-          var modal = $("\n                        <div class=\"about trakt-device-auth\">\n                            <div class=\"trakt-device-auth__inner\">\n                                <div class=\"trakt-device-auth__qr-col\">\n                                    <div class=\"trakt-device-auth__qr-container\">\n                                        <a href=\"".concat(activateUrl, "\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"trakt-device-auth__qr-link\">\n                                            <img src=\"").concat(qrCodeUrl, "\" alt=\"Trakt.TV QR Code\" class=\"trakt-device-auth__qr-image\">\n                                        </a>\n                                        <div class=\"trakt-device-auth__qr-caption\">").concat(Lampa.Lang.translate('trakttv_scan_qr_code'), "</div>\n                                    </div>\n                                </div>\n                                <div class=\"trakt-device-auth__info-col\">\n                                    <div class=\"about__text trakt-device-auth__verification\">").concat(safeVerification, "</div>\n                                    <div class=\"about__text trakt-device-auth__code\">").concat(Lampa.Lang.translate('trakttv_code'), ": <strong>").concat(safeUserCode, "</strong></div>\n                                    <div class=\"modal__button selector trakt-check-btn\">").concat(Lampa.Lang.translate('trakttv_check_now'), "</div>\n                                </div>\n                            </div>\n                        </div>\n                    "));
-          modal.find('.trakt-device-auth__qr-image').on('error', function () {
-            modal.find('.trakt-device-auth__qr-container').addClass('trakt-device-auth__qr-container--hidden');
-          });
-          Lampa.Modal.open({
-            title: Lampa.Lang.translate('trakttv_auth'),
-            html: modal,
-            size: Lampa.Platform.screen('mobile') ? 'medium' : 'small',
-            select: modal.find('.trakt-check-btn')[0],
-            onSelect: function onSelect() {
-              if (checkNowHandler) checkNowHandler();
-            },
-            scroll: {
-              nopadding: true
-            },
-            onBack: function onBack() {
-              if (currentPollTimeoutId) {
-                clearTimeout(currentPollTimeoutId);
-                currentPollTimeoutId = null;
-              }
-              Lampa.Storage.set('trakt_active_device_auth', false);
-              Lampa.Storage.set('trakt_active_device_auth_started_at', null);
-              Lampa.Modal.close();
-              Lampa.Controller.toggle('settings_component');
-            }
-          });
-
-          // If already polling due to a previous attempt, do not start a new one
-          // This check is crucial to prevent multiple polling loops
-          if (Lampa.Storage.get('trakt_active_device_auth') === true) {
-            var startedAt = Number(Lampa.Storage.get('trakt_active_device_auth_started_at') || 0);
-            var isStale = !startedAt || Date.now() - startedAt > 20 * 60 * 1000;
-            if (isStale) {
-              Lampa.Storage.set('trakt_active_device_auth', false);
-              Lampa.Storage.set('trakt_active_device_auth_started_at', null);
-            } else {
-              logDebug('Device auth already active, skip duplicate start');
-              return;
-            }
-          }
-
-          // Mark as active and start polling
-          Lampa.Storage.set('trakt_active_device_auth', true);
-          Lampa.Storage.set('trakt_active_device_auth_started_at', Date.now());
-          pollAuth(data, Lampa.Modal); // Pass Lampa.Modal to pollAuth for direct control
-        })["catch"](function (error) {
-          logError('Device auth init failed', error, {
-            debugOnly: true
-          });
-          Lampa.Bell.push({
-            text: Lampa.Lang.translate('trakttvAuthError')
-          });
-        });
+        startDeviceAuthForSlot(multiAccountGetActiveSlot());
       }
     });
 
@@ -7934,6 +8068,136 @@
         Lampa.Settings.update();
       }
     });
+
+    // ── Секция: Мультиаккаунт ───────────────────────────────────────────────
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: { name: 'trakt_multi_account_section', type: 'static' },
+      field: { name: '' },
+      onRender: function (item) {
+        item.empty();
+        item.append('<div class="settings-param__name"><b>' + t$1('trakt_multi_account_section', 'Мультиаккаунт') + '</b></div>');
+      }
+    });
+
+    for (var _slotIdx = 0; _slotIdx < MULTI_MAX_SLOTS; _slotIdx++) {
+      (function (slotIndex) {
+        Lampa.SettingsApi.addParam({
+          component: 'trakt',
+          param: { name: 'trakt_account_slot_' + slotIndex, type: 'button' },
+          field: { name: t$1('trakt_account_slot_empty', 'Не привязан') },
+          onRender: function (item) {
+            var d = multiAccountGetSlot(slotIndex);
+            var active = multiAccountGetActiveSlot();
+            var label = (d && d.label) ? d.label : t$1('trakt_account_slot_empty', 'Не привязан');
+            if (slotIndex === active && d && d.token) label += ' ' + t$1('trakt_account_slot_active', '(активен)');
+            item.find('.settings-param__name').text((slotIndex + 1) + '. ' + label);
+          },
+          onChange: function () {
+            var d = multiAccountGetSlot(slotIndex);
+            var active = multiAccountGetActiveSlot();
+            var menuItems = [];
+            if (d && d.token) {
+              if (slotIndex !== active) menuItems.push({ title: t$1('trakt_account_switch', 'Сделать активным'), action: 'switch' });
+              menuItems.push({ title: t$1('trakt_account_rename', 'Переименовать'), action: 'rename' });
+              menuItems.push({ title: t$1('trakt_account_logout_slot', 'Выйти из аккаунта'), action: 'logout' });
+            }
+            menuItems.push({ title: t$1('trakt_account_login_slot', 'Войти в этот аккаунт'), action: 'login' });
+            Lampa.Select.show({
+              title: (slotIndex + 1) + '. ' + ((d && d.label) || t$1('trakt_account_slot_empty', 'Не привязан')),
+              items: menuItems,
+              onSelect: function (a) {
+                if (a.action === 'switch') {
+                  multiAccountActivateSlot(slotIndex);
+                  Lampa.Settings.update();
+                } else if (a.action === 'rename') {
+                  Lampa.Input.edit({
+                    title: t$1('trakt_account_rename', 'Переименовать'),
+                    value: (d && d.label) || '',
+                    free: true, nosave: true, nomic: true
+                  }, function (val) {
+                    multiAccountUpdateSlot(slotIndex, { label: (val || '').trim() || ('Account ' + (slotIndex + 1)) });
+                    Lampa.Settings.update();
+                  });
+                } else if (a.action === 'logout') {
+                  if (slotIndex === multiAccountGetActiveSlot()) {
+                    if (Api$1) Api$1.auth.logout();
+                  }
+                  multiAccountUpdateSlot(slotIndex, { token: null, refresh_token: null, expires_at: null });
+                  Lampa.Settings.update();
+                } else if (a.action === 'login') {
+                  startDeviceAuthForSlot(slotIndex);
+                }
+              },
+              onBack: function () { Lampa.Controller.toggle('settings_component'); }
+            });
+          }
+        });
+      })(_slotIdx);
+    }
+
+    // ── Секция: Семейный просмотр ────────────────────────────────────────────
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: { name: 'trakt_multiwatch_section', type: 'static' },
+      field: { name: '' },
+      onRender: function (item) {
+        item.empty();
+        item.append('<div class="settings-param__name"><b>' + t$1('trakt_multiwatch_section', 'Семейный просмотр') + '</b></div>');
+      }
+    });
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: { name: 'trakt_multiwatch_enabled', type: 'trigger', default: false },
+      field: {
+        name: t$1('trakt_multiwatch_enabled', 'Мультипросмотр'),
+        description: t$1('trakt_multiwatch_enabled_descr', 'Отмечать просмотренное сразу во всех выбранных аккаунтах')
+      }
+    });
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: { name: 'trakt_multiwatch_accounts', type: 'button' },
+      field: { name: t$1('trakt_multiwatch_accounts', 'Аккаунты мультипросмотра') },
+      onRender: function (item) {
+        var enabled = readBooleanStorage$2('trakt_multiwatch_enabled', false);
+        enabled ? item.show() : item.hide();
+        var selected;
+        try { selected = JSON.parse(Lampa.Storage.get('trakt_multiwatch_slots') || '[]'); } catch (e) { selected = []; }
+        var labels = selected.map(function (s) {
+          var d = multiAccountGetSlot(s);
+          return (d && d.label) || ('Account ' + (s + 1));
+        }).join(', ');
+        item.find('.settings-param__value').text(labels || '—');
+      },
+      onChange: function () {
+        var allAccounts = multiAccountGetAll().filter(function (d) { return d && d.token; });
+        if (allAccounts.length < 2) {
+          Lampa.Noty.show('Добавьте хотя бы 2 аккаунта для мультипросмотра');
+          return;
+        }
+        var selected;
+        try { selected = JSON.parse(Lampa.Storage.get('trakt_multiwatch_slots') || '[]'); } catch (e) { selected = []; }
+        var menuItems = allAccounts.map(function (d) {
+          var isSelected = selected.indexOf(d.slot) >= 0;
+          return { title: (isSelected ? '✓ ' : '  ') + (d.label || ('Account ' + (d.slot + 1))), slot: d.slot, selected: isSelected };
+        });
+        menuItems.push({ title: Lampa.Lang.translate('cancel') || 'Отмена', cancel: true });
+        Lampa.Select.show({
+          title: t$1('trakt_multiwatch_accounts', 'Аккаунты мультипросмотра'),
+          items: menuItems,
+          onSelect: function (a) {
+            if (a.cancel) { Lampa.Controller.toggle('settings_component'); return; }
+            var idx = selected.indexOf(a.slot);
+            if (idx >= 0) selected.splice(idx, 1); else selected.push(a.slot);
+            Lampa.Storage.set('trakt_multiwatch_slots', JSON.stringify(selected));
+            Lampa.Settings.update();
+          },
+          onBack: function () { Lampa.Controller.toggle('settings_component'); }
+        });
+      }
+    });
+    // ────────────────────────────────────────────────────────────────────────
+
     Lampa.SettingsApi.addParam({
       component: 'trakt',
       param: {
@@ -8508,6 +8772,7 @@
   var visibilityHandler = null;
   var pollInFlight = false;
   var checkNowHandler = null;
+  var pendingLoginSlot = null;
 
   // Centralized error handling and polling stop
   function handlePollingError(modalInstance, messageKey, defaultMessage, code) {
@@ -8560,6 +8825,27 @@
     }
     Lampa.Storage.set('trakt_active_device_auth', false);
     Lampa.Storage.set('trakt_active_device_auth_started_at', null);
+    if (pendingLoginSlot !== null && pendingLoginSlot !== multiAccountGetActiveSlot()) {
+      var targetSlot = pendingLoginSlot;
+      pendingLoginSlot = null;
+      multiAccountUpdateSlot(targetSlot, {
+        token: response.access_token || null,
+        refresh_token: response.refresh_token || null,
+        expires_at: response.expires_in ? ((Number(response.created_at) || Math.floor(Date.now() / 1000)) * 1000 + Number(response.expires_in) * 1000) : null,
+        label: multiAccountGetSlot(targetSlot) && multiAccountGetSlot(targetSlot).label || ('Account ' + (targetSlot + 1))
+      });
+      requestApiWithToken(response.access_token, 'GET', '/users/me').then(function (user) {
+        if (user && user.username) {
+          multiAccountUpdateSlot(targetSlot, { label: user.username });
+          Lampa.Settings.update();
+        }
+      }).catch(function () {});
+      if (modalInstance) modalInstance.close();
+      Lampa.Settings.update();
+      Lampa.Bell.push({ text: Lampa.Lang.translate('trakttvAuthOk') });
+      return;
+    }
+    pendingLoginSlot = null;
     if (modalInstance) {
       modalInstance.close();
     }
@@ -10242,6 +10528,25 @@
       }
       isInitialized = true;
 
+      multiAccountMigrateIfNeeded();
+
+      try {
+        Lampa.Listener.follow('profile', function (e) {
+          if (!e || e.type !== 'changed') return;
+          var profileId = e.profile && (e.profile.id || e.profile.name || String(e.index || 0));
+          if (!profileId) return;
+          var profileSlots = {};
+          try { profileSlots = JSON.parse(Lampa.Storage.get('trakt_profile_slots') || '{}'); } catch (pe) {}
+          var targetSlot = profileSlots[String(profileId)];
+          if (typeof targetSlot === 'number' && targetSlot !== multiAccountGetActiveSlot()) {
+            multiAccountActivateSlot(targetSlot);
+            Lampa.Bell.push({ text: 'Trakt: ' + (multiAccountGetSlot(targetSlot) && multiAccountGetSlot(targetSlot).label || ('Account ' + (targetSlot + 1))) });
+          }
+        });
+      } catch (profileListenerErr) {
+        logWarn('Profile listener not available, multi-account auto-switch disabled', profileListenerErr, { debugOnly: true });
+      }
+
       // Следим за готовностью приложения
       if (window.appready) this.onAppReady();else {
         Lampa.Listener.follow('app', function (e) {
@@ -10543,6 +10848,36 @@
       }
       if (e.object.method === 'movie') {
         showDigitalReleaseDate(e.data, e);
+      }
+
+      // Кнопка "Смотрели вместе" — мультипросмотр
+      if (readBooleanStorage$2('trakt_multiwatch_enabled', false)) {
+        var mwAccounts = multiAccountGetMultiwatchTokens();
+        if (mwAccounts.length > 0 && e.data && e.data.id) {
+          var renderRoot = e.object && e.object.activity && typeof e.object.activity.render === 'function'
+            ? e.object.activity.render() : null;
+          if (renderRoot) {
+            var mwItemData = { id: e.data.id, method: e.object.method === 'tv' ? 'show' : 'movie' };
+            var mwBtn = document.createElement('div');
+            mwBtn.className = 'full-start-new__details trakt trakt-multiwatch-btn selector';
+            mwBtn.innerHTML = '<div class="trakt-icon" style="width:1.5em;height:1.5em;color:rgba(255,255,255,0.55)">' + icons.TRAKT_ICON + '</div>'
+              + '<span style="font-size:.85em;opacity:.75">\xD7' + (mwAccounts.length + 1) + ' ' + Lampa.Lang.translate('trakt_multiwatch_btn') + '</span>';
+            $(mwBtn).on('hover:enter', function () {
+              mwBtn.classList.add('trakt-loading');
+              markWatchedAllAccounts(mwItemData).then(function (summary) {
+                mwBtn.classList.remove('trakt-loading');
+                var msg = Lampa.Lang.translate('trakt_multiwatch_done')
+                  .replace('{ok}', summary.succeeded).replace('{total}', summary.total);
+                Lampa.Bell.push({ text: msg });
+              }).catch(function () {
+                mwBtn.classList.remove('trakt-loading');
+                Lampa.Bell.push({ text: Lampa.Lang.translate('trakt_multiwatch_error') });
+              });
+            });
+            var rateLine = renderRoot.find('.full-start-new__rate-line');
+            if (rateLine.length) rateLine.after(mwBtn);
+          }
+        }
       }
     }
   };
