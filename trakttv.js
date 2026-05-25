@@ -5296,7 +5296,7 @@
         ru: "Нет незавершённых сериалов с ожидаемыми эпизодами",
         en: "No ongoing shows with upcoming episodes",
       },
-      trakt_multi_account_section: { ru: "Мультиаккаунт", en: "Multi-account" },
+      trakt_multi_account_section: { ru: "Аккаунты", en: "Accounts" },
       trakt_account_slot_empty: { ru: "Не привязан", en: "Not linked" },
       trakt_account_slot_active: { ru: "(активен)", en: "(active)" },
       trakt_account_switch: { ru: "Сделать активным", en: "Set as active" },
@@ -5304,14 +5304,17 @@
       trakt_account_rename: { ru: "Переименовать", en: "Rename" },
       trakt_account_logout_slot: { ru: "Выйти из аккаунта", en: "Logout this account" },
       trakt_account_link_profile: { ru: "Привязать к профилю Lampa", en: "Link to Lampa profile" },
-      trakt_multiwatch_section: { ru: "Семейный просмотр", en: "Family Watch" },
-      trakt_multiwatch_enabled: { ru: "Мультипросмотр", en: "Multi-watch" },
-      trakt_multiwatch_enabled_descr: { ru: "Отмечать просмотренное сразу во всех выбранных аккаунтах", en: "Mark watched in all selected accounts" },
-      trakt_multiwatch_accounts: { ru: "Аккаунты мультипросмотра", en: "Multi-watch accounts" },
-      trakt_multiwatch_btn: { ru: "Смотрели вместе", en: "Watched together" },
+      trakt_account_profile_bound: { ru: "Профиль:", en: "Profile:" },
+      trakt_multiwatch_section: { ru: "Общий просмотр", en: "Shared Watch" },
+      trakt_multiwatch_enabled: { ru: "Совместный просмотр", en: "Shared Watch" },
+      trakt_multiwatch_enabled_descr: { ru: "Показывать кнопку выбора участников в карточке фильма", en: "Show participant selector button on movie card" },
+      trakt_multiwatch_accounts: { ru: "Участники просмотра", en: "Viewing participants" },
+      trakt_multiwatch_btn: { ru: "Смотреть вместе", en: "Watch together" },
+      trakt_multiwatch_confirm: { ru: "Отметить выбранных", en: "Mark selected" },
       trakt_multiwatch_done: { ru: "Отмечено в аккаунтах: {ok}/{total}", en: "Marked in accounts: {ok}/{total}" },
       trakt_multiwatch_error: { ru: "Ошибка в одном из аккаунтов", en: "Error in one of the accounts" },
       trakt_profile_map_edit: { ru: "Привязка к профилям Lampa", en: "Lampa profile mapping" },
+      trakt_profile_not_available: { ru: "Профили Lampa недоступны в этой версии", en: "Lampa profiles not available in this version" },
       trakttv_menu_title: {
         ru: "Trakt.TV",
       },
@@ -7997,7 +8000,7 @@
         description: 'Для входа укажите Client ID и Client Secret выше — без них авторизация недоступна'
       },
       onRender: function onRender(item) {
-        item.show();
+        item.hide();
       },
       onChange: function onChange() {
         startDeviceAuthForSlot(multiAccountGetActiveSlot());
@@ -8015,7 +8018,8 @@
         name: Lampa.Lang.translate('trakttvLogout')
       },
       onRender: function onRender(item) {
-        if (Lampa.Storage.get('trakt_token')) {
+        item.hide();
+        if (false && Lampa.Storage.get('trakt_token')) {
           item.show();
         } else {
           item.hide();
@@ -8091,6 +8095,8 @@
             var active = multiAccountGetActiveSlot();
             var label = (d && d.label) ? d.label : t$1('trakt_account_slot_empty', 'Не привязан');
             if (slotIndex === active && d && d.token) label += ' ' + t$1('trakt_account_slot_active', '(активен)');
+            // Show profile binding if set
+            if (d && d.lampa_profile_name) label += ' · ' + t$1('trakt_account_profile_bound', 'Профиль:') + ' ' + d.lampa_profile_name;
             item.find('.settings-param__name').text((slotIndex + 1) + '. ' + label);
           },
           onChange: function () {
@@ -8100,6 +8106,7 @@
             if (d && d.token) {
               if (slotIndex !== active) menuItems.push({ title: t$1('trakt_account_switch', 'Сделать активным'), action: 'switch' });
               menuItems.push({ title: t$1('trakt_account_rename', 'Переименовать'), action: 'rename' });
+              menuItems.push({ title: t$1('trakt_account_link_profile', 'Привязать к профилю Lampa'), action: 'link_profile' });
               menuItems.push({ title: t$1('trakt_account_logout_slot', 'Выйти из аккаунта'), action: 'logout' });
             }
             menuItems.push({ title: t$1('trakt_account_login_slot', 'Войти в этот аккаунт'), action: 'login' });
@@ -8118,6 +8125,42 @@
                   }, function (val) {
                     multiAccountUpdateSlot(slotIndex, { label: (val || '').trim() || ('Account ' + (slotIndex + 1)) });
                     Lampa.Settings.update();
+                  });
+                } else if (a.action === 'link_profile') {
+                  var profileList = [];
+                  try {
+                    if (window.Lampa && Lampa.Profile && typeof Lampa.Profile.list === 'function') {
+                      profileList = Lampa.Profile.list() || [];
+                    } else {
+                      var raw = Lampa.Storage.get('profiles');
+                      if (raw) profileList = JSON.parse(raw) || [];
+                    }
+                  } catch (pe) { profileList = []; }
+                  if (!profileList.length) {
+                    Lampa.Noty.show(t$1('trakt_profile_not_available', 'Профили Lampa недоступны в этой версии'));
+                    Lampa.Controller.toggle('settings_component');
+                    return;
+                  }
+                  var profileMenuItems = profileList.map(function (p) {
+                    return { title: p.name || p.title || String(p.id || p.index || ''), profile: p };
+                  });
+                  profileMenuItems.push({ title: Lampa.Lang.translate('cancel') || 'Отмена', cancel: true });
+                  Lampa.Select.show({
+                    title: t$1('trakt_account_link_profile', 'Привязать к профилю Lampa'),
+                    items: profileMenuItems,
+                    onSelect: function (pa) {
+                      if (pa.cancel) { Lampa.Controller.toggle('settings_component'); return; }
+                      var p = pa.profile;
+                      var profileId = String(p.id || p.index || p.name || '');
+                      var profileName = p.name || p.title || profileId;
+                      var profileSlots = {};
+                      try { profileSlots = JSON.parse(Lampa.Storage.get('trakt_profile_slots') || '{}'); } catch (e) {}
+                      profileSlots[profileId] = slotIndex;
+                      Lampa.Storage.set('trakt_profile_slots', JSON.stringify(profileSlots));
+                      multiAccountUpdateSlot(slotIndex, { lampa_profile_id: profileId, lampa_profile_name: profileName });
+                      Lampa.Settings.update();
+                    },
+                    onBack: function () { Lampa.Controller.toggle('settings_component'); }
                   });
                 } else if (a.action === 'logout') {
                   if (slotIndex === multiAccountGetActiveSlot()) {
@@ -8773,6 +8816,7 @@
   var pollInFlight = false;
   var checkNowHandler = null;
   var pendingLoginSlot = null;
+  var lastMultiwatchSelection = [];
 
   // Centralized error handling and polling stop
   function handlePollingError(modalInstance, messageKey, defaultMessage, code) {
@@ -8836,7 +8880,10 @@
       });
       requestApiWithToken(response.access_token, 'GET', '/users/me').then(function (user) {
         if (user && user.username) {
-          multiAccountUpdateSlot(targetSlot, { label: user.username });
+          multiAccountUpdateSlot(targetSlot, {
+            label: user.username,
+            avatar: (user.images && user.images.avatar && user.images.avatar.full) || ''
+          });
           Lampa.Settings.update();
         }
       }).catch(function () {});
@@ -8846,6 +8893,16 @@
       return;
     }
     pendingLoginSlot = null;
+    var activeSlotForSave = multiAccountGetActiveSlot();
+    requestApiWithToken(response.access_token || Lampa.Storage.get('trakt_token'), 'GET', '/users/me').then(function (user) {
+      if (user && user.username) {
+        multiAccountUpdateSlot(activeSlotForSave, {
+          label: user.username,
+          avatar: (user.images && user.images.avatar && user.images.avatar.full) || ''
+        });
+        Lampa.Settings.update();
+      }
+    }).catch(function () {});
     if (modalInstance) {
       modalInstance.close();
     }
@@ -10858,22 +10915,75 @@
             ? e.object.activity.render() : null;
           if (renderRoot) {
             var mwItemData = { id: e.data.id, method: e.object.method === 'tv' ? 'show' : 'movie' };
+            // Ensure lastMultiwatchSelection contains only valid slots from the current pool
+            var validSlots = mwAccounts.map(function (a) { return a.slot; });
+            if (lastMultiwatchSelection.length === 0) {
+              lastMultiwatchSelection = validSlots.slice();
+            } else {
+              lastMultiwatchSelection = lastMultiwatchSelection.filter(function (s) { return validSlots.indexOf(s) >= 0; });
+              if (lastMultiwatchSelection.length === 0) lastMultiwatchSelection = validSlots.slice();
+            }
+
             var mwBtn = document.createElement('div');
             mwBtn.className = 'full-start-new__details trakt trakt-multiwatch-btn selector';
-            mwBtn.innerHTML = '<div class="trakt-icon" style="width:1.5em;height:1.5em;color:rgba(255,255,255,0.55)">' + icons.TRAKT_ICON + '</div>'
-              + '<span style="font-size:.85em;opacity:.75">\xD7' + (mwAccounts.length + 1) + ' ' + Lampa.Lang.translate('trakt_multiwatch_btn') + '</span>';
+
+            function buildMwBtnLabel() {
+              var names = mwAccounts.map(function (a) { return a.label; }).join(', ');
+              return '<div class="trakt-icon" style="width:1.5em;height:1.5em;color:rgba(255,255,255,0.55)">' + icons.TRAKT_ICON + '</div>'
+                + '<span style="font-size:.85em;opacity:.75">' + Lampa.Lang.translate('trakt_multiwatch_btn') + ': ' + names + '</span>';
+            }
+            mwBtn.innerHTML = buildMwBtnLabel();
+
             $(mwBtn).on('hover:enter', function () {
-              mwBtn.classList.add('trakt-loading');
-              markWatchedAllAccounts(mwItemData).then(function (summary) {
-                mwBtn.classList.remove('trakt-loading');
-                var msg = Lampa.Lang.translate('trakt_multiwatch_done')
-                  .replace('{ok}', summary.succeeded).replace('{total}', summary.total);
-                Lampa.Bell.push({ text: msg });
-              }).catch(function () {
-                mwBtn.classList.remove('trakt-loading');
-                Lampa.Bell.push({ text: Lampa.Lang.translate('trakt_multiwatch_error') });
+              var menuItems = mwAccounts.map(function (acc) {
+                var isSelected = lastMultiwatchSelection.indexOf(acc.slot) >= 0;
+                return { title: (isSelected ? '✓ ' : '  ') + acc.label, slot: acc.slot, selected: isSelected };
+              });
+              menuItems.push({ title: '——————————', separator: true });
+              menuItems.push({ title: Lampa.Lang.translate('trakt_multiwatch_confirm') || 'Отметить выбранных', action: 'confirm' });
+              menuItems.push({ title: Lampa.Lang.translate('cancel') || 'Отмена', cancel: true });
+
+              Lampa.Select.show({
+                title: Lampa.Lang.translate('trakt_multiwatch_btn'),
+                items: menuItems,
+                onSelect: function (a) {
+                  if (a.cancel) { Lampa.Controller.toggle('content'); return; }
+                  if (a.separator) return;
+                  if (a.action === 'confirm') {
+                    if (lastMultiwatchSelection.length === 0) {
+                      Lampa.Bell.push({ text: Lampa.Lang.translate('trakt_multiwatch_error') });
+                      return;
+                    }
+                    var selectedAccounts = mwAccounts.filter(function (acc) {
+                      return lastMultiwatchSelection.indexOf(acc.slot) >= 0;
+                    });
+                    var tasks = selectedAccounts.map(function (acc) {
+                      var body = { movies: [], shows: [] };
+                      if (mwItemData.method === 'movie') body.movies.push({ ids: { tmdb: mwItemData.id }, watched_at: new Date().toISOString() });
+                      else body.shows.push({ ids: { tmdb: mwItemData.id }, watched_at: new Date().toISOString() });
+                      return requestApiWithToken(acc.token, 'POST', '/sync/history', body)
+                        .then(function () { return true; }).catch(function () { return false; });
+                    });
+                    Promise.all(tasks).then(function (results) {
+                      var ok = results.filter(Boolean).length;
+                      var msg = Lampa.Lang.translate('trakt_multiwatch_done')
+                        .replace('{ok}', ok).replace('{total}', results.length);
+                      Lampa.Bell.push({ text: msg });
+                    });
+                    Lampa.Controller.toggle('content');
+                    return;
+                  }
+                  // Toggle selection
+                  var idx = lastMultiwatchSelection.indexOf(a.slot);
+                  if (idx >= 0) lastMultiwatchSelection.splice(idx, 1);
+                  else lastMultiwatchSelection.push(a.slot);
+                  // Reopen with updated checkmarks
+                  $(mwBtn).trigger('hover:enter');
+                },
+                onBack: function () { Lampa.Controller.toggle('content'); }
               });
             });
+
             var rateLine = renderRoot.find('.full-start-new__rate-line');
             if (rateLine.length) rateLine.after(mwBtn);
           }
