@@ -392,7 +392,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '1.3.3';
+  var PLUGIN_VERSION = '1.3.4';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -8149,7 +8149,6 @@
               label = d.label;
             }
             if (slotIndex === active && d && d.token && label !== '...') label += ' ' + t$1('trakt_account_slot_active', '(активен)');
-            if (d && d.lampa_profile_name) label += ' · ' + t$1('trakt_account_profile_bound', 'Профиль:') + ' ' + d.lampa_profile_name;
             item.find('.settings-param__name').text((slotIndex + 1) + '. ' + label);
             // Show VIP status below the label
             item.find('.trakt-slot-userinfo').remove();
@@ -8175,12 +8174,12 @@
                   item.find('.settings-param__name').text(
                     (slotIndex + 1) + '. ' + (user.username || label)
                     + ' ' + t$1('trakt_account_slot_active', '(активен)')
-                    + ((d && d.lampa_profile_name) ? ' · ' + t$1('trakt_account_profile_bound', 'Профиль:') + ' ' + d.lampa_profile_name : '')
                   );
                   item.find('.trakt-slot-userinfo').remove();
                   var vk = user.vip ? 'trakttv_vip_enabled' : 'trakttv_vip_disabled';
                   var vc = user.vip ? 'trakt-vip-badge--enabled' : 'trakt-vip-badge--disabled';
                   item.append('<div class="settings-param__value trakt-slot-userinfo" style="margin-top:2px"><span class="trakt-vip-badge ' + vc + '">' + Lampa.Lang.translate(vk) + '</span></div>');
+                  try { Lampa.Settings.update(); } catch (e) {}
                 }).catch(function () {});
               }
             }
@@ -8188,75 +8187,36 @@
           onChange: function () {
             var d = multiAccountGetSlot(slotIndex);
             var active = multiAccountGetActiveSlot();
-            // For slot 0: use flat trakt_token as fallback if multiacccount storage isn't populated yet
             var flatToken = (slotIndex === 0 && active === 0) ? (Lampa.Storage.get('trakt_token') || null) : null;
             var hasToken = !!(d && d.token) || !!flatToken;
             var menuItems = [];
-            if (hasToken) {
-              if (slotIndex !== active) menuItems.push({ title: t$1('trakt_account_switch', 'Сделать активным'), action: 'switch' });
-              menuItems.push({ title: t$1('trakt_account_rename', 'Переименовать'), action: 'rename' });
-              menuItems.push({ title: t$1('trakt_account_link_profile', 'Привязать к профилю Lampa'), action: 'link_profile' });
+            if (!hasToken) {
+              menuItems.push({ title: t$1('trakt_account_login_slot', 'Войти в этот аккаунт'), action: 'login' });
+            } else {
+              if (d && typeof d.vip === 'boolean') {
+                menuItems.push({ title: t$1(d.vip ? 'trakttv_vip_enabled' : 'trakttv_vip_disabled', d.vip ? 'Trakt VIP активирован' : 'Trakt VIP не активирован'), action: 'info' });
+              }
+              if (slotIndex !== active) {
+                menuItems.push({ title: t$1('trakt_account_switch', 'Сделать активным'), action: 'switch' });
+              }
               menuItems.push({ title: t$1('trakt_account_logout_slot', 'Выйти из аккаунта'), action: 'logout' });
             }
-            menuItems.push({ title: t$1('trakt_account_login_slot', 'Войти в этот аккаунт'), action: 'login' });
+            var menuLabel = (d && d.label && d.label !== '…') ? d.label : (hasToken ? '...' : t$1('trakt_account_slot_empty', 'Не привязан'));
             Lampa.Select.show({
-              title: (slotIndex + 1) + '. ' + ((d && d.label) || (flatToken ? '...' : t$1('trakt_account_slot_empty', 'Не привязан'))),
+              title: (slotIndex + 1) + '. ' + menuLabel,
               items: menuItems,
               onSelect: function (a) {
-                if (a.action === 'switch') {
+                if (a.action === 'info') {
+                  Lampa.Controller.toggle('settings_component');
+                } else if (a.action === 'switch') {
                   multiAccountActivateSlot(slotIndex);
-                  Lampa.Settings.update();
-                } else if (a.action === 'rename') {
-                  Lampa.Input.edit({
-                    title: t$1('trakt_account_rename', 'Переименовать'),
-                    value: (d && d.label) || '',
-                    free: true, nosave: true, nomic: true
-                  }, function (val) {
-                    multiAccountUpdateSlot(slotIndex, { label: (val || '').trim() || ('Account ' + (slotIndex + 1)) });
-                    Lampa.Settings.update();
-                  });
-                } else if (a.action === 'link_profile') {
-                  var profileList = [];
-                  try {
-                    if (window.Lampa && Lampa.Profile && typeof Lampa.Profile.list === 'function') {
-                      profileList = Lampa.Profile.list() || [];
-                    } else {
-                      var raw = Lampa.Storage.get('profiles');
-                      if (raw) profileList = JSON.parse(raw) || [];
-                    }
-                  } catch (pe) { profileList = []; }
-                  if (!profileList.length) {
-                    Lampa.Noty.show(t$1('trakt_profile_not_available', 'Профили Lampa недоступны в этой версии'));
-                    Lampa.Controller.toggle('settings_component');
-                    return;
-                  }
-                  var profileMenuItems = profileList.map(function (p) {
-                    return { title: p.name || p.title || String(p.id || p.index || ''), profile: p };
-                  });
-                  profileMenuItems.push({ title: Lampa.Lang.translate('cancel') || 'Отмена', cancel: true });
-                  Lampa.Select.show({
-                    title: t$1('trakt_account_link_profile', 'Привязать к профилю Lampa'),
-                    items: profileMenuItems,
-                    onSelect: function (pa) {
-                      if (pa.cancel) { Lampa.Controller.toggle('settings_component'); return; }
-                      var p = pa.profile;
-                      var profileId = String(p.id || p.index || p.name || '');
-                      var profileName = p.name || p.title || profileId;
-                      var profileSlots = {};
-                      try { profileSlots = JSON.parse(Lampa.Storage.get('trakt_profile_slots') || '{}'); } catch (e) {}
-                      profileSlots[profileId] = slotIndex;
-                      Lampa.Storage.set('trakt_profile_slots', JSON.stringify(profileSlots));
-                      multiAccountUpdateSlot(slotIndex, { lampa_profile_id: profileId, lampa_profile_name: profileName });
-                      Lampa.Settings.update();
-                    },
-                    onBack: function () { Lampa.Controller.toggle('settings_component'); }
-                  });
+                  try { Lampa.Settings.update(); } catch (e) {}
                 } else if (a.action === 'logout') {
                   if (slotIndex === multiAccountGetActiveSlot()) {
                     if (Api$1) Api$1.auth.logout();
                   }
-                  multiAccountUpdateSlot(slotIndex, { token: null, refresh_token: null, expires_at: null });
-                  Lampa.Settings.update();
+                  multiAccountUpdateSlot(slotIndex, { token: null, refresh_token: null, expires_at: null, label: null });
+                  try { Lampa.Settings.update(); } catch (e) {}
                 } else if (a.action === 'login') {
                   startDeviceAuthForSlot(slotIndex);
                 }
