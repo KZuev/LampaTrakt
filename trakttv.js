@@ -392,7 +392,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '1.3.2';
+  var PLUGIN_VERSION = '1.3.3';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -12138,7 +12138,7 @@
                   title: calTitle,
                   source: 'tmdb',
                   page: 1,
-                  total_pages: 2,
+                  total_pages: 1,
                   trakt_line: true,
                   trakt_line_title: calTitle,
                   trakt_more_component: 'trakt_timetable_all',
