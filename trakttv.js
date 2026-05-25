@@ -728,19 +728,28 @@
       .filter(Boolean);
   }
   function multiAccountMigrateIfNeeded() {
-    var accounts = multiAccountGetAll();
     var token = Lampa.Storage.get('trakt_token');
-    if (token && accounts.length === 0) {
-      multiAccountUpdateSlot(0, {
-        token: token,
-        refresh_token: Lampa.Storage.get('trakt_refresh_token') || null,
-        expires_at: Lampa.Storage.get('trakt_token_expires_at') || null,
-        created_at: Lampa.Storage.get('trakt_token_created_at') || null,
-        expires_in: Lampa.Storage.get('trakt_token_expires_in') || null,
-        label: 'Account 1'
-      });
-      Lampa.Storage.set('trakt_active_slot', 0);
-    }
+    if (!token) return;
+    var slot0 = multiAccountGetSlot(0);
+    if (slot0 && slot0.label) return;
+    multiAccountUpdateSlot(0, {
+      token: token,
+      refresh_token: Lampa.Storage.get('trakt_refresh_token') || null,
+      expires_at: Lampa.Storage.get('trakt_token_expires_at') || null,
+      created_at: Lampa.Storage.get('trakt_token_created_at') || null,
+      expires_in: Lampa.Storage.get('trakt_token_expires_in') || null,
+      label: '…'
+    });
+    Lampa.Storage.set('trakt_active_slot', 0);
+    requestApiWithToken(token, 'GET', '/users/me').then(function (user) {
+      if (user && user.username) {
+        multiAccountUpdateSlot(0, {
+          label: user.username,
+          avatar: (user.images && user.images.avatar && user.images.avatar.full) || '',
+          vip: !!(user.vip)
+        });
+      }
+    }).catch(function () {});
   }
   // ─────────────────────────────────────────────────────────────────────────
 
@@ -7905,30 +7914,7 @@
         name: ''
       },
       onRender: function onRender(item) {
-        item.empty();
-        var token = Lampa.Storage.get('trakt_token');
-        if (!token || !getClientId()) {
-          item.append("<div>".concat(Lampa.Lang.translate('trakttvAuthMissed'), "</div>"));
-          return;
-        }
-        var loading = $("<div class=\"settings-param__value\">".concat(Lampa.Lang.translate('loading'), "</div>"));
-        item.append(loading);
-        if (!Api$1) {
-          logApiMissing();
-          return;
-        }
-        Api$1.get('/users/me').then(function (user) {
-          loading.remove();
-          var vipEnabled = !!(user && user.vip);
-          var vipStatusKey = vipEnabled ? 'trakttv_vip_enabled' : 'trakttv_vip_disabled';
-          var vipClass = vipEnabled ? 'trakt-vip-badge--enabled' : 'trakt-vip-badge--disabled';
-          item.append("<div class=\"settings-param__name\"><b>".concat(Lampa.Lang.translate('trakttv_user_info'), "</b></div>"));
-          item.append("<div class=\"settings-param__value trakt-userinfo-name\">".concat(Lampa.Lang.translate('trakttv_username'), ": ").concat((user === null || user === void 0 ? void 0 : user.username) || '-', "</div>"));
-          item.append("\n                    <div class=\"settings-param__value trakt-userinfo-vip\">\n                        <span class=\"trakt-userinfo-vip__label\">".concat(Lampa.Lang.translate('trakttv_vip_status'), ":</span>\n                        <span class=\"trakt-vip-badge ").concat(vipClass, "\">").concat(Lampa.Lang.translate(vipStatusKey), "</span>\n                    </div>\n                "));
-        })["catch"](function () {
-          loading.remove();
-          item.append("<div>".concat(Lampa.Lang.translate('trakttvAuthError'), "</div>"));
-        });
+        item.hide();
       }
     });
 
@@ -8091,13 +8077,45 @@
           param: { name: 'trakt_account_slot_' + slotIndex, type: 'button' },
           field: { name: t$1('trakt_account_slot_empty', 'Не привязан') },
           onRender: function (item) {
+            // Trigger migration if slot 0 has a token but no label (race condition fix)
+            if (slotIndex === 0 && Lampa.Storage.get('trakt_token')) {
+              var s0 = multiAccountGetSlot(0);
+              if (!s0 || !s0.label) multiAccountMigrateIfNeeded();
+            }
             var d = multiAccountGetSlot(slotIndex);
             var active = multiAccountGetActiveSlot();
-            var label = (d && d.label) ? d.label : t$1('trakt_account_slot_empty', 'Не привязан');
+            var label = (d && d.label && d.label !== '…') ? d.label : t$1('trakt_account_slot_empty', 'Не привязан');
+            if (d && d.label === '…') label = '…';
             if (slotIndex === active && d && d.token) label += ' ' + t$1('trakt_account_slot_active', '(активен)');
-            // Show profile binding if set
             if (d && d.lampa_profile_name) label += ' · ' + t$1('trakt_account_profile_bound', 'Профиль:') + ' ' + d.lampa_profile_name;
             item.find('.settings-param__name').text((slotIndex + 1) + '. ' + label);
+            // Show VIP status below the label
+            item.find('.trakt-slot-userinfo').remove();
+            if (d && d.token) {
+              if (typeof d.vip === 'boolean') {
+                var vipKey = d.vip ? 'trakttv_vip_enabled' : 'trakttv_vip_disabled';
+                var vipCls = d.vip ? 'trakt-vip-badge--enabled' : 'trakt-vip-badge--disabled';
+                item.append('<div class="settings-param__value trakt-slot-userinfo" style="margin-top:2px"><span class="trakt-vip-badge ' + vipCls + '">' + Lampa.Lang.translate(vipKey) + '</span></div>');
+              } else if (slotIndex === active && Api$1) {
+                Api$1.get('/users/me').then(function (user) {
+                  if (!user) return;
+                  multiAccountUpdateSlot(slotIndex, {
+                    label: user.username || (d && d.label) || ('Account ' + (slotIndex + 1)),
+                    avatar: (user.images && user.images.avatar && user.images.avatar.full) || (d && d.avatar) || '',
+                    vip: !!(user.vip)
+                  });
+                  item.find('.settings-param__name').text(
+                    (slotIndex + 1) + '. ' + (user.username || label)
+                    + ' ' + t$1('trakt_account_slot_active', '(активен)')
+                    + ((d && d.lampa_profile_name) ? ' · ' + t$1('trakt_account_profile_bound', 'Профиль:') + ' ' + d.lampa_profile_name : '')
+                  );
+                  item.find('.trakt-slot-userinfo').remove();
+                  var vk = user.vip ? 'trakttv_vip_enabled' : 'trakttv_vip_disabled';
+                  var vc = user.vip ? 'trakt-vip-badge--enabled' : 'trakt-vip-badge--disabled';
+                  item.append('<div class="settings-param__value trakt-slot-userinfo" style="margin-top:2px"><span class="trakt-vip-badge ' + vc + '">' + Lampa.Lang.translate(vk) + '</span></div>');
+                }).catch(function () {});
+              }
+            }
           },
           onChange: function () {
             var d = multiAccountGetSlot(slotIndex);
@@ -8882,7 +8900,8 @@
         if (user && user.username) {
           multiAccountUpdateSlot(targetSlot, {
             label: user.username,
-            avatar: (user.images && user.images.avatar && user.images.avatar.full) || ''
+            avatar: (user.images && user.images.avatar && user.images.avatar.full) || '',
+            vip: !!(user.vip)
           });
           Lampa.Settings.update();
         }
@@ -8898,7 +8917,8 @@
       if (user && user.username) {
         multiAccountUpdateSlot(activeSlotForSave, {
           label: user.username,
-          avatar: (user.images && user.images.avatar && user.images.avatar.full) || ''
+          avatar: (user.images && user.images.avatar && user.images.avatar.full) || '',
+          vip: !!(user.vip)
         });
         Lampa.Settings.update();
       }
