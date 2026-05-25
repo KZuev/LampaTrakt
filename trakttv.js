@@ -392,7 +392,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '1.3.1';
+  var PLUGIN_VERSION = '1.3.2';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -674,7 +674,7 @@
   // ── Multi-Account Storage Layer ──────────────────────────────────────────
   var MULTI_MAX_SLOTS = 5;
   function multiAccountGetAll() {
-    try { return JSON.parse(Lampa.Storage.get('trakt_accounts') || '[]'); } catch (e) { return []; }
+    try { var r = JSON.parse(Lampa.Storage.get('trakt_accounts') || '[]'); return Array.isArray(r) ? r : []; } catch (e) { return []; }
   }
   function multiAccountSaveAll(slots) {
     Lampa.Storage.set('trakt_accounts', JSON.stringify(slots));
@@ -8295,6 +8295,7 @@
         enabled ? item.show() : item.hide();
         var selected;
         try { selected = JSON.parse(Lampa.Storage.get('trakt_multiwatch_slots') || '[]'); } catch (e) { selected = []; }
+        if (!Array.isArray(selected)) selected = [];
         var labels = selected.map(function (s) {
           var d = multiAccountGetSlot(s);
           return (d && d.label) || ('Account ' + (s + 1));
@@ -8592,7 +8593,8 @@
       },
       onRender: function onRender(item) { item.show(); },
       onChange: function onChange() {
-        if (typeof Lampa.Storage.set === 'function') {
+        clearAuthBlocked();
+        try {
           Lampa.Storage.set('trakt_token', null);
           Lampa.Storage.set('trakt_refresh_token', null);
           Lampa.Storage.set('trakt_token_created_at', null);
@@ -8600,16 +8602,14 @@
           Lampa.Storage.set('trakt_token_expires_at', null);
           Lampa.Storage.set('trakt_active_device_auth', false);
           Lampa.Storage.set('trakt_active_device_auth_started_at', null);
-          Lampa.Storage.set('trakt_accounts', null);
-          Lampa.Storage.set('trakt_active_slot', null);
-          Lampa.Storage.set('trakt_multiwatch_slots', null);
-          Lampa.Storage.set('trakt_multiwatch_enabled', null);
+          Lampa.Storage.set('trakt_accounts', '[]');
+          Lampa.Storage.set('trakt_active_slot', 0);
+          Lampa.Storage.set('trakt_multiwatch_slots', '[]');
+          Lampa.Storage.set('trakt_multiwatch_enabled', false);
           Lampa.Storage.set('trakt_profile_slots', null);
-        }
-        Lampa.Bell.push({
-          text: Lampa.Lang.translate('trakttvFullClearNoty')
-        });
-        Lampa.Settings.update();
+        } catch (e) {}
+        Lampa.Bell.push({ text: t$1('trakttvFullClearNoty', 'Все очищено') });
+        try { Lampa.Settings.update(); } catch (e) {}
       }
     });
   }
