@@ -392,7 +392,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '1.4.6';
+  var PLUGIN_VERSION = '1.4.7';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -3985,6 +3985,21 @@
     });
     Lampa.Activity.replace(next);
   }
+  function getCurrentActivityDescriptor() {
+    try {
+      if (!Lampa || !Lampa.Activity || typeof Lampa.Activity.active !== 'function') return null;
+      var cur = Lampa.Activity.active();
+      if (!cur || typeof cur.component !== 'string' || !cur.component) return null;
+      var desc = {};
+      Object.keys(cur).forEach(function (k) {
+        var v = cur[k];
+        if (typeof v === 'function') return;
+        if (v && typeof v === 'object' && typeof v.render === 'function') return;
+        desc[k] = v;
+      });
+      return desc.component ? desc : null;
+    } catch (e) { return null; }
+  }
   function refreshMyListsAfterCreate(activityObject, createdList) {
     var listId = createdList && createdList.ids ? createdList.ids.trakt || createdList.id : createdList && createdList.id;
     var maxAttempts = 8;
@@ -7271,8 +7286,9 @@
         var data = multiAccountGetSlot(item.slot);
         var name = (data && data.label && data.label !== '…') ? data.label : (t$1('trakt_account_slot', 'Аккаунт') + ' ' + (item.slot + 1));
         try { Lampa.Bell.push({ text: t$1('trakt_switched_to', 'Активен аккаунт') + ': ' + name }); } catch (e) {}
-        if (_lastActivityObject && _lastActivityObject.component) {
-          try { Lampa.Activity.replace(Object.assign({}, _lastActivityObject, { refresh: Date.now() })); } catch (e) {
+        var desc = getCurrentActivityDescriptor();
+        if (desc) {
+          try { Lampa.Activity.replace(Object.assign({}, desc, { refresh: Date.now() })); } catch (e) {
             try { Lampa.Controller.toggle('menu'); } catch (e2) {}
           }
         } else {
@@ -8974,7 +8990,6 @@
   var checkNowHandler = null;
   var pendingLoginSlot = null;
   var lastMultiwatchSelection = [];
-  var _lastActivityObject = null;
 
   // Centralized error handling and polling stop
   function handlePollingError(modalInstance, messageKey, defaultMessage, code) {
@@ -10867,13 +10882,6 @@
       ensureWatchlistBadgeCache();
       applyLampaHideClasses();
       initTraktAccountSwitchButton();
-      try {
-        Lampa.Listener.follow('activity', function (e) {
-          if (e && e.type === 'complite' && e.object && e.object.component) {
-            _lastActivityObject = e.object;
-          }
-        });
-      } catch (e) {}
     },
     /**
      * Додає блок з пов'язаними списками в картку медіа
