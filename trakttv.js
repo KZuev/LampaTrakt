@@ -392,7 +392,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '1.3.8';
+  var PLUGIN_VERSION = '1.3.9';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -728,6 +728,7 @@
       })
       .filter(Boolean);
   }
+  var _fetchingSlots = {};
   function multiAccountMigrateToken() {
     var token = Lampa.Storage.get('trakt_token');
     if (!token) return;
@@ -749,7 +750,10 @@
     slots.forEach(function (d) {
       if (!d || !d.token) return;
       if (d.label && d.label !== '…') return;
+      if (_fetchingSlots[d.slot]) return;
+      _fetchingSlots[d.slot] = true;
       requestApiWithToken(d.token, 'GET', '/users/me').then(function (user) {
+        delete _fetchingSlots[d.slot];
         if (user && user.username) {
           multiAccountUpdateSlot(d.slot, {
             label: user.username,
@@ -762,8 +766,7 @@
         }
         try { Lampa.Settings.update(); } catch (e) {}
       }).catch(function () {
-        var cur = multiAccountGetSlot(d.slot);
-        if (!cur || !cur.label || cur.label === '…') multiAccountUpdateSlot(d.slot, { label: null });
+        delete _fetchingSlots[d.slot];
       });
     });
   }
@@ -8151,6 +8154,22 @@
                 var vipKey = d.vip ? 'trakttv_vip_enabled' : 'trakttv_vip_disabled';
                 var vipCls = d.vip ? 'trakt-vip-badge--enabled' : 'trakt-vip-badge--disabled';
                 item.append('<div class="settings-param__value trakt-slot-userinfo" style="margin-top:2px"><span class="trakt-vip-badge ' + vipCls + '">' + Lampa.Lang.translate(vipKey) + '</span></div>');
+              }
+              if (needsLabelFetch && !_fetchingSlots[slotIndex]) {
+                _fetchingSlots[slotIndex] = true;
+                requestApiWithToken(d.token, 'GET', '/users/me').then(function (user) {
+                  delete _fetchingSlots[slotIndex];
+                  if (user && user.username) {
+                    multiAccountUpdateSlot(slotIndex, {
+                      label: user.username,
+                      avatar: (user.images && user.images.avatar && user.images.avatar.full) || '',
+                      vip: !!(user.vip)
+                    });
+                    try { Lampa.Settings.update(); } catch (e) {}
+                  }
+                }).catch(function () {
+                  delete _fetchingSlots[slotIndex];
+                });
               }
             }
           },
