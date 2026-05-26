@@ -392,7 +392,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '1.3.14';
+  var PLUGIN_VERSION = '1.4.0';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -5329,6 +5329,8 @@
         ru: "Нет незавершённых сериалов с ожидаемыми эпизодами",
         en: "No ongoing shows with upcoming episodes",
       },
+      trakt_switch_account: { ru: "Переключить аккаунт Trakt.TV", en: "Switch Trakt.TV Account" },
+      trakt_switched_to: { ru: "Активен аккаунт", en: "Active account" },
       trakt_multi_account_section: { ru: "Аккаунты", en: "Accounts" },
       trakt_account_slot_empty: { ru: "Не привязан", en: "Not linked" },
       trakt_account_slot_active: { ru: "(активен)", en: "(active)" },
@@ -7242,6 +7244,52 @@
       var key = item.component;
       syncSideMenuItem(key);
     });
+  }
+
+  function openTraktAccountSwitchMenu() {
+    var accounts = multiAccountGetAll().filter(function (d) { return d && d.token; });
+    if (!accounts.length) return;
+    var active = multiAccountGetActiveSlot();
+    var items = accounts.map(function (d) {
+      var name = (d.label && d.label !== '…') ? d.label : (t$1('trakt_account_slot', 'Аккаунт') + ' ' + (d.slot + 1));
+      return {
+        title: (d.slot + 1) + '. ' + name + (d.slot === active ? ' ✓' : ''),
+        slot: d.slot
+      };
+    });
+    Lampa.Select.show({
+      title: t$1('trakt_switch_account', 'Переключить аккаунт Trakt.TV'),
+      items: items,
+      onSelect: function (item) {
+        if (item.slot === multiAccountGetActiveSlot()) {
+          try { Lampa.Controller.toggle('head'); } catch (e) {}
+          return;
+        }
+        multiAccountActivateSlot(item.slot);
+        var data = multiAccountGetSlot(item.slot);
+        var name = (data && data.label && data.label !== '…') ? data.label : (t$1('trakt_account_slot', 'Аккаунт') + ' ' + (item.slot + 1));
+        try { Lampa.Bell.push({ text: t$1('trakt_switched_to', 'Активен аккаунт') + ': ' + name }); } catch (e) {}
+        setTimeout(function () { window.location.reload(); }, 700);
+      },
+      onBack: function () {
+        try { Lampa.Controller.toggle('head'); } catch (e) {}
+      }
+    });
+  }
+
+  function initTraktAccountSwitchButton() {
+    try {
+      if (!window.Lampa || !Lampa.Head || typeof Lampa.Head.addIcon !== 'function') return;
+      if ($('.trakt-account-switcher').length) return;
+      var accounts = multiAccountGetAll().filter(function (d) { return d && d.token; });
+      if (accounts.length < 2) return;
+      var iconSvg = icons.TRAKT_ICON.replace('<svg ', '<svg style="width:100%;height:100%;display:block;" ');
+      var btn = Lampa.Head.addIcon(
+        '<span class="trakt-head-icon">' + iconSvg + '</span>',
+        openTraktAccountSwitchMenu
+      );
+      btn.addClass('trakt-head-action trakt-account-switcher');
+    } catch (e) {}
   }
 
   var PAGE_LIMIT = 100;
@@ -10802,6 +10850,7 @@
       loadWatchedCache();
       ensureWatchlistBadgeCache();
       applyLampaHideClasses();
+      initTraktAccountSwitchButton();
     },
     /**
      * Додає блок з пов'язаними списками в картку медіа
