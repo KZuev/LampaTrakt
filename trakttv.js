@@ -392,7 +392,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '1.4.5';
+  var PLUGIN_VERSION = '1.4.6';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -7271,7 +7271,13 @@
         var data = multiAccountGetSlot(item.slot);
         var name = (data && data.label && data.label !== '…') ? data.label : (t$1('trakt_account_slot', 'Аккаунт') + ' ' + (item.slot + 1));
         try { Lampa.Bell.push({ text: t$1('trakt_switched_to', 'Активен аккаунт') + ': ' + name }); } catch (e) {}
-        try { Lampa.Controller.toggle('menu'); } catch (e) {}
+        if (_lastActivityObject && _lastActivityObject.component) {
+          try { Lampa.Activity.replace(Object.assign({}, _lastActivityObject, { refresh: Date.now() })); } catch (e) {
+            try { Lampa.Controller.toggle('menu'); } catch (e2) {}
+          }
+        } else {
+          try { Lampa.Controller.toggle('menu'); } catch (e) {}
+        }
       },
       onBack: function () {
         try { Lampa.Controller.toggle('head'); } catch (e) {}
@@ -8968,6 +8974,7 @@
   var checkNowHandler = null;
   var pendingLoginSlot = null;
   var lastMultiwatchSelection = [];
+  var _lastActivityObject = null;
 
   // Centralized error handling and polling stop
   function handlePollingError(modalInstance, messageKey, defaultMessage, code) {
@@ -10860,6 +10867,13 @@
       ensureWatchlistBadgeCache();
       applyLampaHideClasses();
       initTraktAccountSwitchButton();
+      try {
+        Lampa.Listener.follow('activity', function (e) {
+          if (e && e.type === 'complite' && e.object && e.object.component) {
+            _lastActivityObject = e.object;
+          }
+        });
+      } catch (e) {}
     },
     /**
      * Додає блок з пов'язаними списками в картку медіа
