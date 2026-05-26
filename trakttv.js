@@ -392,7 +392,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '1.3.12';
+  var PLUGIN_VERSION = '1.3.13';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -7955,7 +7955,7 @@
       },
       onRender: function onRender(item) {
         item.empty();
-        item.append('<div class="settings-param__value" style="opacity:.6;font-size:.9em">v' + PLUGIN_VERSION + ' · Основан на плагине <a href="https://lampame.github.io/main/trakttv.js" style="color:inherit">lampame.github.io/main/trakttv.js</a></div>');
+        item.append('<div class="settings-param__value" style="opacity:.6;font-size:.9em"><a href="https://github.com/kzuev/lampatrakt" style="color:inherit">v' + PLUGIN_VERSION + '</a> · Основан на плагине <a href="https://lampame.github.io/main/trakttv.js" style="color:inherit">lampame.github.io/main/trakttv.js</a></div>');
       }
     });
 
@@ -7981,7 +7981,7 @@
       field: { name: '' },
       onRender: function (item) {
         item.empty();
-        item.append('<div class="settings-param__name"><b>' + t$1('trakt_api_section', 'Trakt.TV API') + '</b></div>');
+        item.append('<div class="settings-param__name" style="opacity:.55;font-weight:700">' + t$1('trakt_api_section', 'Trakt.TV API') + '</div><div class="settings-param__value" style="opacity:.5;font-size:.85em;margin-top:.2em">' + t$1('trakt_api_help_btn', 'Как получить Client ID и Secret?') + '</div>');
       }
     });
 
@@ -8042,30 +8042,6 @@
         });
       }
     });
-    Lampa.SettingsApi.addParam({
-      component: 'trakt',
-      param: { name: 'trakt_api_help', type: 'button' },
-      field: { name: t$1('trakt_api_help_btn', 'Как получить Client ID и Secret?') },
-      onRender: function (item) { item.show(); },
-      onChange: function () {
-        var html = $('<div class="about" style="max-width:520px">'
-          + '<div class="about__text"><b>1.</b> Откройте trakt.tv &rarr; Settings &rarr; Your API Apps</div>'
-          + '<div class="about__text"><b>2.</b> Нажмите <b>New Application</b></div>'
-          + '<div class="about__text"><b>3.</b> Name: любое название (например: Lampa)</div>'
-          + '<div class="about__text"><b>4.</b> Redirect URI: <code>urn:ietf:wg:oauth:2.0:oob</code></div>'
-          + '<div class="about__text"><b>5.</b> Permissions: отметьте <b>/checkin</b> и <b>/scrobble</b></div>'
-          + '<div class="about__text"><b>6.</b> Нажмите <b>Save App</b></div>'
-          + '<div class="about__text"><b>7.</b> Скопируйте <b>Client ID</b> и <b>Client Secret</b> в настройки плагина</div>'
-          + '</div>');
-        Lampa.Modal.open({
-          title: t$1('trakt_api_help_title', 'Получение API ключей Trakt.TV'),
-          html: html,
-          size: 'medium',
-          onBack: function () { Lampa.Modal.close(); Lampa.Controller.toggle('settings_component'); }
-        });
-      }
-    });
-
     // Кнопка авторизації — чистий Device OAuth
     Lampa.SettingsApi.addParam({
       component: 'trakt',
@@ -8124,7 +8100,7 @@
       field: { name: '' },
       onRender: function (item) {
         item.empty();
-        item.append('<div class="settings-param__name"><b>' + t$1('trakt_multi_account_section', 'Мультиаккаунт') + '</b></div>');
+        item.append('<div class="settings-param__name" style="opacity:.55;font-weight:700">' + t$1('trakt_multi_account_section', 'Мультиаккаунт') + '</div>');
       }
     });
 
@@ -8196,7 +8172,7 @@
               menuItems.push({ title: t$1('trakt_account_login_slot', 'Войти в этот аккаунт'), action: 'login' });
             } else {
               if (d && typeof d.vip === 'boolean') {
-                menuItems.push({ title: t$1(d.vip ? 'trakttv_vip_enabled' : 'trakttv_vip_disabled', d.vip ? 'Trakt VIP активирован' : 'Trakt VIP не активирован'), action: 'info' });
+                menuItems.push({ title: 'Trakt.TV VIP: ' + t$1(d.vip ? 'trakttv_vip_enabled' : 'trakttv_vip_disabled', d.vip ? 'Trakt VIP активирован' : 'Trakt VIP не активирован'), action: 'info' });
               }
               if (slotIndex !== active) {
                 menuItems.push({ title: t$1('trakt_account_switch', 'Сделать активным'), action: 'switch' });
@@ -8237,7 +8213,7 @@
       field: { name: '' },
       onRender: function (item) {
         item.empty();
-        item.append('<div class="settings-param__name"><b>' + t$1('trakt_multiwatch_section', 'Семейный просмотр') + '</b></div>');
+        item.append('<div class="settings-param__name" style="opacity:.55;font-weight:700">' + t$1('trakt_multiwatch_section', 'Семейный просмотр') + '</div>');
       }
     });
     Lampa.SettingsApi.addParam({
@@ -8304,7 +8280,7 @@
       },
       onRender: function onRender(item) {
         item.empty();
-        item.append("<div class=\"settings-param__name\"><b>".concat(t$1('trakt_bookmarks_sync_section', 'Bookmarks sync'), "</b></div>"));
+        item.append("<div class=\"settings-param__name\" style=\"opacity:.55;font-weight:700\">".concat(t$1('trakt_bookmarks_sync_section', 'Bookmarks sync'), "</div>"));
       }
     });
     Lampa.SettingsApi.addParam({
@@ -8378,7 +8354,7 @@
       },
       onRender: function onRender(item) {
         item.empty();
-        item.append("<div class=\"settings-param__name\"><b>".concat(t$1('trakt_progress_section', 'Progress configuration'), "</b></div>"));
+        item.append("<div class=\"settings-param__name\" style=\"opacity:.55;font-weight:700\">".concat(t$1('trakt_progress_section', 'Progress configuration'), "</div>"));
       }
     });
     Lampa.SettingsApi.addParam({
@@ -8392,7 +8368,7 @@
       },
       onRender: function onRender(item) {
         item.empty();
-        item.append("<div class=\"settings-param__name\"><b>".concat(t$1('trakttv_source_section', 'Trakt.TV source filters'), "</b></div>"));
+        item.append("<div class=\"settings-param__name\" style=\"opacity:.55;font-weight:700\">".concat(t$1('trakttv_source_section', 'Trakt.TV source filters'), "</div>"));
       }
     });
     Lampa.SettingsApi.addParam({
@@ -8440,7 +8416,7 @@
       field: { name: '' },
       onRender: function onRender(item) {
         item.empty();
-        item.append("<div class=\"settings-param__name\"><b>".concat(t$1('trakttv_lampa_section', 'Lampa home page'), "</b></div>"));
+        item.append("<div class=\"settings-param__name\" style=\"opacity:.55;font-weight:700\">".concat(t$1('trakttv_lampa_section', 'Lampa home page'), "</div>"));
       }
     });
     Lampa.SettingsApi.addParam({
