@@ -392,7 +392,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '1.5.0';
+  var PLUGIN_VERSION = '1.5.1';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -5349,7 +5349,7 @@
         en: "No ongoing shows with upcoming episodes",
       },
       trakt_switch_account: { ru: "Переключить аккаунт Trakt.TV", en: "Switch Trakt.TV Account" },
-      trakt_switched_to: { ru: "Активен аккаунт", en: "Active account" },
+      trakt_switched_to: { ru: "Привет,", en: "Hello," },
       trakt_account_alias: { ru: "Отображать как", en: "Display as" },
       trakt_multi_account_section: { ru: "Аккаунты", en: "Accounts" },
       trakt_account_slot_empty: { ru: "Не привязан", en: "Not linked" },
@@ -7293,7 +7293,7 @@
         ensureWatchlistBadgeCache();
         updateTraktAccountSwitchBadge();
         var name = getSlotDisplayName(item.slot);
-        try { Lampa.Bell.push({ text: t$1('trakt_switched_to', 'Активен аккаунт') + ': ' + name }); } catch (e) {}
+        try { Lampa.Bell.push({ text: t$1('trakt_switched_to', 'Привет,') + ' ' + name + '!' }); } catch (e) {}
         var desc = getCurrentActivityDescriptor();
         if (desc) {
           try { Lampa.Activity.replace(Object.assign({}, desc, { refresh: Date.now() })); } catch (e) {
