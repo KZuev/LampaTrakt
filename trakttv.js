@@ -392,7 +392,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '1.4.3';
+  var PLUGIN_VERSION = '1.4.3-debug';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -7246,9 +7246,23 @@
     });
   }
 
+  function _dbg(msg) { try { Lampa.Bell.push({ text: '[Trakt dbg] ' + msg }); } catch (e) {} }
+
   function openTraktAccountSwitchMenu() {
-    var accounts = multiAccountGetAll().filter(function (d) { return d && d.token; });
-    if (!accounts.length) return;
+    var allAccounts = multiAccountGetAll();
+    var accounts = allAccounts.filter(function (d) { return d && d.token; });
+
+    // DEBUG: show what's stored
+    _dbg('all slots: ' + allAccounts.length + '  w/token: ' + accounts.length);
+    allAccounts.forEach(function (d) {
+      _dbg('slot' + d.slot + ': label=' + (d.label || 'none') + ' token=' + (d.token ? d.token.slice(0, 8) + '…' : 'NULL'));
+    });
+    _dbg('active slot: ' + multiAccountGetActiveSlot() + '  storage token: ' + String(Lampa.Storage.get('trakt_token') || '').slice(0, 8) + '…');
+
+    if (!accounts.length) {
+      _dbg('no accounts with token — menu will not open');
+      return;
+    }
     var active = multiAccountGetActiveSlot();
     var items = accounts.map(function (d) {
       var name = (d.label && d.label !== '…') ? d.label : (t$1('trakt_account_slot', 'Аккаунт') + ' ' + (d.slot + 1));
@@ -7265,7 +7279,12 @@
           try { Lampa.Controller.toggle('head'); } catch (e) {}
           return;
         }
+        _dbg('switching to slot ' + item.slot);
+        _dbg('before: storage token=' + String(Lampa.Storage.get('trakt_token') || '').slice(0, 8) + '…');
+        var targetSlotData = multiAccountGetSlot(item.slot);
+        _dbg('target slot data: label=' + (targetSlotData && targetSlotData.label) + ' token=' + (targetSlotData && targetSlotData.token ? targetSlotData.token.slice(0, 8) + '…' : 'NULL'));
         multiAccountActivateSlot(item.slot);
+        _dbg('after: storage token=' + String(Lampa.Storage.get('trakt_token') || '').slice(0, 8) + '…');
         invalidateWatchedCache();
         invalidateWatchlistBadgeCache();
         loadWatchedCache();
