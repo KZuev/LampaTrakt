@@ -392,7 +392,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '1.4.4';
+  var PLUGIN_VERSION = '1.4.5';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -2882,9 +2882,6 @@
             }, true);
           }).then(function (response) {
             rlRecordRequest(url, 200);
-            if (response && response.access_token) {
-              saveTokens(response);
-            }
             return response;
           })["catch"](function (error) {
             var status = Number(error && error.status) || 0;
@@ -7266,6 +7263,7 @@
           return;
         }
         multiAccountActivateSlot(item.slot);
+        try { clearResponseCache(); } catch (e) {}
         invalidateWatchedCache();
         invalidateWatchlistBadgeCache();
         loadWatchedCache();
@@ -8267,6 +8265,11 @@
                   Lampa.Controller.toggle('settings_component');
                 } else if (a.action === 'switch') {
                   multiAccountActivateSlot(slotIndex);
+                  try { clearResponseCache(); } catch (e) {}
+                  invalidateWatchedCache();
+                  invalidateWatchlistBadgeCache();
+                  loadWatchedCache();
+                  ensureWatchlistBadgeCache();
                   try { Lampa.Settings.update(); } catch (e) {}
                 } else if (a.action === 'logout') {
                   if (slotIndex === multiAccountGetActiveSlot()) {
