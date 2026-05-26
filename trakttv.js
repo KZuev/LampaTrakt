@@ -392,7 +392,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '1.3.9';
+  var PLUGIN_VERSION = '1.3.10';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -8157,6 +8157,7 @@
               }
               if (needsLabelFetch && !_fetchingSlots[slotIndex]) {
                 _fetchingSlots[slotIndex] = true;
+                var _active = active;
                 requestApiWithToken(d.token, 'GET', '/users/me').then(function (user) {
                   delete _fetchingSlots[slotIndex];
                   if (user && user.username) {
@@ -8165,7 +8166,14 @@
                       avatar: (user.images && user.images.avatar && user.images.avatar.full) || '',
                       vip: !!(user.vip)
                     });
-                    try { Lampa.Settings.update(); } catch (e) {}
+                    var newLabel = user.username;
+                    if (slotIndex === _active) newLabel += ' ' + t$1('trakt_account_slot_active', '(активен)');
+                    item.find('.settings-param__name').text((slotIndex + 1) + '. ' + newLabel);
+                    item.find('.trakt-slot-userinfo').remove();
+                    var vipEnabled = !!(user.vip);
+                    var vipKey2 = vipEnabled ? 'trakttv_vip_enabled' : 'trakttv_vip_disabled';
+                    var vipCls2 = vipEnabled ? 'trakt-vip-badge--enabled' : 'trakt-vip-badge--disabled';
+                    item.append('<div class="settings-param__value trakt-slot-userinfo" style="margin-top:2px"><span class="trakt-vip-badge ' + vipCls2 + '">' + Lampa.Lang.translate(vipKey2) + '</span></div>');
                   }
                 }).catch(function () {
                   delete _fetchingSlots[slotIndex];
