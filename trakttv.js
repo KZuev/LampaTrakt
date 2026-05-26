@@ -392,7 +392,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '1.4.3-debug';
+  var PLUGIN_VERSION = '1.4.4';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -7246,23 +7246,9 @@
     });
   }
 
-  function _dbg(msg) { try { Lampa.Bell.push({ text: '[Trakt dbg] ' + msg }); } catch (e) {} }
-
   function openTraktAccountSwitchMenu() {
-    var allAccounts = multiAccountGetAll();
-    var accounts = allAccounts.filter(function (d) { return d && d.token; });
-
-    // DEBUG: show what's stored
-    _dbg('all slots: ' + allAccounts.length + '  w/token: ' + accounts.length);
-    allAccounts.forEach(function (d) {
-      _dbg('slot' + d.slot + ': label=' + (d.label || 'none') + ' token=' + (d.token ? d.token.slice(0, 8) + '…' : 'NULL'));
-    });
-    _dbg('active slot: ' + multiAccountGetActiveSlot() + '  storage token: ' + String(Lampa.Storage.get('trakt_token') || '').slice(0, 8) + '…');
-
-    if (!accounts.length) {
-      _dbg('no accounts with token — menu will not open');
-      return;
-    }
+    var accounts = multiAccountGetAll().filter(function (d) { return d && d.token; });
+    if (!accounts.length) return;
     var active = multiAccountGetActiveSlot();
     var items = accounts.map(function (d) {
       var name = (d.label && d.label !== '…') ? d.label : (t$1('trakt_account_slot', 'Аккаунт') + ' ' + (d.slot + 1));
@@ -7279,12 +7265,7 @@
           try { Lampa.Controller.toggle('head'); } catch (e) {}
           return;
         }
-        _dbg('switching to slot ' + item.slot);
-        _dbg('before: storage token=' + String(Lampa.Storage.get('trakt_token') || '').slice(0, 8) + '…');
-        var targetSlotData = multiAccountGetSlot(item.slot);
-        _dbg('target slot data: label=' + (targetSlotData && targetSlotData.label) + ' token=' + (targetSlotData && targetSlotData.token ? targetSlotData.token.slice(0, 8) + '…' : 'NULL'));
         multiAccountActivateSlot(item.slot);
-        _dbg('after: storage token=' + String(Lampa.Storage.get('trakt_token') || '').slice(0, 8) + '…');
         invalidateWatchedCache();
         invalidateWatchlistBadgeCache();
         loadWatchedCache();
@@ -7292,8 +7273,6 @@
         var data = multiAccountGetSlot(item.slot);
         var name = (data && data.label && data.label !== '…') ? data.label : (t$1('trakt_account_slot', 'Аккаунт') + ' ' + (item.slot + 1));
         try { Lampa.Bell.push({ text: t$1('trakt_switched_to', 'Активен аккаунт') + ': ' + name }); } catch (e) {}
-        // Open the sidebar so the user picks a destination — that screen loads fresh with the new token.
-        // Activity.replace() and backward() both break the native home screen, so we don't use them.
         try { Lampa.Controller.toggle('menu'); } catch (e) {}
       },
       onBack: function () {
@@ -9030,14 +9009,9 @@
     }
     pollInFlight = false;
     checkNowHandler = null;
-    if (Api$1 && Api$1.auth && typeof Api$1.auth.storeTokens === 'function') {
-      Api$1.auth.storeTokens(response);
-    } else {
-      Lampa.Storage.set('trakt_token', response.access_token);
-      Lampa.Storage.set('trakt_refresh_token', response.refresh_token);
-    }
     Lampa.Storage.set('trakt_active_device_auth', false);
     Lampa.Storage.set('trakt_active_device_auth_started_at', null);
+    // Non-active slot: write ONLY to target slot, never touch flat storage or the active slot
     if (pendingLoginSlot !== null && pendingLoginSlot !== multiAccountGetActiveSlot()) {
       var targetSlot = pendingLoginSlot;
       pendingLoginSlot = null;
@@ -9063,6 +9037,13 @@
       return;
     }
     pendingLoginSlot = null;
+    // Active slot: now safe to write to flat storage
+    if (Api$1 && Api$1.auth && typeof Api$1.auth.storeTokens === 'function') {
+      Api$1.auth.storeTokens(response);
+    } else {
+      Lampa.Storage.set('trakt_token', response.access_token);
+      Lampa.Storage.set('trakt_refresh_token', response.refresh_token);
+    }
     var activeSlotForSave = multiAccountGetActiveSlot();
     multiAccountSnapshotActive();
     multiAccountUpdateSlot(activeSlotForSave, { label: '…' });
