@@ -392,7 +392,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '1.4.1';
+  var PLUGIN_VERSION = '1.4.2';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -7273,21 +7273,14 @@
         var data = multiAccountGetSlot(item.slot);
         var name = (data && data.label && data.label !== '…') ? data.label : (t$1('trakt_account_slot', 'Аккаунт') + ' ' + (item.slot + 1));
         try { Lampa.Bell.push({ text: t$1('trakt_switched_to', 'Активен аккаунт') + ': ' + name }); } catch (e) {}
-        try { Lampa.Controller.toggle('head'); } catch (e) {}
-        // Navigate back to home so all lines reload with the new account's data
-        setTimeout(function () {
-          try {
-            var steps = 0;
-            var goBack = function () {
-              if (steps++ > 25) return;
-              var cur = Lampa.Activity && Lampa.Activity.active && Lampa.Activity.active();
-              if (!cur) return;
-              Lampa.Activity.backward();
-              setTimeout(goBack, 60);
-            };
-            goBack();
-          } catch (e) {}
-        }, 200);
+        // Re-render the current screen in-place so items-lines reload with the new token
+        try {
+          var cur = Lampa.Activity && typeof Lampa.Activity.active === 'function' && Lampa.Activity.active();
+          if (cur && typeof Lampa.Activity.replace === 'function') {
+            Lampa.Activity.replace(Object.assign({}, cur, { refresh: Date.now() }));
+          }
+        } catch (e) {}
+        try { Lampa.Controller.toggle('content'); } catch (e) {}
       },
       onBack: function () {
         try { Lampa.Controller.toggle('head'); } catch (e) {}
