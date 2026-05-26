@@ -392,7 +392,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '1.3.6';
+  var PLUGIN_VERSION = '1.3.7';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -8159,27 +8159,6 @@
                 var vipKey = d.vip ? 'trakttv_vip_enabled' : 'trakttv_vip_disabled';
                 var vipCls = d.vip ? 'trakt-vip-badge--enabled' : 'trakt-vip-badge--disabled';
                 item.append('<div class="settings-param__value trakt-slot-userinfo" style="margin-top:2px"><span class="trakt-vip-badge ' + vipCls + '">' + Lampa.Lang.translate(vipKey) + '</span></div>');
-              } else if (slotIndex === active) {
-                if (typeof d.vip === 'boolean') {
-                  var vipKey2 = d.vip ? 'trakttv_vip_enabled' : 'trakttv_vip_disabled';
-                  var vipCls2 = d.vip ? 'trakt-vip-badge--enabled' : 'trakt-vip-badge--disabled';
-                  item.append('<div class="settings-param__value trakt-slot-userinfo" style="margin-top:2px"><span class="trakt-vip-badge ' + vipCls2 + '">' + Lampa.Lang.translate(vipKey2) + '</span></div>');
-                }
-                var fetchToken = d.token || Lampa.Storage.get('trakt_token') || null;
-                if (fetchToken) {
-                  requestApiWithToken(fetchToken, 'GET', '/users/me').then(function (user) {
-                    if (!user) return;
-                    var uname = user.username || ('Account ' + (slotIndex + 1));
-                    var patch = { label: uname, vip: !!(user.vip) };
-                    if (user.images && user.images.avatar && user.images.avatar.full) patch.avatar = user.images.avatar.full;
-                    multiAccountUpdateSlot(slotIndex, patch);
-                    item.find('.settings-param__name').text((slotIndex + 1) + '. ' + uname + ' ' + t$1('trakt_account_slot_active', '(активен)'));
-                    item.find('.trakt-slot-userinfo').remove();
-                    var vk = user.vip ? 'trakttv_vip_enabled' : 'trakttv_vip_disabled';
-                    var vc = user.vip ? 'trakt-vip-badge--enabled' : 'trakt-vip-badge--disabled';
-                    item.append('<div class="settings-param__value trakt-slot-userinfo" style="margin-top:2px"><span class="trakt-vip-badge ' + vc + '">' + Lampa.Lang.translate(vk) + '</span></div>');
-                  }).catch(function () {});
-                }
               }
             }
           },
