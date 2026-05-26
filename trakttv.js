@@ -392,7 +392,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '1.3.11-debug';
+  var PLUGIN_VERSION = '1.3.11';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -674,10 +674,15 @@
   // ── Multi-Account Storage Layer ──────────────────────────────────────────
   var MULTI_MAX_SLOTS = 5;
   function multiAccountGetAll() {
-    try { var r = JSON.parse(Lampa.Storage.get('trakt_accounts') || '[]'); return Array.isArray(r) ? r : []; } catch (e) { return []; }
+    try {
+      var r = Lampa.Storage.get('trakt_accounts');
+      if (Array.isArray(r)) return r;
+      r = JSON.parse(typeof r === 'string' ? r : '[]');
+      return Array.isArray(r) ? r : [];
+    } catch (e) { return []; }
   }
   function multiAccountSaveAll(slots) {
-    Lampa.Storage.set('trakt_accounts', JSON.stringify(slots));
+    Lampa.Storage.set('trakt_accounts', slots);
   }
   function multiAccountGetActiveSlot() {
     return parseInt(Lampa.Storage.get('trakt_active_slot') || '0', 10) || 0;
@@ -745,19 +750,15 @@
       Lampa.Storage.set('trakt_active_slot', 0);
     }
   }
-  function dbg(msg) { try { Lampa.Bell.push({ text: msg }); } catch(e) {} }
   function multiAccountFetchMissingUsernames() {
     var slots = multiAccountGetAll();
-    dbg('[Trakt debug] fetchMissing: slots=' + slots.length + ' tokens=' + slots.filter(function(s){return s&&s.token;}).length);
     slots.forEach(function (d) {
       if (!d || !d.token) return;
       if (d.label && d.label !== '…') return;
       if (_fetchingSlots[d.slot]) return;
       _fetchingSlots[d.slot] = true;
-      dbg('[Trakt debug] fetching /users/me slot=' + d.slot + ' clientId=' + (getClientId() ? 'set' : 'EMPTY') + ' token=' + d.token.slice(0,8) + '…');
       requestApiWithToken(d.token, 'GET', '/users/me').then(function (user) {
         delete _fetchingSlots[d.slot];
-        dbg('[Trakt debug] slot ' + d.slot + ' OK: ' + JSON.stringify(user && {u: user.username, vip: user.vip}));
         if (user && user.username) {
           multiAccountUpdateSlot(d.slot, {
             label: user.username,
@@ -769,9 +770,8 @@
           if (!cur || !cur.label || cur.label === '…') multiAccountUpdateSlot(d.slot, { label: null });
         }
         try { Lampa.Settings.update(); } catch (e) {}
-      }).catch(function (err) {
+      }).catch(function () {
         delete _fetchingSlots[d.slot];
-        dbg('[Trakt debug] slot ' + d.slot + ' ERR: status=' + (err && err.status) + ' ' + (err && err.message || ''));
       });
     });
   }
@@ -8135,7 +8135,6 @@
           param: { name: 'trakt_account_slot_' + slotIndex, type: 'button' },
           field: { name: t$1('trakt_account_slot_empty', 'Не привязан') },
           onRender: function (item) {
-            dbg('[Trakt debug] onRender slot=' + slotIndex + ' token=' + (Lampa.Storage.get('trakt_token') ? 'yes' : 'no') + ' accounts=' + Lampa.Storage.get('trakt_accounts'));
             if (slotIndex === 0) multiAccountMigrateToken();
             var d = multiAccountGetSlot(slotIndex);
             var active = multiAccountGetActiveSlot();
@@ -8164,10 +8163,8 @@
               if (needsLabelFetch && !_fetchingSlots[slotIndex]) {
                 _fetchingSlots[slotIndex] = true;
                 var _active = active;
-                dbg('[Trakt debug] onRender fetch slot=' + slotIndex + ' token=' + (d.token ? d.token.slice(0,8)+'…' : 'NONE') + ' clientId=' + (getClientId() ? 'set' : 'EMPTY'));
                 requestApiWithToken(d.token, 'GET', '/users/me').then(function (user) {
                   delete _fetchingSlots[slotIndex];
-                  dbg('[Trakt debug] onRender slot=' + slotIndex + ' OK: ' + JSON.stringify(user && {u: user.username, vip: user.vip}));
                   if (user && user.username) {
                     multiAccountUpdateSlot(slotIndex, {
                       label: user.username,
@@ -8183,9 +8180,8 @@
                     var vipCls2 = vipEnabled ? 'trakt-vip-badge--enabled' : 'trakt-vip-badge--disabled';
                     item.append('<div class="settings-param__value trakt-slot-userinfo" style="margin-top:2px"><span class="trakt-vip-badge ' + vipCls2 + '">' + Lampa.Lang.translate(vipKey2) + '</span></div>');
                   }
-                }).catch(function (err) {
+                }).catch(function () {
                   delete _fetchingSlots[slotIndex];
-                  dbg('[Trakt debug] onRender slot=' + slotIndex + ' ERR: status=' + (err && err.status) + ' ' + (err && err.message || ''));
                 });
               }
             }
