@@ -392,7 +392,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '1.3.7';
+  var PLUGIN_VERSION = '1.3.8';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -728,12 +728,10 @@
       })
       .filter(Boolean);
   }
-  function multiAccountMigrateIfNeeded() {
+  function multiAccountMigrateToken() {
     var token = Lampa.Storage.get('trakt_token');
     if (!token) return;
     var slot0 = multiAccountGetSlot(0);
-    // Skip only if we already have a real (non-placeholder) label
-    if (slot0 && slot0.label && slot0.label !== '…') return;
     if (!slot0 || !slot0.token) {
       multiAccountUpdateSlot(0, {
         token: token,
@@ -745,30 +743,28 @@
       });
       Lampa.Storage.set('trakt_active_slot', 0);
     }
-    // Use the full api$1 which handles token refresh, fall back to raw request
-    var fetchPromise = (typeof api$1 !== 'undefined' && api$1 && api$1.get)
-      ? api$1.get('/users/me')
-      : requestApiWithToken(token, 'GET', '/users/me');
-    fetchPromise.then(function (user) {
-      if (user && user.username) {
-        multiAccountUpdateSlot(0, {
-          label: user.username,
-          avatar: (user.images && user.images.avatar && user.images.avatar.full) || '',
-          vip: !!(user.vip)
-        });
-      } else {
-        var cur = multiAccountGetSlot(0);
-        if (!cur || !cur.label || cur.label === '…') {
-          multiAccountUpdateSlot(0, { label: null });
+  }
+  function multiAccountFetchMissingUsernames() {
+    var slots = multiAccountGetAll();
+    slots.forEach(function (d) {
+      if (!d || !d.token) return;
+      if (d.label && d.label !== '…') return;
+      requestApiWithToken(d.token, 'GET', '/users/me').then(function (user) {
+        if (user && user.username) {
+          multiAccountUpdateSlot(d.slot, {
+            label: user.username,
+            avatar: (user.images && user.images.avatar && user.images.avatar.full) || '',
+            vip: !!(user.vip)
+          });
+        } else {
+          var cur = multiAccountGetSlot(d.slot);
+          if (!cur || !cur.label || cur.label === '…') multiAccountUpdateSlot(d.slot, { label: null });
         }
-      }
-      try { Lampa.Settings.update(); } catch (e) {}
-    }).catch(function () {
-      // Reset only if label is still the placeholder (not overwritten by a concurrent auth success)
-      var cur = multiAccountGetSlot(0);
-      if (!cur || !cur.label || cur.label === '…') {
-        multiAccountUpdateSlot(0, { label: null });
-      }
+        try { Lampa.Settings.update(); } catch (e) {}
+      }).catch(function () {
+        var cur = multiAccountGetSlot(d.slot);
+        if (!cur || !cur.label || cur.label === '…') multiAccountUpdateSlot(d.slot, { label: null });
+      });
     });
   }
   // ─────────────────────────────────────────────────────────────────────────
@@ -8131,11 +8127,7 @@
           param: { name: 'trakt_account_slot_' + slotIndex, type: 'button' },
           field: { name: t$1('trakt_account_slot_empty', 'Не привязан') },
           onRender: function (item) {
-            // Trigger migration only for legacy flat-token case (slot has no token yet)
-            if (slotIndex === 0 && Lampa.Storage.get('trakt_token')) {
-              var s0 = multiAccountGetSlot(0);
-              if (!s0 || !s0.token) multiAccountMigrateIfNeeded();
-            }
+            if (slotIndex === 0) multiAccountMigrateToken();
             var d = multiAccountGetSlot(slotIndex);
             var active = multiAccountGetActiveSlot();
             var label;
@@ -10647,7 +10639,8 @@
       }
       isInitialized = true;
 
-      multiAccountMigrateIfNeeded();
+      multiAccountMigrateToken();
+      multiAccountFetchMissingUsernames();
 
       try {
         Lampa.Listener.follow('profile', function (e) {
