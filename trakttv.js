@@ -392,7 +392,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '1.3.13';
+  var PLUGIN_VERSION = '1.3.14';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -5890,6 +5890,10 @@
         ru: "Удалит все токены, настройки и данные аккаунтов",
         en: "Deletes all tokens, settings and account data",
       },
+      trakt_reset_confirm: {
+        ru: "Да, удалить всё",
+        en: "Yes, delete everything",
+      },
       trakt_watched_now: {
         ru: "Просмотрено сейчас",
       },
@@ -7981,7 +7985,7 @@
       field: { name: '' },
       onRender: function (item) {
         item.empty();
-        item.append('<div class="settings-param__name" style="opacity:.55;font-weight:700">' + t$1('trakt_api_section', 'Trakt.TV API') + '</div><div class="settings-param__value" style="opacity:.5;font-size:.85em;margin-top:.2em">' + t$1('trakt_api_help_btn', 'Как получить Client ID и Secret?') + '</div>');
+        item.append('<div class="settings-param__name" style="opacity:.55;font-weight:700">' + t$1('trakt_api_section', 'Trakt.TV API') + '</div>');
       }
     });
 
@@ -8039,6 +8043,29 @@
         }, function (val) {
           Lampa.Storage.set('trakt_client_secret', (val || '').trim());
           Lampa.Settings.update();
+        });
+      }
+    });
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: { name: 'trakt_api_help', type: 'button' },
+      field: { name: t$1('trakt_api_help_btn', 'Как получить Client ID и Secret?') },
+      onRender: function (item) { item.show(); },
+      onChange: function () {
+        var html = $('<div class="about" style="max-width:520px">'
+          + '<div class="about__text"><b>1.</b> Откройте trakt.tv &rarr; Settings &rarr; Your API Apps</div>'
+          + '<div class="about__text"><b>2.</b> Нажмите <b>New Application</b></div>'
+          + '<div class="about__text"><b>3.</b> Name: любое название (например: Lampa)</div>'
+          + '<div class="about__text"><b>4.</b> Redirect URI: <code>urn:ietf:wg:oauth:2.0:oob</code></div>'
+          + '<div class="about__text"><b>5.</b> Permissions: отметьте <b>/checkin</b> и <b>/scrobble</b></div>'
+          + '<div class="about__text"><b>6.</b> Нажмите <b>Save App</b></div>'
+          + '<div class="about__text"><b>7.</b> Скопируйте <b>Client ID</b> и <b>Client Secret</b> в настройки плагина</div>'
+          + '</div>');
+        Lampa.Modal.open({
+          title: t$1('trakt_api_help_title', 'Получение API ключей Trakt.TV'),
+          html: html,
+          size: 'medium',
+          onBack: function () { Lampa.Modal.close(); Lampa.Controller.toggle('settings_component'); }
         });
       }
     });
@@ -8531,23 +8558,34 @@
       },
       onRender: function onRender(item) { item.show(); },
       onChange: function onChange() {
-        clearAuthBlocked();
-        try {
-          Lampa.Storage.set('trakt_token', null);
-          Lampa.Storage.set('trakt_refresh_token', null);
-          Lampa.Storage.set('trakt_token_created_at', null);
-          Lampa.Storage.set('trakt_token_expires_in', null);
-          Lampa.Storage.set('trakt_token_expires_at', null);
-          Lampa.Storage.set('trakt_active_device_auth', false);
-          Lampa.Storage.set('trakt_active_device_auth_started_at', null);
-          Lampa.Storage.set('trakt_accounts', '[]');
-          Lampa.Storage.set('trakt_active_slot', 0);
-          Lampa.Storage.set('trakt_multiwatch_slots', '[]');
-          Lampa.Storage.set('trakt_multiwatch_enabled', false);
-          Lampa.Storage.set('trakt_profile_slots', null);
-        } catch (e) {}
-        Lampa.Bell.push({ text: t$1('trakttvFullClearNoty', 'Все очищено') });
-        try { Lampa.Settings.update(); } catch (e) {}
+        Lampa.Select.show({
+          title: t$1('trakt_reset_all', 'Сброс всех настроек плагина Trakt.TV'),
+          items: [
+            { title: t$1('trakt_reset_confirm', 'Да, удалить всё'), action: 'confirm' },
+            { title: t$1('cancel', 'Отмена'), action: 'cancel' }
+          ],
+          onSelect: function (a) {
+            if (a.action !== 'confirm') return;
+            clearAuthBlocked();
+            try {
+              Lampa.Storage.set('trakt_token', null);
+              Lampa.Storage.set('trakt_refresh_token', null);
+              Lampa.Storage.set('trakt_token_created_at', null);
+              Lampa.Storage.set('trakt_token_expires_in', null);
+              Lampa.Storage.set('trakt_token_expires_at', null);
+              Lampa.Storage.set('trakt_active_device_auth', false);
+              Lampa.Storage.set('trakt_active_device_auth_started_at', null);
+              Lampa.Storage.set('trakt_accounts', '[]');
+              Lampa.Storage.set('trakt_active_slot', 0);
+              Lampa.Storage.set('trakt_multiwatch_slots', '[]');
+              Lampa.Storage.set('trakt_multiwatch_enabled', false);
+              Lampa.Storage.set('trakt_profile_slots', null);
+            } catch (e) {}
+            Lampa.Bell.push({ text: t$1('trakttvFullClearNoty', 'Все очищено') });
+            try { Lampa.Settings.update(); } catch (e) {}
+          },
+          onBack: function () { Lampa.Controller.toggle('settings_component'); }
+        });
       }
     });
   }
