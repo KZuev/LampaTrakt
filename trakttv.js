@@ -8135,6 +8135,7 @@
           param: { name: 'trakt_account_slot_' + slotIndex, type: 'button' },
           field: { name: t$1('trakt_account_slot_empty', 'Не привязан') },
           onRender: function (item) {
+            dbg('[Trakt debug] onRender slot=' + slotIndex + ' token=' + (Lampa.Storage.get('trakt_token') ? 'yes' : 'no') + ' accounts=' + Lampa.Storage.get('trakt_accounts'));
             if (slotIndex === 0) multiAccountMigrateToken();
             var d = multiAccountGetSlot(slotIndex);
             var active = multiAccountGetActiveSlot();
