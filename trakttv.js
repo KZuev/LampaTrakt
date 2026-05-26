@@ -392,7 +392,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '1.3.11';
+  var PLUGIN_VERSION = '1.3.12';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -8158,7 +8158,7 @@
               if (typeof d.vip === 'boolean' && !needsLabelFetch) {
                 var vipKey = d.vip ? 'trakttv_vip_enabled' : 'trakttv_vip_disabled';
                 var vipCls = d.vip ? 'trakt-vip-badge--enabled' : 'trakt-vip-badge--disabled';
-                item.append('<div class="settings-param__value trakt-slot-userinfo" style="margin-top:2px"><span class="trakt-vip-badge ' + vipCls + '">' + Lampa.Lang.translate(vipKey) + '</span></div>');
+                item.append('<div class="settings-param__value trakt-slot-userinfo" style="margin-top:2px">Trakt.TV VIP: <span class="trakt-vip-badge ' + vipCls + '">' + Lampa.Lang.translate(vipKey) + '</span></div>');
               }
               if (needsLabelFetch && !_fetchingSlots[slotIndex]) {
                 _fetchingSlots[slotIndex] = true;
@@ -8178,7 +8178,7 @@
                     var vipEnabled = !!(user.vip);
                     var vipKey2 = vipEnabled ? 'trakttv_vip_enabled' : 'trakttv_vip_disabled';
                     var vipCls2 = vipEnabled ? 'trakt-vip-badge--enabled' : 'trakt-vip-badge--disabled';
-                    item.append('<div class="settings-param__value trakt-slot-userinfo" style="margin-top:2px"><span class="trakt-vip-badge ' + vipCls2 + '">' + Lampa.Lang.translate(vipKey2) + '</span></div>');
+                    item.append('<div class="settings-param__value trakt-slot-userinfo" style="margin-top:2px">Trakt.TV VIP: <span class="trakt-vip-badge ' + vipCls2 + '">' + Lampa.Lang.translate(vipKey2) + '</span></div>');
                   }
                 }).catch(function () {
                   delete _fetchingSlots[slotIndex];
