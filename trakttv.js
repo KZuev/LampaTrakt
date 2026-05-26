@@ -392,7 +392,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '1.3.10';
+  var PLUGIN_VERSION = '1.3.11-debug';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -747,13 +747,16 @@
   }
   function multiAccountFetchMissingUsernames() {
     var slots = multiAccountGetAll();
+    Lampa.Bell.push({ text: '[Trakt debug] fetchMissing: slots=' + slots.length + ' tokens=' + slots.filter(function(s){return s&&s.token;}).length });
     slots.forEach(function (d) {
       if (!d || !d.token) return;
       if (d.label && d.label !== '…') return;
       if (_fetchingSlots[d.slot]) return;
       _fetchingSlots[d.slot] = true;
+      Lampa.Bell.push({ text: '[Trakt debug] fetching /users/me for slot ' + d.slot + ' clientId=' + (getClientId() ? 'set' : 'EMPTY') });
       requestApiWithToken(d.token, 'GET', '/users/me').then(function (user) {
         delete _fetchingSlots[d.slot];
+        Lampa.Bell.push({ text: '[Trakt debug] slot ' + d.slot + ' got user: ' + JSON.stringify(user && {username: user.username, vip: user.vip}) });
         if (user && user.username) {
           multiAccountUpdateSlot(d.slot, {
             label: user.username,
@@ -765,8 +768,9 @@
           if (!cur || !cur.label || cur.label === '…') multiAccountUpdateSlot(d.slot, { label: null });
         }
         try { Lampa.Settings.update(); } catch (e) {}
-      }).catch(function () {
+      }).catch(function (err) {
         delete _fetchingSlots[d.slot];
+        Lampa.Bell.push({ text: '[Trakt debug] slot ' + d.slot + ' FETCH ERROR: ' + (err && err.status || err) });
       });
     });
   }
@@ -8158,8 +8162,10 @@
               if (needsLabelFetch && !_fetchingSlots[slotIndex]) {
                 _fetchingSlots[slotIndex] = true;
                 var _active = active;
+                Lampa.Bell.push({ text: '[Trakt debug] onRender fetch slot ' + slotIndex + ' token=' + (d.token ? d.token.slice(0,8)+'…' : 'NONE') + ' clientId=' + (getClientId() ? 'set' : 'EMPTY') });
                 requestApiWithToken(d.token, 'GET', '/users/me').then(function (user) {
                   delete _fetchingSlots[slotIndex];
+                  Lampa.Bell.push({ text: '[Trakt debug] onRender slot ' + slotIndex + ' got: ' + JSON.stringify(user && {username: user.username, vip: user.vip}) });
                   if (user && user.username) {
                     multiAccountUpdateSlot(slotIndex, {
                       label: user.username,
@@ -8175,8 +8181,9 @@
                     var vipCls2 = vipEnabled ? 'trakt-vip-badge--enabled' : 'trakt-vip-badge--disabled';
                     item.append('<div class="settings-param__value trakt-slot-userinfo" style="margin-top:2px"><span class="trakt-vip-badge ' + vipCls2 + '">' + Lampa.Lang.translate(vipKey2) + '</span></div>');
                   }
-                }).catch(function () {
+                }).catch(function (err) {
                   delete _fetchingSlots[slotIndex];
+                  Lampa.Bell.push({ text: '[Trakt debug] onRender slot ' + slotIndex + ' ERROR: ' + (err && err.status || err) });
                 });
               }
             }
