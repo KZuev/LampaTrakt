@@ -392,7 +392,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '1.6.23';
+  var PLUGIN_VERSION = '2.0.0';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -9678,6 +9678,18 @@
     }
     return rec;
   }
+  function findHashForEpisode(tmdbShowId, season, episode) {
+    var tmdbStr = String(tmdbShowId);
+    var best = null;
+    hashMetaCache.forEach(function(meta, hash) {
+      if (!meta || !meta.card) return;
+      if (String(meta.card.id) !== tmdbStr) return;
+      if (String(meta.season) !== String(season) || String(meta.episode) !== String(episode)) return;
+      if (!best || (meta.ts || 0) > (best.ts || 0)) best = { hash: hash, ts: meta.ts || 0 };
+    });
+    return best && best.hash;
+  }
+
   function extractSeasonEpisode(obj) {
     if (!obj) return {};
     var season = obj.season_number || obj.season || obj.seasonNumber || obj.s;
@@ -10771,6 +10783,43 @@
      * Єдиний шлях відправити фінальний запит з ідемпотентністю
      */
     finish: finish,
+    scrobblePause: function scrobblePause(media, percent) {
+      if (!percent || percent <= 0) return Promise.resolve();
+      var token = Lampa.Storage.get('trakt_token');
+      if (!token) return Promise.resolve();
+      var contentType = this.getContentType(media);
+      var ids = media.ids || {};
+      var body = contentType === 'movie'
+        ? { progress: percent, movie: { ids: ids } }
+        : { progress: percent,
+            show: { ids: ids },
+            episode: {
+              season: media.season_number || media.season,
+              number: media.episode_number || media.episode
+            }};
+      return requestApi('POST', '/scrobble/pause', body).then(function() {
+        try {
+          Lampa.Storage.set('trakt_debug_scrobble', {
+            ts: new Date().toISOString(),
+            percent: percent,
+            hash: media.hash || null,
+            season: media.season_number || media.season || null,
+            episode: media.episode_number || media.episode || null,
+            status: 'sent'
+          });
+        } catch(e) {}
+      }).catch(function(err) {
+        try {
+          Lampa.Storage.set('trakt_debug_scrobble', {
+            ts: new Date().toISOString(),
+            percent: percent,
+            hash: media.hash || null,
+            status: 'error',
+            error: String(err)
+          });
+        } catch(e2) {}
+      });
+    },
     /**
      * Знаходить інформацію про епізод за хешем
      * @param {Object} card - Картка серіалу
@@ -10819,6 +10868,93 @@
       return null;
     }
   };
+
+  function getFileViewKey() {
+    try {
+      var permit = Lampa.Account && Lampa.Account.Permit;
+      var profileId = permit && permit.account && permit.account.profile && permit.account.profile.id;
+      if (profileId) return 'file_view_' + profileId;
+    } catch(e) {}
+    try {
+      var keys = Object.keys(localStorage);
+      for (var i = 0; i < keys.length; i++) {
+        if (keys[i].indexOf('file_view_') === 0 && keys[i].length > 'file_view_'.length) return keys[i];
+      }
+    } catch(e2) {}
+    return 'file_view';
+  }
+
+  function syncPlaybackFromTrakt() {
+    var token = Lampa.Storage.get('trakt_token');
+    if (!token) return;
+    requestApi('GET', '/sync/playback?extended=full').then(function(items) {
+      var debugItems = [];
+      if (Array.isArray(items)) {
+        var fileViewKey = getFileViewKey();
+        var views = Lampa.Storage.get(fileViewKey) || {};
+        items.forEach(function(item) {
+          if (!item || !item.progress) return;
+          var percent = parseFloat(item.progress);
+          if (!percent) return;
+          var hash, durationSec, debugLabel;
+          if (item.type === 'episode' && item.show && item.episode) {
+            var showTmdb = item.show.ids && item.show.ids.tmdb;
+            var season = item.episode.season;
+            var epNum = item.episode.number;
+            var runtime = item.episode.runtime;
+            if (!showTmdb || !season || !epNum) return;
+            hash = findHashForEpisode(showTmdb, season, epNum);
+            durationSec = runtime ? runtime * 60 : 0;
+            debugLabel = 'tmdb:' + showTmdb + ' S' + season + 'E' + epNum;
+          } else if (item.type === 'movie' && item.movie) {
+            var movieTmdb = item.movie.ids && item.movie.ids.tmdb;
+            var movieRuntime = item.movie.runtime;
+            if (!movieTmdb) return;
+            var movieTmdbStr = String(movieTmdb);
+            hashMetaCache.forEach(function(meta, h) {
+              if (!meta || !meta.card || String(meta.card.id) !== movieTmdbStr) return;
+              var prevMeta = hash ? hashMetaCache.get(hash) : null;
+              if (!prevMeta || (meta.ts || 0) > (prevMeta.ts || 0)) hash = h;
+            });
+            durationSec = movieRuntime ? movieRuntime * 60 : 0;
+            debugLabel = 'movie tmdb:' + movieTmdb;
+          }
+          if (!hash) {
+            debugItems.push({ label: debugLabel, traktPct: percent, action: 'no_hash' });
+            return;
+          }
+          var localPct = views[hash] ? parseFloat(views[hash].percent || 0) : 0;
+          if (percent > localPct) {
+            var timeSec = durationSec ? Math.round(percent / 100 * durationSec) : 0;
+            try {
+              Lampa.Timeline.update({ hash: hash, percent: percent, time: timeSec, duration: durationSec });
+              debugItems.push({ label: debugLabel, hash: hash, traktPct: percent, localPct: localPct, action: 'updated' });
+            } catch(e) {
+              debugItems.push({ label: debugLabel, hash: hash, traktPct: percent, localPct: localPct, action: 'error', error: String(e) });
+            }
+          } else {
+            debugItems.push({ label: debugLabel, hash: hash, traktPct: percent, localPct: localPct, action: 'skipped_local_newer' });
+          }
+        });
+      }
+      try {
+        Lampa.Storage.set('trakt_debug_sync', {
+          ts: new Date().toISOString(),
+          total: Array.isArray(items) ? items.length : 0,
+          items: debugItems.slice(0, 20)
+        });
+      } catch(e) {}
+    }).catch(function(err) {
+      try {
+        Lampa.Storage.set('trakt_debug_sync', {
+          ts: new Date().toISOString(),
+          total: 0,
+          items: [],
+          error: String(err)
+        });
+      } catch(e) {}
+    });
+  }
 
   var isInitialized = false;
   var API_MISSING_LOG_KEY = 'events:api-missing';
@@ -11096,6 +11232,13 @@
                 });
               }
             }
+            // Scrobble pause to Trakt if progress is below the finish threshold
+            var lastRoad = window.last_timeline_event && window.last_timeline_event.data && window.last_timeline_event.data.road || {};
+            var lastPct = parseFloat(lastRoad.percent || 0);
+            var minProg2 = parseInt(Lampa.Storage.field('trakt_min_progress') || config.minProgress);
+            if (lastPct > 0 && lastPct < minProg2 && media && watching && typeof watching.scrobblePause === 'function') {
+              watching.scrobblePause(media, lastPct);
+            }
           } catch (e) {
             logWarn('Event finish route failed', e, {
               debugOnly: true
@@ -11125,6 +11268,7 @@
       ensureWatchlistBadgeCache();
       applyLampaHideClasses();
       initTraktAccountSwitchButton();
+      setTimeout(syncPlaybackFromTrakt, 2000);
     },
     /**
      * Додає блок з пов'язаними списками в картку медіа
@@ -11319,6 +11463,11 @@
         eventForLists.data.id = e.data.id; // Явно копіюємо ID
       }
       this.addRelatedListsBlock(eventForLists);
+
+      // Синхронизируем Trakt playback → Lampa.Timeline при открытии карточки TV
+      if (e.object.method === 'tv' && e.data && e.data.id) {
+        setTimeout(syncPlaybackFromTrakt, 500);
+      }
 
       // Додаємо прогрес перегляду для серіалів
       if (e.object.method === 'tv' || e.object.method === 'movie') {
