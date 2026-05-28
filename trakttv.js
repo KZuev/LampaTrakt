@@ -392,7 +392,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '1.6.9';
+  var PLUGIN_VERSION = '1.6.10';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -6013,6 +6013,8 @@
       trakt_watched_no: {
         ru: "Не просмотрено",
       },
+      trakt_multiwatch_yes: { ru: 'Да', en: 'Yes' },
+      trakt_multiwatch_no:  { ru: 'Нет', en: 'No' },
       trakt_digital_release: {
         ru: "Цифровой релиз фильма",
         en: "Digital film release",
@@ -7341,14 +7343,18 @@
     if (!Array.isArray(selected)) selected = [];
     selected = selected.filter(function (s) { return s !== active; });
 
-    var YES = Lampa.Lang.translate('yes') || 'Да';
-    var NO  = Lampa.Lang.translate('no')  || 'Нет';
+    var YES = t$1('trakt_multiwatch_yes', 'Да');
+    var NO  = t$1('trakt_multiwatch_no',  'Нет');
 
     var menuItems = allAccounts.map(function (d) {
       var isMain = d.slot === active;
       var isSel  = isMain || selected.indexOf(d.slot) >= 0;
-      var name   = (d.slot + 1) + '. ' + getSlotDisplayName(d.slot);
-      return { title: name + '   ' + (isSel ? YES : NO), slot: d.slot, isMain: isMain };
+      return {
+        title:  (d.slot + 1) + '. ' + getSlotDisplayName(d.slot),
+        yesno:  isSel ? YES : NO,
+        slot:   d.slot,
+        isMain: isMain
+      };
     });
     menuItems.push({ title: t$1('trakt_multiwatch_done_btn', 'Готово'), done: true });
     if (selected.length > 0) {
@@ -7358,6 +7364,13 @@
     Lampa.Select.show({
       title: t$1('trakt_multiwatch_title', 'Совместный просмотр Trakt.TV'),
       items: menuItems,
+      onRender: function (item, element) {
+        try {
+          if (element && typeof element.yesno === 'string') {
+            item.append('<div style="font-size:0.8em;opacity:0.65;padding:0.1em 0 0.1em 0.15em">' + element.yesno + '</div>');
+          }
+        } catch (e) {}
+      },
       onSelect: function (item) {
         if (item.isMain) { return; }
         if (item.done || item.disable) {
