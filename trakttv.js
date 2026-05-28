@@ -392,7 +392,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '1.6.16';
+  var PLUGIN_VERSION = '1.6.17';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -7400,7 +7400,13 @@
           invalidateMultiwatchIdsCache();
           updateTraktAccountSwitchBadge();
           try { Lampa.Controller.toggle('head'); } catch (e) {}
-          setTimeout(updateTraktAccountSwitchBadge, 300);
+          var desc = getCurrentActivityDescriptor();
+          if (desc) {
+            try {
+              Lampa.Activity.replace(Object.assign({}, desc, { refresh: Date.now() }));
+              setTimeout(function() { try { initTraktAccountSwitchButton(); updateTraktAccountSwitchBadge(); } catch(e) {} }, 800);
+            } catch (e) {}
+          }
           return;
         }
         var idx = selected.indexOf(item.slot);
@@ -7456,13 +7462,21 @@
           var name = getSlotDisplayName(item.slot);
           try { Lampa.Bell.push({ text: t$1('trakt_switched_to', 'Привет,') + ' ' + name + '!' }); } catch (e) {}
           try { Lampa.Controller.toggle('head'); } catch (e) {}
-          setTimeout(updateTraktAccountSwitchBadge, 300);
+          var _desc = getCurrentActivityDescriptor();
+          if (_desc) {
+            try {
+              Lampa.Activity.replace(Object.assign({}, _desc, { refresh: Date.now() }));
+              setTimeout(function() { try { initTraktAccountSwitchButton(); updateTraktAccountSwitchBadge(); } catch(e) {} }, 800);
+            } catch (e) {}
+          }
         },
         onBack: function () {
           try { Lampa.Controller.toggle('head'); } catch (e) {}
         }
       });
-    } catch (e) {}
+    } catch (e) {
+      try { Lampa.Bell.push({ text: 'TraktTV: ' + (e && e.message || String(e)) }); } catch (_) {}
+    }
   }
 
   function updateTraktAccountSwitchBadge() {
