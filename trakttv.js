@@ -392,7 +392,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '1.6.0';
+  var PLUGIN_VERSION = '1.6.1';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -7357,14 +7357,7 @@
         updateTraktAccountSwitchBadge();
         var name = getSlotDisplayName(item.slot);
         try { Lampa.Bell.push({ text: t$1('trakt_switched_to', 'Привет,') + ' ' + name + '!' }); } catch (e) {}
-        var desc = getCurrentActivityDescriptor();
-        if (desc) {
-          try { Lampa.Activity.replace(Object.assign({}, desc, { refresh: Date.now() })); } catch (e) {
-            try { Lampa.Controller.toggle('menu'); } catch (e2) {}
-          }
-        } else {
-          try { Lampa.Controller.toggle('menu'); } catch (e) {}
-        }
+        try { Lampa.Controller.toggle('menu'); } catch (e) {}
       },
       onBack: function () {
         try { Lampa.Controller.toggle('head'); } catch (e) {}
