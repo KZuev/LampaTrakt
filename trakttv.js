@@ -392,7 +392,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '1.6.7';
+  var PLUGIN_VERSION = '1.6.8';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -7344,12 +7344,10 @@
     var YES = Lampa.Lang.translate('yes') || 'Да';
     var NO  = Lampa.Lang.translate('no')  || 'Нет';
 
-    // Only secondary accounts — active account is implicit, no need to list it
-    var secondaryAccounts = allAccounts.filter(function (d) { return d.slot !== active; });
-
-    var menuItems = secondaryAccounts.map(function (d) {
-      var isSel = selected.indexOf(d.slot) >= 0;
-      return { title: (d.slot + 1) + '. ' + getSlotDisplayName(d.slot), value: isSel ? YES : NO, slot: d.slot };
+    var menuItems = allAccounts.map(function (d) {
+      var isMain = d.slot === active;
+      var isSel  = isMain || selected.indexOf(d.slot) >= 0;
+      return { title: (d.slot + 1) + '. ' + getSlotDisplayName(d.slot), value: isSel ? YES : NO, slot: d.slot, isMain: isMain };
     });
     menuItems.push({ title: t$1('trakt_multiwatch_done_btn', 'Готово'), done: true });
     if (selected.length > 0) {
@@ -7367,6 +7365,7 @@
         }
       },
       onSelect: function (item) {
+        if (item.isMain) { return; }
         if (item.done || item.disable) {
           if (item.done) {
             Lampa.Storage.set('trakt_multiwatch_enabled', selected.length > 0);
@@ -7386,7 +7385,9 @@
         if (idx >= 0) selected.splice(idx, 1); else selected.push(item.slot);
         Lampa.Storage.set('trakt_multiwatch_slots', JSON.stringify(selected));
         invalidateMultiwatchIdsCache();
-        openMultiwatchSelector();
+        // setTimeout lets Lampa close the current dialog first, then reopens —
+        // synchronous call causes Lampa to close the new dialog instead
+        setTimeout(openMultiwatchSelector, 0);
       },
       onBack: function () { try { Lampa.Controller.toggle('head'); } catch (e) {} }
     });
