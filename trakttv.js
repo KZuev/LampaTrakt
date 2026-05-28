@@ -392,7 +392,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '1.6.1';
+  var PLUGIN_VERSION = '1.6.2';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -11761,18 +11761,6 @@
         var titleNode = icons.createLineTitle(e.data.trakt_line_title || e.data.title || '');
         var container = e.line && e.line.render ? e.line.render().find('.items-line__title') : null;
         if (container && container.length) container.empty().append(titleNode);
-        if (e.line && typeof e.line.use === 'function' && e.data.trakt_more_component) {
-          e.line.use({
-            onlyMore: function onlyMore() {
-              Lampa.Activity.push({
-                title: e.data.trakt_more_title || e.data.title || '',
-                component: e.data.trakt_more_component,
-                page: 1,
-                source: e.data.source || 'tmdb'
-              });
-            }
-          });
-        }
       } catch (error) {
         logError('Line title decorate failed', error, {
           debugOnly: true
