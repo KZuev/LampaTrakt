@@ -392,7 +392,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '1.6.12';
+  var PLUGIN_VERSION = '1.6.13';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -3677,8 +3677,8 @@
             _this.build(data && _typeof(data) === 'object' && Array.isArray(data.results) ? data : {
               results: []
             });
-            if (type === 'watchlist') setTimeout(function () { insertUpcomingDivider(_this); }, 0);
-            if (type === 'upnext') setTimeout(function () { insertUpnextNotStartedDivider(_this); }, 0);
+            if (type === 'watchlist') setTimeout(function () { try { insertUpcomingDivider(_this); } catch(e) {} }, 0);
+            if (type === 'upnext') setTimeout(function () { try { insertUpnextNotStartedDivider(_this); } catch(e) {} }, 0);
           })["catch"](function () {
             _this.empty();
           });
@@ -3713,8 +3713,8 @@
               resolve.call(_this2, data && _typeof(data) === 'object' && Array.isArray(data.results) ? data : {
                 results: []
               });
-              if (type === 'watchlist') setTimeout(function () { insertUpcomingDivider(_this2); }, 0);
-              if (type === 'upnext') setTimeout(function () { insertUpnextNotStartedDivider(_this2); }, 0);
+              if (type === 'watchlist') setTimeout(function () { try { insertUpcomingDivider(_this2); } catch(e) {} }, 0);
+              if (type === 'upnext') setTimeout(function () { try { insertUpnextNotStartedDivider(_this2); } catch(e) {} }, 0);
               waitload = false;
             })["catch"](function () {
               waitload = false;
@@ -7386,6 +7386,12 @@
           if (item.done) {
             Lampa.Storage.set('trakt_multiwatch_enabled', secs.length > 0);
             Lampa.Storage.set('trakt_multiwatch_slots', JSON.stringify(secs));
+            try {
+              var names = secs.map(function(s) { return getSlotDisplayName(s); });
+              Lampa.Bell.push({ text: secs.length > 0
+                ? t$1('trakt_multiwatch_enabled', 'Совместный просмотр') + ': ' + names.join(', ')
+                : t$1('trakt_multiwatch_enabled', 'Совместный просмотр') + ' ' + t$1('trakt_multiwatch_no', 'Нет') });
+            } catch(e) {}
           } else {
             Lampa.Storage.set('trakt_multiwatch_enabled', false);
             Lampa.Storage.set('trakt_multiwatch_slots', '[]');
