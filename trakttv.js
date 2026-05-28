@@ -392,7 +392,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '1.6.8';
+  var PLUGIN_VERSION = '1.6.9';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -7347,7 +7347,8 @@
     var menuItems = allAccounts.map(function (d) {
       var isMain = d.slot === active;
       var isSel  = isMain || selected.indexOf(d.slot) >= 0;
-      return { title: (d.slot + 1) + '. ' + getSlotDisplayName(d.slot), value: isSel ? YES : NO, slot: d.slot, isMain: isMain };
+      var name   = (d.slot + 1) + '. ' + getSlotDisplayName(d.slot);
+      return { title: name + '   ' + (isSel ? YES : NO), slot: d.slot, isMain: isMain };
     });
     menuItems.push({ title: t$1('trakt_multiwatch_done_btn', 'Готово'), done: true });
     if (selected.length > 0) {
@@ -7357,13 +7358,6 @@
     Lampa.Select.show({
       title: t$1('trakt_multiwatch_title', 'Совместный просмотр Trakt.TV'),
       items: menuItems,
-      onRender: function (item, data) {
-        if (data.value) {
-          item.find('.selectbox__title')
-            .css({ display: 'flex', justifyContent: 'space-between', alignItems: 'center' })
-            .append('<span style="opacity:0.65;margin-left:1.5em;flex-shrink:0">' + data.value + '</span>');
-        }
-      },
       onSelect: function (item) {
         if (item.isMain) { return; }
         if (item.done || item.disable) {
@@ -7385,8 +7379,6 @@
         if (idx >= 0) selected.splice(idx, 1); else selected.push(item.slot);
         Lampa.Storage.set('trakt_multiwatch_slots', JSON.stringify(selected));
         invalidateMultiwatchIdsCache();
-        // setTimeout lets Lampa close the current dialog first, then reopens —
-        // synchronous call causes Lampa to close the new dialog instead
         setTimeout(openMultiwatchSelector, 0);
       },
       onBack: function () { try { Lampa.Controller.toggle('head'); } catch (e) {} }
