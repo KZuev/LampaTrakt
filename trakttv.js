@@ -392,7 +392,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '1.6.14';
+  var PLUGIN_VERSION = '1.6.15';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -7398,15 +7398,8 @@
             Lampa.Storage.set('trakt_multiwatch_slots', '[]');
           }
           invalidateMultiwatchIdsCache();
-          updateTraktAccountSwitchBadge();
           try { Lampa.Controller.toggle('head'); } catch (e) {}
-          var desc = getCurrentActivityDescriptor();
-          if (desc) {
-            try {
-              Lampa.Activity.replace(Object.assign({}, desc, { refresh: Date.now() }));
-              setTimeout(updateTraktAccountSwitchBadge, 300);
-            } catch (e) {}
-          }
+          setTimeout(function() { try { initTraktAccountSwitchButton(); updateTraktAccountSwitchBadge(); } catch(e) {} }, 300);
           return;
         }
         var idx = selected.indexOf(item.slot);
@@ -7459,17 +7452,10 @@
             loadWatchedCache();
             ensureWatchlistBadgeCache();
           }
-          updateTraktAccountSwitchBadge();
           var name = getSlotDisplayName(item.slot);
           try { Lampa.Bell.push({ text: t$1('trakt_switched_to', 'Привет,') + ' ' + name + '!' }); } catch (e) {}
-          try { Lampa.Controller.toggle('head'); } catch (e) {}
-          var _desc = getCurrentActivityDescriptor();
-          if (_desc) {
-            try {
-              Lampa.Activity.replace(Object.assign({}, _desc, { refresh: Date.now() }));
-              setTimeout(updateTraktAccountSwitchBadge, 300);
-            } catch (e) {}
-          }
+          try { Lampa.Controller.toggle('menu'); } catch (e) {}
+          setTimeout(function() { try { initTraktAccountSwitchButton(); updateTraktAccountSwitchBadge(); } catch(e) {} }, 300);
         },
         onBack: function () {
           try { Lampa.Controller.toggle('head'); } catch (e) {}
