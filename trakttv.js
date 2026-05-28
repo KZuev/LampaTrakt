@@ -392,7 +392,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.0.1';
+  var PLUGIN_VERSION = '2.0.2';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -10424,6 +10424,32 @@
         Lampa.Player.listener.follow('start', this.onPlayerStart.bind(this));
         slog('Player listener attached');
       }
+
+      // Підписуємось на список файлів торрента для попереднього заповнення кешу hash→episode
+      if (window.Lampa && Lampa.Listener) {
+        Lampa.Listener.follow('torrent_file', this.onTorrentFileList.bind(this));
+      }
+    },
+    /**
+     * Обробник списку файлів торрента — заповнює hashMetaCache для всього сезону одразу
+     */
+    onTorrentFileList: function onTorrentFileList(e) {
+      if (!e || !Array.isArray(e.items) || !e.items.length) return;
+      var card = Lampa.Activity && Lampa.Activity.active && Lampa.Activity.active() &&
+        (Lampa.Activity.active().card_data || Lampa.Activity.active().card || Lampa.Activity.active().movie);
+      if (!card) return;
+      e.items.forEach(function(item) {
+        var hash = item.timeline && item.timeline.hash;
+        var season = item.season;
+        var episode = item.episode;
+        if (!hash || !season || !episode) return;
+        setHashMeta(hash, {
+          card: card,
+          season: season,
+          episode: episode,
+          ids: card.ids
+        });
+      });
     },
     /**
      * Обробник події старту програвача
