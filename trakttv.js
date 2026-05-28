@@ -392,7 +392,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '1.6.3';
+  var PLUGIN_VERSION = '1.6.4';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -5425,6 +5425,7 @@
       trakt_account_link_profile: { ru: "Привязать к профилю Lampa", en: "Link to Lampa profile" },
       trakt_account_profile_bound: { ru: "Профиль:", en: "Profile:" },
       trakt_multiwatch_section: { ru: "Совместный просмотр", en: "Shared Watch" },
+      trakt_multiwatch_title: { ru: "Совместный просмотр Trakt.TV", en: "Shared Watch Trakt.TV" },
       trakt_multiwatch_enabled: { ru: "Совместный просмотр", en: "Shared Watch" },
       trakt_multiwatch_enabled_descr: { ru: "Отмечать просмотренное сразу во всех выбранных аккаунтах", en: "Mark watched in all selected accounts simultaneously" },
       trakt_multiwatch_accounts: { ru: "Участники просмотра", en: "Viewing participants" },
@@ -7342,19 +7343,20 @@
     var anySelected = selected.length > 0;
     var menuItems = [];
     allAccounts.forEach(function (d) {
+      var num = (d.slot + 1) + '. ';
       if (d.slot === active) {
-        menuItems.push({ title: '✓ ' + getSlotDisplayName(d.slot), isMain: true });
+        menuItems.push({ title: num + getSlotDisplayName(d.slot) + ' ✓', isMain: true });
       } else {
         var isSel = selected.indexOf(d.slot) >= 0;
-        menuItems.push({ title: (isSel ? '✓ ' : '    ') + getSlotDisplayName(d.slot), slot: d.slot });
+        menuItems.push({ title: num + getSlotDisplayName(d.slot) + (isSel ? ' ✓' : ''), slot: d.slot });
       }
     });
-    menuItems.push({ title: '✔  ' + t$1('trakt_multiwatch_done_btn', 'Готово'), done: true });
+    menuItems.push({ title: t$1('trakt_multiwatch_done_btn', 'Готово'), done: true });
     if (anySelected) {
       menuItems.push({ title: t$1('trakt_multiwatch_disable', 'Выключить совместный просмотр'), disable: true });
     }
     Lampa.Select.show({
-      title: t$1('trakt_multiwatch_section', 'Совместный просмотр'),
+      title: t$1('trakt_multiwatch_title', 'Совместный просмотр Trakt.TV'),
       items: menuItems,
       onSelect: function (item) {
         if (item.isMain) { return; }
@@ -7401,16 +7403,16 @@
       var mwTokens = multiAccountGetMultiwatchTokens();
       var nums = [active + 1].concat(mwTokens.map(function (t) { return t.slot + 1; }));
       nums.sort(function (a, b) { return a - b; });
-      mwLabel = '● ' + t$1('trakt_multiwatch_enabled', 'Совместный просмотр') + ': ' + nums.join('+');
+      mwLabel = t$1('trakt_multiwatch_enabled', 'Совместный просмотр') + ': ' + nums.join('+') + ' ✓';
     } else {
-      mwLabel = '○ ' + t$1('trakt_multiwatch_enabled', 'Совместный просмотр');
+      mwLabel = t$1('trakt_multiwatch_enabled', 'Совместный просмотр');
     }
     items.push({ title: mwLabel, isMultiwatch: true });
     Lampa.Select.show({
       title: t$1('trakt_switch_account', 'Переключить аккаунт Trakt.TV'),
       items: items,
       onSelect: function (item) {
-        if (item.isMultiwatch) { openMultiwatchSelector(); return; }
+        if (item.isMultiwatch) { setTimeout(openMultiwatchSelector, 0); return; }
         if (item.slot === multiAccountGetActiveSlot()) {
           try { Lampa.Controller.toggle('head'); } catch (e) {}
           return;
@@ -7425,7 +7427,8 @@
         updateTraktAccountSwitchBadge();
         var name = getSlotDisplayName(item.slot);
         try { Lampa.Bell.push({ text: t$1('trakt_switched_to', 'Привет,') + ' ' + name + '!' }); } catch (e) {}
-        try { Lampa.Controller.toggle('menu'); } catch (e) {}
+        var _desc = getCurrentActivityDescriptor();
+        if (_desc) { try { Lampa.Activity.replace(Object.assign({}, _desc, { refresh: Date.now() })); } catch (e) {} }
       },
       onBack: function () {
         try { Lampa.Controller.toggle('head'); } catch (e) {}
