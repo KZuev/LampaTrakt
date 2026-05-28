@@ -392,7 +392,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '1.6.4';
+  var PLUGIN_VERSION = '1.6.5';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -7380,7 +7380,7 @@
         if (idx >= 0) selected.splice(idx, 1); else selected.push(item.slot);
         Lampa.Storage.set('trakt_multiwatch_slots', JSON.stringify(selected));
         invalidateMultiwatchIdsCache();
-        setTimeout(openMultiwatchSelector, 0);
+        openMultiwatchSelector();
       },
       onBack: function () { try { Lampa.Controller.toggle('head'); } catch (e) {} }
     });
