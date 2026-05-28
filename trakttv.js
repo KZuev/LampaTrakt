@@ -392,7 +392,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '1.6.17';
+  var PLUGIN_VERSION = '1.6.18';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -730,7 +730,9 @@
     var enabled = readBooleanStorage$2('trakt_multiwatch_enabled', false);
     if (!enabled) return [];
     var selected;
-    try { selected = JSON.parse(Lampa.Storage.get('trakt_multiwatch_slots') || '[]'); } catch (e) { selected = []; }
+    var _raw733 = Lampa.Storage.get('trakt_multiwatch_slots');
+    try { selected = Array.isArray(_raw733) ? _raw733 : JSON.parse(_raw733 || '[]'); } catch (e) { selected = []; }
+    if (!Array.isArray(selected)) selected = [];
     var active = multiAccountGetActiveSlot();
     return selected
       .filter(function (s) { return s !== active; })
@@ -7355,7 +7357,8 @@
       selected = initialSelected.slice();
     } else {
       var stored;
-      try { stored = JSON.parse(Lampa.Storage.get('trakt_multiwatch_slots') || 'null'); } catch (e) { stored = null; }
+      var _raw7358 = Lampa.Storage.get('trakt_multiwatch_slots');
+      try { stored = Array.isArray(_raw7358) ? _raw7358 : JSON.parse(_raw7358 || 'null'); } catch (e) { stored = null; }
       selected = Array.isArray(stored) ? stored.slice() : [];
       if (selected.indexOf(active) < 0) selected.push(active);
     }
@@ -7487,7 +7490,9 @@
       var enabled = readBooleanStorage$2('trakt_multiwatch_enabled', false);
       if (enabled) {
         var selected;
-        try { selected = JSON.parse(Lampa.Storage.get('trakt_multiwatch_slots') || '[]'); } catch (e) { selected = []; }
+        var _raw7490 = Lampa.Storage.get('trakt_multiwatch_slots');
+        try { selected = Array.isArray(_raw7490) ? _raw7490 : JSON.parse(_raw7490 || '[]'); } catch (e) { selected = []; }
+        if (!Array.isArray(selected)) selected = [];
         var extra = selected.filter(function (s) { return s !== active; });
         if (extra.length > 0) {
           var allNums = [active].concat(extra);
@@ -8567,7 +8572,8 @@
         var enabled = readBooleanStorage$2('trakt_multiwatch_enabled', false);
         enabled ? item.show() : item.hide();
         var selected;
-        try { selected = JSON.parse(Lampa.Storage.get('trakt_multiwatch_slots') || '[]'); } catch (e) { selected = []; }
+        var _raw8575 = Lampa.Storage.get('trakt_multiwatch_slots');
+        try { selected = Array.isArray(_raw8575) ? _raw8575 : JSON.parse(_raw8575 || '[]'); } catch (e) { selected = []; }
         if (!Array.isArray(selected)) selected = [];
         var labels = selected.map(function (s) {
           var d = multiAccountGetSlot(s);
@@ -8582,7 +8588,9 @@
           return;
         }
         var selected;
-        try { selected = JSON.parse(Lampa.Storage.get('trakt_multiwatch_slots') || '[]'); } catch (e) { selected = []; }
+        var _raw8591 = Lampa.Storage.get('trakt_multiwatch_slots');
+        try { selected = Array.isArray(_raw8591) ? _raw8591 : JSON.parse(_raw8591 || '[]'); } catch (e) { selected = []; }
+        if (!Array.isArray(selected)) selected = [];
         var menuItems = allAccounts.map(function (d) {
           var isSelected = selected.indexOf(d.slot) >= 0;
           return { title: (isSelected ? '✓ ' : '  ') + (d.label || ('Account ' + (d.slot + 1))), slot: d.slot, selected: isSelected };
