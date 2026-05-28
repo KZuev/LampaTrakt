@@ -10433,7 +10433,9 @@
       if (this.isLoggingEnabled()) {
         slog('Player start event received', data);
       }
-      var card = data.card || Lampa.Activity.active() && Lampa.Activity.active().movie;
+      var activityCard = Lampa.Activity && Lampa.Activity.active && Lampa.Activity.active() &&
+        (Lampa.Activity.active().card_data || Lampa.Activity.active().card || Lampa.Activity.active().movie);
+      var card = data.card || activityCard;
       if (this.isLoggingEnabled()) {
         slog('Card determined in onPlayerStart', card);
       }
@@ -10454,7 +10456,13 @@
       var timeline = data && data.timeline;
       var hash = timeline && timeline.hash;
       if (hash) {
-        var se = extractSeasonEpisode(data);
+        var seData = extractSeasonEpisode(data);
+        var seCard = extractSeasonEpisode(card);
+        var seActivity = extractSeasonEpisode(activityCard);
+        var se = {
+          season: seData.season || seCard.season || seActivity.season,
+          episode: seData.episode || seCard.episode || seActivity.episode
+        };
         setHashMeta(hash, {
           card: card,
           season: se.season,
