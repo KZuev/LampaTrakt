@@ -392,7 +392,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '1.6.5';
+  var PLUGIN_VERSION = '1.6.6';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -7340,50 +7340,123 @@
     try { selected = JSON.parse(Lampa.Storage.get('trakt_multiwatch_slots') || '[]'); } catch (e) { selected = []; }
     if (!Array.isArray(selected)) selected = [];
     selected = selected.filter(function (s) { return s !== active; });
-    var anySelected = selected.length > 0;
-    var menuItems = [];
-    allAccounts.forEach(function (d) {
-      var num = (d.slot + 1) + '. ';
-      if (d.slot === active) {
-        menuItems.push({ title: num + getSlotDisplayName(d.slot) + ' ✓', isMain: true });
-      } else {
-        var isSel = selected.indexOf(d.slot) >= 0;
-        menuItems.push({ title: num + getSlotDisplayName(d.slot) + (isSel ? ' ✓' : ''), slot: d.slot });
+
+    var YES = Lampa.Lang.translate('yes') || 'Да';
+    var NO  = Lampa.Lang.translate('no')  || 'Нет';
+
+    // Remove any stale instance
+    $('.trakt-mw-selector').remove();
+
+    var overlay = $([
+      '<div class="trakt-mw-selector selectbox">',
+      '  <div class="selectbox__wrap">',
+      '    <div class="selectbox__content">',
+      '      <div class="selectbox__title">' + t$1('trakt_multiwatch_title', 'Совместный просмотр Trakt.TV') + '</div>',
+      '      <div class="selectbox__list"></div>',
+      '    </div>',
+      '  </div>',
+      '</div>'
+    ].join(''));
+    var list = overlay.find('.selectbox__list');
+
+    function renderItems(focusSlot) {
+      list.empty();
+
+      allAccounts.forEach(function (d) {
+        var isMain = d.slot === active;
+        var isSel  = !isMain && selected.indexOf(d.slot) >= 0;
+        var label  = (d.slot + 1) + '. ' + getSlotDisplayName(d.slot);
+        var value  = isMain ? t$1('trakt_mw_main_account', 'Главный') : (isSel ? YES : NO);
+
+        var el = $('<div class="selectbox__item selector" data-mw-slot="' + d.slot + '">'
+          + '<div class="selectbox__title" style="display:flex;justify-content:space-between;align-items:center;gap:1.5em">'
+          + '<span>' + label + '</span>'
+          + '<span style="opacity:0.65;min-width:3em;text-align:right">' + value + '</span>'
+          + '</div></div>');
+
+        if (!isMain) {
+          el.on('hover:enter', function () {
+            var idx = selected.indexOf(d.slot);
+            if (idx >= 0) selected.splice(idx, 1); else selected.push(d.slot);
+            Lampa.Storage.set('trakt_multiwatch_slots', JSON.stringify(selected));
+            invalidateMultiwatchIdsCache();
+            renderItems(d.slot);
+          });
+        }
+        list.append(el);
+      });
+
+      var doneEl = $('<div class="selectbox__item selector"><div class="selectbox__title">'
+        + t$1('trakt_multiwatch_done_btn', 'Готово') + '</div></div>');
+      doneEl.on('hover:enter', function () { saveAndClose(); });
+      list.append(doneEl);
+
+      if (selected.length > 0) {
+        var disEl = $('<div class="selectbox__item selector"><div class="selectbox__title">'
+          + t$1('trakt_multiwatch_disable', 'Выключить совместный просмотр') + '</div></div>');
+        disEl.on('hover:enter', function () { disableAndClose(); });
+        list.append(disEl);
       }
-    });
-    menuItems.push({ title: t$1('trakt_multiwatch_done_btn', 'Готово'), done: true });
-    if (anySelected) {
-      menuItems.push({ title: t$1('trakt_multiwatch_disable', 'Выключить совместный просмотр'), disable: true });
+
+      var items = list.find('.selector');
+      Lampa.Controller.collectionSet(items);
+      var focusEl = focusSlot !== undefined
+        ? list.find('[data-mw-slot="' + focusSlot + '"]')[0]
+        : null;
+      Lampa.Controller.collectionFocus(focusEl || items.first()[0], list);
     }
-    Lampa.Select.show({
-      title: t$1('trakt_multiwatch_title', 'Совместный просмотр Trakt.TV'),
-      items: menuItems,
-      onSelect: function (item) {
-        if (item.isMain) { return; }
-        if (item.done) {
-          Lampa.Storage.set('trakt_multiwatch_enabled', selected.length > 0);
-          Lampa.Storage.set('trakt_multiwatch_slots', JSON.stringify(selected));
-          invalidateMultiwatchIdsCache();
-          updateTraktAccountSwitchBadge();
-          try { Lampa.Controller.toggle('head'); } catch (e) {}
-          return;
-        }
-        if (item.disable) {
-          Lampa.Storage.set('trakt_multiwatch_enabled', false);
-          Lampa.Storage.set('trakt_multiwatch_slots', '[]');
-          invalidateMultiwatchIdsCache();
-          updateTraktAccountSwitchBadge();
-          try { Lampa.Controller.toggle('head'); } catch (e) {}
-          return;
-        }
-        var idx = selected.indexOf(item.slot);
-        if (idx >= 0) selected.splice(idx, 1); else selected.push(item.slot);
-        Lampa.Storage.set('trakt_multiwatch_slots', JSON.stringify(selected));
-        invalidateMultiwatchIdsCache();
-        openMultiwatchSelector();
+
+    function refreshPage() {
+      var _desc = getCurrentActivityDescriptor();
+      if (_desc) { try { Lampa.Activity.replace(Object.assign({}, _desc, { refresh: Date.now() })); } catch (e) {} }
+    }
+
+    function saveAndClose() {
+      Lampa.Storage.set('trakt_multiwatch_enabled', selected.length > 0);
+      Lampa.Storage.set('trakt_multiwatch_slots', JSON.stringify(selected));
+      invalidateMultiwatchIdsCache();
+      updateTraktAccountSwitchBadge();
+      close();
+      refreshPage();
+    }
+
+    function disableAndClose() {
+      Lampa.Storage.set('trakt_multiwatch_enabled', false);
+      Lampa.Storage.set('trakt_multiwatch_slots', '[]');
+      invalidateMultiwatchIdsCache();
+      updateTraktAccountSwitchBadge();
+      close();
+      refreshPage();
+    }
+
+    function close() {
+      overlay.remove();
+      try { Lampa.Controller.toggle('head'); } catch (e) {}
+    }
+
+    renderItems();
+    $('body').append(overlay);
+
+    Lampa.Controller.add('trakt_mw_sel', {
+      toggle: function () {
+        var items = list.find('.selector');
+        Lampa.Controller.collectionSet(items);
+        Lampa.Controller.collectionFocus(items.first()[0], list);
       },
-      onBack: function () { try { Lampa.Controller.toggle('head'); } catch (e) {} }
+      up: function () {
+        if (typeof Navigator !== 'undefined' && Navigator.canmove('up')) Navigator.move('up');
+        else close();
+      },
+      down: function () {
+        Lampa.Controller.collectionSet(list.find('.selector'));
+        if (typeof Navigator !== 'undefined' && Navigator.canmove('down')) Navigator.move('down');
+      },
+      left:  function () {},
+      right: function () {},
+      back:  close
     });
+
+    Lampa.Controller.toggle('trakt_mw_sel');
   }
 
   function openTraktAccountSwitchMenu() {
