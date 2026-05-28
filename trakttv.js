@@ -392,7 +392,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '1.6.13';
+  var PLUGIN_VERSION = '1.6.14';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -7387,7 +7387,8 @@
             Lampa.Storage.set('trakt_multiwatch_enabled', secs.length > 0);
             Lampa.Storage.set('trakt_multiwatch_slots', JSON.stringify(secs));
             try {
-              var names = secs.map(function(s) { return getSlotDisplayName(s); });
+              var allParticipants = [active].concat(secs);
+              var names = allParticipants.map(function(s) { return getSlotDisplayName(s); });
               Lampa.Bell.push({ text: secs.length > 0
                 ? t$1('trakt_multiwatch_enabled', 'Совместный просмотр') + ': ' + names.join(', ')
                 : t$1('trakt_multiwatch_enabled', 'Совместный просмотр') + ' ' + t$1('trakt_multiwatch_no', 'Нет') });
@@ -7400,7 +7401,12 @@
           updateTraktAccountSwitchBadge();
           try { Lampa.Controller.toggle('head'); } catch (e) {}
           var desc = getCurrentActivityDescriptor();
-          if (desc) { try { Lampa.Activity.replace(Object.assign({}, desc, { refresh: Date.now() })); } catch (e) {} }
+          if (desc) {
+            try {
+              Lampa.Activity.replace(Object.assign({}, desc, { refresh: Date.now() }));
+              setTimeout(updateTraktAccountSwitchBadge, 300);
+            } catch (e) {}
+          }
           return;
         }
         var idx = selected.indexOf(item.slot);
@@ -7412,53 +7418,64 @@
   }
 
   function openTraktAccountSwitchMenu() {
-    var accounts = multiAccountGetAll().filter(function (d) { return d && d.token; });
-    if (!accounts.length) return;
-    var active = multiAccountGetActiveSlot();
-    var mwEnabled = readBooleanStorage$2('trakt_multiwatch_enabled', false);
-    var items = accounts.map(function (d) {
-      var name = getSlotDisplayName(d.slot);
-      return {
-        title: (d.slot + 1) + '. ' + name + (d.slot === active ? ' ✓' : ''),
-        slot: d.slot
-      };
-    });
-    var mwLabel;
-    if (mwEnabled) {
-      var mwTokens = multiAccountGetMultiwatchTokens();
-      var nums = [active + 1].concat(mwTokens.map(function (t) { return t.slot + 1; }));
-      nums.sort(function (a, b) { return a - b; });
-      mwLabel = t$1('trakt_multiwatch_enabled', 'Совместный просмотр') + ': ' + nums.join('+') + ' ✓';
-    } else {
-      mwLabel = t$1('trakt_multiwatch_enabled', 'Совместный просмотр');
-    }
-    items.push({ title: mwLabel, isMultiwatch: true });
-    Lampa.Select.show({
-      title: t$1('trakt_switch_account', 'Переключить аккаунт Trakt.TV'),
-      items: items,
-      onSelect: function (item) {
-        if (item.isMultiwatch) { setTimeout(openMultiwatchSelector, 0); return; }
-        if (item.slot === multiAccountGetActiveSlot()) {
-          try { Lampa.Controller.toggle('head'); } catch (e) {}
-          return;
-        }
-        multiAccountActivateSlot(item.slot);
-        try { clearResponseCache(); } catch (e) {}
-        invalidateWatchedCache();
-        invalidateWatchlistBadgeCache();
-        invalidateMultiwatchIdsCache();
-        loadWatchedCache();
-        ensureWatchlistBadgeCache();
-        updateTraktAccountSwitchBadge();
-        var name = getSlotDisplayName(item.slot);
-        try { Lampa.Bell.push({ text: t$1('trakt_switched_to', 'Привет,') + ' ' + name + '!' }); } catch (e) {}
-        var _desc = getCurrentActivityDescriptor();
-        if (_desc) { try { Lampa.Activity.replace(Object.assign({}, _desc, { refresh: Date.now() })); } catch (e) {} }
-      },
-      onBack: function () {
-        try { Lampa.Controller.toggle('head'); } catch (e) {}
+    try {
+      var accounts = multiAccountGetAll().filter(function (d) { return d && d.token; });
+      if (!accounts.length) return;
+      var active = multiAccountGetActiveSlot();
+      var mwEnabled = readBooleanStorage$2('trakt_multiwatch_enabled', false);
+      var items = accounts.map(function (d) {
+        var name = getSlotDisplayName(d.slot);
+        var check = (!mwEnabled && d.slot === active) ? ' ✓' : '';
+        return {
+          title: (d.slot + 1) + '. ' + name + check,
+          slot: d.slot
+        };
+      });
+      var mwLabel;
+      if (mwEnabled) {
+        var mwTokens = multiAccountGetMultiwatchTokens();
+        var nums = [active + 1].concat(mwTokens.map(function (t) { return t.slot + 1; }));
+        nums.sort(function (a, b) { return a - b; });
+        mwLabel = t$1('trakt_multiwatch_enabled', 'Совместный просмотр') + ': ' + nums.join('+') + ' ✓';
+      } else {
+        mwLabel = t$1('trakt_multiwatch_enabled', 'Совместный просмотр');
       }
-    });
+      items.push({ title: mwLabel, isMultiwatch: true });
+      Lampa.Select.show({
+        title: t$1('trakt_switch_account', 'Переключить аккаунт Trakt.TV'),
+        items: items,
+        onSelect: function (item) {
+          if (item.isMultiwatch) { setTimeout(openMultiwatchSelector, 0); return; }
+          if (mwEnabled) {
+            Lampa.Storage.set('trakt_multiwatch_enabled', false);
+            Lampa.Storage.set('trakt_multiwatch_slots', '[]');
+            invalidateMultiwatchIdsCache();
+          }
+          if (item.slot !== multiAccountGetActiveSlot()) {
+            multiAccountActivateSlot(item.slot);
+            try { clearResponseCache(); } catch (e) {}
+            invalidateWatchedCache();
+            invalidateWatchlistBadgeCache();
+            loadWatchedCache();
+            ensureWatchlistBadgeCache();
+          }
+          updateTraktAccountSwitchBadge();
+          var name = getSlotDisplayName(item.slot);
+          try { Lampa.Bell.push({ text: t$1('trakt_switched_to', 'Привет,') + ' ' + name + '!' }); } catch (e) {}
+          try { Lampa.Controller.toggle('head'); } catch (e) {}
+          var _desc = getCurrentActivityDescriptor();
+          if (_desc) {
+            try {
+              Lampa.Activity.replace(Object.assign({}, _desc, { refresh: Date.now() }));
+              setTimeout(updateTraktAccountSwitchBadge, 300);
+            } catch (e) {}
+          }
+        },
+        onBack: function () {
+          try { Lampa.Controller.toggle('head'); } catch (e) {}
+        }
+      });
+    } catch (e) {}
   }
 
   function updateTraktAccountSwitchBadge() {
