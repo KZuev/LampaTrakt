@@ -392,7 +392,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '1.6.22';
+  var PLUGIN_VERSION = '1.6.23';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -2043,6 +2043,18 @@
     });
   }
 
+  function applyMultiwatchFilter(dataPromise) {
+    var mwEnabled = readBooleanStorage$2('trakt_multiwatch_enabled', false);
+    var mwTokens = mwEnabled ? multiAccountGetMultiwatchTokens() : [];
+    if (!mwTokens.length) return dataPromise;
+    return dataPromise.then(function(data) {
+      if (!data || !Array.isArray(data.results)) return data;
+      return ensureMultiwatchIdsCache().then(function() {
+        return Object.assign({}, data, { results: filterByMultiwatchIds(data.results) });
+      }).catch(function() { return data; });
+    });
+  }
+
   function requestApiWithToken(overrideToken, method, endpoint, data) {
     var headers = {
       'Content-Type': 'application/json',
@@ -2730,13 +2742,13 @@
           limit: requestedLimit,
           total: fallbackTotal
         });
-        return enrichWithTmdbLocale({
+        return applyMultiwatchFilter(Promise.resolve(enrichWithTmdbLocale({
           results: mapped,
           total: pagination.total,
           total_pages: pagination.total_pages,
           page: pagination.page,
           limit: pagination.limit
-        });
+        })));
       });
     },
     history: function(params) {
@@ -2748,7 +2760,7 @@
         var mapped = payload.map(mapHistoryItem).filter(Boolean);
         var pagination = resolvePaginationFromHeaders(headers, { page: page, limit: limit, total: (page - 1) * limit + mapped.length });
         var base = { results: mapped, total: pagination.total, total_pages: pagination.total_pages, page: pagination.page, limit: pagination.limit };
-        return enrichWithTmdbLocale(base);
+        return applyMultiwatchFilter(Promise.resolve(enrichWithTmdbLocale(base)));
       });
     },
     watching: function(params) {
@@ -2801,13 +2813,13 @@
             card_type: 'tv'
           };
         });
-        return enrichWithTmdbLocale({
+        return applyMultiwatchFilter(Promise.resolve(enrichWithTmdbLocale({
           results: mapped,
           total: total,
           total_pages: Math.max(1, Math.ceil(total / limit)),
           page: page,
           limit: limit
-        });
+        })));
       });
     },
     removeFromHistory: function(element) {
@@ -2843,7 +2855,7 @@
         var pageItems = mapped.slice(start, start + limit);
         var total_pages = Math.ceil(mapped.length / limit) || 1;
         var base = { results: pageItems, total: mapped.length, total_pages: total_pages, page: page, limit: limit };
-        return enrichWithTmdbLocale(base);
+        return applyMultiwatchFilter(Promise.resolve(enrichWithTmdbLocale(base)));
       });
     },
     auth: {
@@ -3314,12 +3326,12 @@
             air_date: releaseDate
           };
         });
-        return {
+        return applyMultiwatchFilter(Promise.resolve({
           results: results,
           total: total,
           total_pages: Math.max(1, Math.ceil(total / limit)),
           page: page
-        };
+        }));
       });
     }
   };
@@ -7397,47 +7409,11 @@
           try { invalidateWatchedCache(); } catch (e) {}
           try { invalidateWatchlistBadgeCache(); } catch (e) {}
           updateTraktAccountSwitchBadge();
-          var desc = getCurrentActivityDescriptor();
           try { Lampa.Controller.toggle('head'); } catch (e) {}
-          var _doReplace = function() {
-            if (!Lampa || !Lampa.Activity || typeof Lampa.Activity.push !== 'function') {
-              try { Lampa.Bell.push({ text: 'Trakt: Activity.push недоступна' }); } catch(_) {}
-              return;
-            }
-            var onWatchlist = desc && desc.component === 'trakt_watchlist';
-            var _push = function() {
-              try {
-                Lampa.Activity.push({
-                  url: '',
-                  title: (desc && desc.title) || 'Мой список',
-                  component: 'trakt_watchlist',
-                  page: 1,
-                  refresh: Date.now()
-                });
-                setTimeout(function() { try { initTraktAccountSwitchButton(); updateTraktAccountSwitchBadge(); } catch(e) {} }, 800);
-              } catch(e) {
-                try { Lampa.Bell.push({ text: 'Trakt: ошибка навигации: ' + (e && e.message || String(e)) }); } catch(_) {}
-              }
-            };
-            if (onWatchlist) {
-              try { Lampa.Activity.backward(); } catch(e) {}
-              setTimeout(_push, 150);
-            } else {
-              _push();
-            }
-          };
           if (secs.length > 0) {
-            ensureMultiwatchIdsCache().then(function(cache) {
-              var total = cache.reduce(function(n, a) { return n + (a.items || []).length; }, 0);
-              try { Lampa.Bell.push({ text: 'Trakt: ' + total + ' элементов совместного просмотра загружено' }); } catch(_) {}
-              _doReplace();
-            }).catch(function() {
-              try { Lampa.Bell.push({ text: 'Trakt: ошибка загрузки данных совместного просмотра' }); } catch(_) {}
-              _doReplace();
-            });
-          } else {
-            _doReplace();
+            setTimeout(function() { ensureMultiwatchIdsCache().catch(function() {}); }, 300);
           }
+          setTimeout(function() { try { initTraktAccountSwitchButton(); updateTraktAccountSwitchBadge(); } catch(e) {} }, 500);
           return;
         }
         var idx = selected.indexOf(item.slot);
