@@ -392,7 +392,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '1.6.19';
+  var PLUGIN_VERSION = '1.6.20';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -7405,23 +7405,27 @@
           try { invalidateWatchedCache(); } catch (e) {}
           try { invalidateWatchlistBadgeCache(); } catch (e) {}
           updateTraktAccountSwitchBadge();
-          if (secs.length > 0) {
-            setTimeout(function() {
-              ensureMultiwatchIdsCache().then(function(cache) {
-                var total = cache.reduce(function(n, a) { return n + (a.items || []).length; }, 0);
-                try { Lampa.Bell.push({ text: 'Trakt: ' + total + ' элементов совместного просмотра загружено' }); } catch(_) {}
-              }).catch(function() {
-                try { Lampa.Bell.push({ text: 'Trakt: ошибка загрузки данных совместного просмотра' }); } catch(_) {}
-              });
-            }, 300);
-          }
-          try { Lampa.Controller.toggle('head'); } catch (e) {}
           var desc = getCurrentActivityDescriptor();
-          if (desc) {
-            try {
-              Lampa.Activity.replace(Object.assign({}, desc, { refresh: Date.now() }));
-              setTimeout(function() { try { initTraktAccountSwitchButton(); updateTraktAccountSwitchBadge(); } catch(e) {} }, 800);
-            } catch (e) {}
+          try { Lampa.Controller.toggle('head'); } catch (e) {}
+          var _doReplace = function() {
+            if (desc) {
+              try {
+                Lampa.Activity.replace(Object.assign({}, desc, { refresh: Date.now() }));
+                setTimeout(function() { try { initTraktAccountSwitchButton(); updateTraktAccountSwitchBadge(); } catch(e) {} }, 800);
+              } catch(e) {}
+            }
+          };
+          if (secs.length > 0) {
+            ensureMultiwatchIdsCache().then(function(cache) {
+              var total = cache.reduce(function(n, a) { return n + (a.items || []).length; }, 0);
+              try { Lampa.Bell.push({ text: 'Trakt: ' + total + ' элементов совместного просмотра загружено' }); } catch(_) {}
+              _doReplace();
+            }).catch(function() {
+              try { Lampa.Bell.push({ text: 'Trakt: ошибка загрузки данных совместного просмотра' }); } catch(_) {}
+              _doReplace();
+            });
+          } else {
+            _doReplace();
           }
           return;
         }
