@@ -392,7 +392,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '1.6.11';
+  var PLUGIN_VERSION = '1.6.12';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -2018,10 +2018,10 @@
         fetchAllWatchlistPagesForToken(acc.token, 'movies'),
         fetchAllWatchlistPagesForToken(acc.token, 'shows')
       ]).then(function(res) {
-        var movies = new Set(res[0].map(function(i) { return i.movie && i.movie.ids && String(i.movie.ids.tmdb); }).filter(Boolean));
-        var shows  = new Set(res[1].map(function(i) { return i.show  && i.show.ids  && String(i.show.ids.tmdb);  }).filter(Boolean));
-        return { movies: movies, shows: shows };
-      }).catch(function() { return { movies: new Set(), shows: new Set() }; });
+        var items = formatTraktResults(res[0].concat(res[1])).results;
+        var ids = new Set(items.map(function(i) { return String(i.id || ''); }).filter(Boolean));
+        return { items: items, ids: ids };
+      }).catch(function() { return { items: [], ids: new Set() }; });
     })).then(function(perAccount) {
       _multiwatchIdsCache = perAccount;
       _multiwatchIdsCachePromise = null;
@@ -2030,14 +2030,23 @@
     return _multiwatchIdsCachePromise;
   }
 
-  function filterByMultiwatchIds(results) {
-    if (!_multiwatchIdsCache || !_multiwatchIdsCache.length) return results;
-    return results.filter(function(item) {
-      var tmdbId = String(item.id || '');
-      if (!tmdbId) return true;
-      var type = item.method === 'movie' ? 'movies' : 'shows';
-      return _multiwatchIdsCache.every(function(acc) { return acc[type].has(tmdbId); });
+  function filterByMultiwatchIds(primaryResults) {
+    if (!_multiwatchIdsCache || !_multiwatchIdsCache.length) return primaryResults;
+    var primaryIds = new Set(primaryResults.map(function(i) { return String(i.id || ''); }).filter(Boolean));
+    var typeMethods = {};
+    primaryResults.forEach(function(i) { if (i.method) typeMethods[i.method] = true; });
+    var typeOk = Object.keys(typeMethods).length > 0
+      ? function(item) { return !!typeMethods[item.method]; }
+      : function() { return true; };
+    var merged = primaryResults.slice();
+    _multiwatchIdsCache.forEach(function(acc) {
+      (acc.items || []).forEach(function(item) {
+        if (!typeOk(item)) return;
+        var id = String(item.id || '');
+        if (id && !primaryIds.has(id)) { merged.push(item); primaryIds.add(id); }
+      });
     });
+    return merged;
   }
 
   function requestApiWithToken(overrideToken, method, endpoint, data) {
@@ -2701,6 +2710,8 @@
         if (!mwTokens.length) return buildBase(formatted.results || []);
         return ensureMultiwatchIdsCache().then(function() {
           return buildBase(filterByMultiwatchIds(formatted.results || []));
+        }).catch(function() {
+          return buildBase(formatted.results || []);
         });
       });
     },
