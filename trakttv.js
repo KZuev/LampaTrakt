@@ -392,7 +392,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '1.6.2';
+  var PLUGIN_VERSION = '1.6.3';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -1983,6 +1983,63 @@
     });
   }
 
+  function fetchAllWatchlistPagesForToken(token, type) {
+    var all = [];
+    function go(page) {
+      return requestApiWithToken(token, 'GET', '/sync/watchlist/' + type + '?extended=full&limit=100&page=' + page)
+        .then(function(data) {
+          var items = Array.isArray(data) ? data : [];
+          all = all.concat(items);
+          return items.length >= 100 ? go(page + 1) : all;
+        })
+        .catch(function() { return all; });
+    }
+    return go(1);
+  }
+
+  var _multiwatchIdsCache = null;
+  var _multiwatchIdsCachePromise = null;
+
+  function invalidateMultiwatchIdsCache() {
+    _multiwatchIdsCache = null;
+    _multiwatchIdsCachePromise = null;
+  }
+
+  function ensureMultiwatchIdsCache() {
+    if (_multiwatchIdsCache) return Promise.resolve(_multiwatchIdsCache);
+    if (_multiwatchIdsCachePromise) return _multiwatchIdsCachePromise;
+    var mwTokens = multiAccountGetMultiwatchTokens();
+    if (!mwTokens.length) {
+      _multiwatchIdsCache = [];
+      return Promise.resolve([]);
+    }
+    _multiwatchIdsCachePromise = Promise.all(mwTokens.map(function(acc) {
+      return Promise.all([
+        fetchAllWatchlistPagesForToken(acc.token, 'movies'),
+        fetchAllWatchlistPagesForToken(acc.token, 'shows')
+      ]).then(function(res) {
+        var movies = new Set(res[0].map(function(i) { return i.movie && i.movie.ids && String(i.movie.ids.tmdb); }).filter(Boolean));
+        var shows  = new Set(res[1].map(function(i) { return i.show  && i.show.ids  && String(i.show.ids.tmdb);  }).filter(Boolean));
+        return { movies: movies, shows: shows };
+      }).catch(function() { return { movies: new Set(), shows: new Set() }; });
+    })).then(function(perAccount) {
+      _multiwatchIdsCache = perAccount;
+      _multiwatchIdsCachePromise = null;
+      return perAccount;
+    });
+    return _multiwatchIdsCachePromise;
+  }
+
+  function filterByMultiwatchIds(results) {
+    if (!_multiwatchIdsCache || !_multiwatchIdsCache.length) return results;
+    return results.filter(function(item) {
+      var tmdbId = String(item.id || '');
+      if (!tmdbId) return true;
+      var type = item.method === 'movie' ? 'movies' : 'shows';
+      return _multiwatchIdsCache.every(function(acc) { return acc[type].has(tmdbId); });
+    });
+  }
+
   function requestApiWithToken(overrideToken, method, endpoint, data) {
     var headers = {
       'Content-Type': 'application/json',
@@ -2630,14 +2687,21 @@
         var headers = response && response.headers ? response.headers : {};
         var formatted = formatTraktResults(payload);
         var pagination = resolveWatchlistPagination(headers, payload, page, limit);
-        var base = {
-          results: formatted.results || [],
-          total: pagination.total,
-          total_pages: pagination.total_pages,
-          page: pagination.page,
-          limit: pagination.limit
+        var mwEnabled = readBooleanStorage$2('trakt_multiwatch_enabled', false);
+        var mwTokens = mwEnabled ? multiAccountGetMultiwatchTokens() : [];
+        var buildBase = function(results) {
+          return enrichWithTmdbLocale({
+            results: results,
+            total: pagination.total,
+            total_pages: pagination.total_pages,
+            page: pagination.page,
+            limit: pagination.limit
+          });
         };
-        return enrichWithTmdbLocale(base);
+        if (!mwTokens.length) return buildBase(formatted.results || []);
+        return ensureMultiwatchIdsCache().then(function() {
+          return buildBase(filterByMultiwatchIds(formatted.results || []));
+        });
       });
     },
     upnext: function upnext(params) {
@@ -7279,7 +7343,7 @@
     var menuItems = [];
     allAccounts.forEach(function (d) {
       if (d.slot === active) {
-        menuItems.push({ title: '★ ' + getSlotDisplayName(d.slot) + ' ' + t$1('trakt_account_slot_active', '(активен)'), isMain: true });
+        menuItems.push({ title: '✓ ' + getSlotDisplayName(d.slot), isMain: true });
       } else {
         var isSel = selected.indexOf(d.slot) >= 0;
         menuItems.push({ title: (isSel ? '✓ ' : '    ') + getSlotDisplayName(d.slot), slot: d.slot });
@@ -7293,10 +7357,11 @@
       title: t$1('trakt_multiwatch_section', 'Совместный просмотр'),
       items: menuItems,
       onSelect: function (item) {
-        if (item.isMain) { openMultiwatchSelector(); return; }
+        if (item.isMain) { return; }
         if (item.done) {
           Lampa.Storage.set('trakt_multiwatch_enabled', selected.length > 0);
           Lampa.Storage.set('trakt_multiwatch_slots', JSON.stringify(selected));
+          invalidateMultiwatchIdsCache();
           updateTraktAccountSwitchBadge();
           try { Lampa.Controller.toggle('head'); } catch (e) {}
           return;
@@ -7304,6 +7369,7 @@
         if (item.disable) {
           Lampa.Storage.set('trakt_multiwatch_enabled', false);
           Lampa.Storage.set('trakt_multiwatch_slots', '[]');
+          invalidateMultiwatchIdsCache();
           updateTraktAccountSwitchBadge();
           try { Lampa.Controller.toggle('head'); } catch (e) {}
           return;
@@ -7311,7 +7377,8 @@
         var idx = selected.indexOf(item.slot);
         if (idx >= 0) selected.splice(idx, 1); else selected.push(item.slot);
         Lampa.Storage.set('trakt_multiwatch_slots', JSON.stringify(selected));
-        openMultiwatchSelector();
+        invalidateMultiwatchIdsCache();
+        setTimeout(openMultiwatchSelector, 0);
       },
       onBack: function () { try { Lampa.Controller.toggle('head'); } catch (e) {} }
     });
@@ -7352,6 +7419,7 @@
         try { clearResponseCache(); } catch (e) {}
         invalidateWatchedCache();
         invalidateWatchlistBadgeCache();
+        invalidateMultiwatchIdsCache();
         loadWatchedCache();
         ensureWatchlistBadgeCache();
         updateTraktAccountSwitchBadge();
