@@ -392,7 +392,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.0.6';
+  var PLUGIN_VERSION = '2.0.7';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -6809,13 +6809,12 @@
           var spanEl = el.querySelector('span');
           if (iconEl) iconEl.style.color = watched ? '#9b59d0' : 'rgba(255,255,255,0.38)';
           if (!spanEl) return;
+          var _RU_MONTHS_GEN = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
           function fmtWatchedDate(iso) {
             if (!iso) return null;
             var d = new Date(iso);
             if (isNaN(d.getTime()) || d.getFullYear() <= 1970) return null;
-            var now = new Date();
-            var mon = d.toLocaleString('ru', { month: 'short' }).replace('.', '');
-            return d.getDate() + ' ' + mon + (d.getFullYear() !== now.getFullYear() ? ' ' + d.getFullYear() : '');
+            return d.getDate() + ' ' + _RU_MONTHS_GEN[d.getMonth()] + ' ' + d.getFullYear();
           }
           var dateLabel = watched ? (fmtWatchedDate(watchedAt) || (Lampa.Lang.translate('trakt_date_unknown') || 'неизвестно')) : null;
           if (labelType === 'completed') {
@@ -8920,6 +8919,7 @@
               Lampa.Storage.set('trakt_multiwatch_slots', '[]');
               Lampa.Storage.set('trakt_multiwatch_enabled', false);
               Lampa.Storage.set('trakt_profile_slots', null);
+              Lampa.Storage.set('trakt_upcoming_movie_ids', null);
             } catch (e) {}
             Lampa.Bell.push({ text: t$1('trakttvFullClearNoty', 'Все очищено') });
             try { Lampa.Settings.update(); } catch (e) {}
@@ -11068,6 +11068,14 @@
   var _watchedCache = null;
   var _watchedCachePromise = null;
 
+  var _UPCOMING_MOVIE_KEY = 'trakt_upcoming_movie_ids';
+  function getUpcomingMovieIds() {
+    try { var r = Lampa.Storage.get(_UPCOMING_MOVIE_KEY); return r ? new Set(JSON.parse(r)) : new Set(); } catch(e) { return new Set(); }
+  }
+  function saveUpcomingMovieIds(ids) {
+    try { Lampa.Storage.set(_UPCOMING_MOVIE_KEY, JSON.stringify(Array.from(ids))); } catch(e) {}
+  }
+
   function ensureWatchedCache() {
     if (_watchedCache) return Promise.resolve(_watchedCache);
     if (_watchedCachePromise) return _watchedCachePromise;
@@ -12239,7 +12247,14 @@
       filter: function filter(results) {
         var todayStr = new Date().toISOString().slice(0, 10);
         var currentYear = new Date().getFullYear();
+        var upcomingIds = getUpcomingMovieIds();
         return results.filter(function(item) {
+          if (item.card_type === 'movie') {
+            // Hide movies that appear in the Calendar's upcoming digital releases
+            if (item.id && upcomingIds.has(String(item.id))) return false;
+            // Hide movies with no known release date (unreleased or untracked)
+            if (!item.trakt_released) return false;
+          }
           var rel = item.trakt_released;
           if (rel && /^\d{4}-\d{2}-\d{2}/.test(String(rel))) {
             return String(rel).slice(0, 10) <= todayStr;
@@ -12426,6 +12441,11 @@
 
             return Promise.all(movieReleasePromises).then(function (movieFetched) {
               var validMovies = movieFetched.filter(function (m) { return m !== null; });
+
+              // Persist IDs of movies with upcoming digital releases so the watchlist row can exclude them
+              saveUpcomingMovieIds(new Set(
+                validMovies.map(function(m) { return m.movie && m.movie.ids && String(m.movie.ids.tmdb); }).filter(Boolean)
+              ));
 
               // Build show cards
               var showResults = shows.map(function (item) {
