@@ -388,7 +388,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.1.8';
+  var PLUGIN_VERSION = '2.1.9';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -11146,6 +11146,9 @@
     var tmdbId = String(data.id);
     var cardNode = typeof cardInstance.render === 'function' ? cardInstance.render(true) : null;
     var cardView = cardNode && cardNode.querySelector('.card__view');
+    if (cardView && !cardView.getAttribute('data-trakt-movie-id')) {
+      cardView.setAttribute('data-trakt-movie-id', tmdbId);
+    }
     _applyDigitalBadge(cardView, tmdbId);
   }
   function refreshDigitalBadgesDOM() {
@@ -11314,6 +11317,9 @@
       applyLampaHideClasses();
       initTraktAccountSwitchButton();
       setTimeout(syncPlaybackFromTrakt, 2000);
+      if (Object.keys(getUpcomingMovieDates()).length > 0 || getSoonMovieIds().size > 0) {
+        _digitalDatesAvailable = true;
+      }
     },
     /**
      * Добавляет блок со связанными списками в карточку медиа
@@ -12204,8 +12210,8 @@
         var upcomingIds = getUpcomingMovieIds();
         return results.filter(function(item) {
           if (item.card_type === 'movie') {
-            // Hide movies that appear in the Calendar's upcoming digital releases
-            if (item.id && upcomingIds.has(String(item.id))) return false;
+            // v2.1.9: Show movies with upcoming digital releases in watchlist row (with badge)
+            if (item.id && upcomingIds.has(String(item.id))) return true;
             // Hide movies with no known release date (unreleased or untracked)
             if (!item.trakt_released) return false;
           }
