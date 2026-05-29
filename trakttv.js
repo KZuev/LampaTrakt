@@ -392,7 +392,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.0.9';
+  var PLUGIN_VERSION = '2.1.0';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -13253,7 +13253,8 @@
       line.type = normalizedType === 'show' ? 'tv' : normalizedType;
       line.search_type = normalizedType;
       line.query = normalizedQuery;
-      return line;
+      if (normalizedType === 'list') return line;
+      return enrichWithTmdbLocale(line);
     });
   }
   function buildMainDefinitions() {
