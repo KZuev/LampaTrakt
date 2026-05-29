@@ -392,7 +392,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.0.2';
+  var PLUGIN_VERSION = '2.0.3';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -12042,18 +12042,9 @@
     registerMainScreenAutoLoad();
   }
   function registerMainScreenAutoLoad() {
-    Lampa.Listener.follow('line', function (e) {
-      if (!e || e.type !== 'create' || !e.data || e.data.trakt_row !== 'upnext') return;
-      setTimeout(function () {
-        try {
-          var active = Lampa.Activity && typeof Lampa.Activity.active === 'function' ? Lampa.Activity.active() : null;
-          var scrollEl = active && active.scroll && typeof active.scroll.render === 'function' ? active.scroll.render()[0] : null;
-          if (!scrollEl) return;
-          scrollEl.scrollTop = scrollEl.scrollHeight;
-          setTimeout(function () { scrollEl.scrollTop = 0; }, 150);
-        } catch (err) {}
-      }, 200);
-    });
+    // Scroll-hack removed — it triggered 'visible' on items-line components before
+    // their build() completed (this.html = null), causing crash in onVisible.
+    // Lampa handles lazy-loading of below-fold rows natively as the user scrolls.
   }
   function registerSourceFiltersCacheInvalidation() {
     if (!Lampa || !Lampa.Storage || !Lampa.Storage.listener || typeof Lampa.Storage.listener.follow !== 'function') return;
