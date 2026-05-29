@@ -2506,8 +2506,6 @@
     return "/sync/watchlist/".concat(mediaType, "/").concat(sort, "?").concat(query.toString());
   }
 
-  /* duplicate ensureHeaders removed */
-
   var api$1 = {
     addToHistory: addToHistory$1,
     watchedMovies: function() { return requestApi('GET', '/sync/watched/movies'); },
@@ -9837,7 +9835,6 @@
     var rec = completionCache.get(key);
     var now = nowSec();
 
-    // DEBUG: Log canFinishOnce check
     if (Lampa.Storage.field('trakt_enable_logging')) {
       slog('DEBUG - canFinishOnce check:', {
         key: key,
@@ -10057,7 +10054,6 @@
     var ttl = getTTL();
     var now = nowSec();
 
-    // DEBUG: Log intent marking
     if (Lampa.Storage.field('trakt_enable_logging')) {
       slog('DEBUG - markFinishIntent called:', {
         key: key,
@@ -10126,7 +10122,7 @@
       return _regenerator().w(function (_context5) {
         while (1) switch (_context5.n) {
           case 0:
-            token = Lampa.Storage.get('trakt_token'); // DEBUG: Log finish function call
+            token = Lampa.Storage.get('trakt_token');
             if (Lampa.Storage.field('trakt_enable_logging')) {
               slog('DEBUG - finish function called:', {
                 mediaId: media.id,
@@ -10159,7 +10155,6 @@
             requestInProgress[key] = true;
             // END -- RACE CONDITION FIX
             _context5.p = 3;
-            // DEBUG: Log key used in finish
             if (Lampa.Storage.field('trakt_enable_logging')) {
               slog('DEBUG - finish function key:', {
                 key: key,
@@ -10659,7 +10654,6 @@
           if (!media.ids && meta.ids) media.ids = meta.ids;
         }
 
-        // DEBUG: Log media object and hash source
         if (this.isLoggingEnabled()) {
           slog('DEBUG - Timeline route media:', {
             cardId: card.id,
@@ -10672,7 +10666,6 @@
         }
         var key = getCompletionKey(media);
 
-        // DEBUG: Log key generation
         if (this.isLoggingEnabled()) {
           slog('DEBUG - Timeline route key generation:', {
             key: key,
@@ -11495,9 +11488,6 @@
     onFullCardReady: function onFullCardReady(e) {
       if (!e || !e.data) return;
       if (!e.object || !e.object.activity || typeof e.object.activity.render !== 'function') return;
-      // Видалено кнопку TraktHistory.addHistoryButton та кнопку watchlist — об'єднані у статус-кнопку
-      // const historyButton = TraktHistory.addHistoryButton(e.data);
-      // e.object.activity.render().find('.full-start-new__buttons').append(historyButton);
 
       // Додаємо блок з пов'язаними списками
       // Перевіряємо наявність необхідних даних для списків
