@@ -392,7 +392,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.0.8';
+  var PLUGIN_VERSION = '2.0.9';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -6023,6 +6023,10 @@
       trakt_show_completed: {
         ru: "Просмотрено полностью",
       },
+      trakt_menu_mark_completed: {
+        ru: "Отметить как просмотрено полностью",
+        en: "Mark as fully watched",
+      },
       trakt_show_in_progress: {
         ru: "В процессе",
       },
@@ -6859,7 +6863,7 @@
           var listParams = normalizeCardParams(data);
           function showTraktMenu(watchlistState, withMembership) {
             var statusItems = isShow ? [
-              { title: Lampa.Lang.translate('trakt_show_completed'), action: 'completed' },
+              { title: Lampa.Lang.translate('trakt_menu_mark_completed'), action: 'completed' },
               { title: Lampa.Lang.translate('trakt_menu_not_watched'), action: 'not_watched' }
             ] : [
               { title: Lampa.Lang.translate('trakt_watched_now'), action: 'now' },
