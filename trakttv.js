@@ -298,9 +298,9 @@
   }
 
   /**
-   * Генерує зображення з текстом за допомогою Canvas API.
-   * @param {string} text - Текст для відображення на зображенні.
-   * @returns {string} - URL зображення у форматі data:image/png;base64.
+   * Создаёт изображение с текстом через Canvas API.
+   * @param {string} text - Текст для отображения на изображении.
+   * @returns {string} - URL изображения в формате data:image/png;base64.
    */
   function textToImage(text) {
     var canvas = document.createElement('canvas');
@@ -310,17 +310,14 @@
     canvas.width = width;
     canvas.height = height;
 
-    // Фон
-    context.fillStyle = '#1a202c'; // Темно-сірий фон
+    context.fillStyle = '#1a202c';
     context.fillRect(0, 0, width, height);
 
-    // Налаштування тексту
-    context.fillStyle = '#ffffff'; // Білий колір тексту
+    context.fillStyle = '#ffffff';
     context.font = 'bold 48px Arial';
     context.textAlign = 'center';
     context.textBaseline = 'middle';
 
-    // Розбивка тексту на рядки
     var words = text.split(' ');
     var lines = [];
     var currentLine = words[0] || '';
@@ -338,7 +335,6 @@
     }
     lines.push(currentLine);
 
-    // Відображення тексту
     var lineHeight = 58;
     var startY = (height - lines.length * lineHeight) / 2 + lineHeight / 2;
     lines.forEach(function (line, index) {
@@ -392,7 +388,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.1.2';
+  var PLUGIN_VERSION = '2.1.3';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -892,14 +888,10 @@
       shows: []
     };
 
-    // Логування для налагодження
 
-    // Перевірка, чи data має структуру для епізодів (викликається з watching.js)
     if (data.episodes) {
-      // Якщо це епізоди, додаємо їх до shows
       body.shows.push({
         ids: data.ids || {},
-        // Використовуємо передані ids або порожній об'єкт
         seasons: [{
           number: data.season_number || 1,
           episodes: data.episodes.map(function (ep) {
@@ -913,9 +905,7 @@
       return requestApi('POST', '/sync/history', body);
     }
 
-    // Перевірка, чи data має структуру для фільму
     if (data.method === 'movie') {
-      // Перевірка наявності необхідних даних
       if (!data.id) {
         return Promise.reject(new Error(Lampa.Lang.translate('trakttv_movie_id_missed')));
       }
@@ -927,14 +917,11 @@
       });
       return requestApi('POST', '/sync/history', body);
     }
-    // Перевірка, чи data має структуру для серіалу
     else if (data.method === 'show' || data.method === 'tv') {
-      // Перевірка наявності необхідних даних
       if (!data.id) {
         return Promise.reject(new Error(Lampa.Lang.translate('trakttv_show_id_missed')));
       }
       if (mode === 'all') {
-        // Додаємо весь серіал в історію
         body.shows.push({
           ids: data.ids || {
             tmdb: data.id
@@ -944,15 +931,11 @@
         return requestApi('POST', '/sync/history', body);
       } else if (mode === 'last_season' || mode === 'last_episode') {
         var _data$ids;
-        // Спочатку отримуємо історію серіалу, щоб визначити які епізоди вже переглянуті
         return getShowHistory(data.id, (_data$ids = data.ids) === null || _data$ids === void 0 ? void 0 : _data$ids.trakt).then(function (historyData) {
           var _data$ids2;
-          // Отримуємо інформацію про серіал для визначення всіх сезонів та епізодів
           return getShowInfo(data.id, (_data$ids2 = data.ids) === null || _data$ids2 === void 0 ? void 0 : _data$ids2.trakt).then(function (showInfo) {
-            // Отримуємо останній сезон
             var lastSeason = showInfo.last_season || data.season || 1;
 
-            // Отримуємо список всіх переглянутих епізодів
             var watchedEpisodes = {};
             if (historyData && historyData.length > 0) {
               historyData.forEach(function (item) {
@@ -969,25 +952,21 @@
               });
             }
 
-            // Отримуємо інформацію про останній сезон
             var seasonUrl = Lampa.TMDB.api('tv/' + data.id + '/season/' + lastSeason + '?api_key=' + Lampa.TMDB.key() + '&language=' + Lampa.Storage.get('language', 'ru'));
             return new Promise(function (resolve, reject) {
               var network = new Lampa.Reguest();
               network.silent(seasonUrl, function (seasonData) {
                 if (seasonData && seasonData.episodes && seasonData.episodes.length > 0) {
-                  // Знаходимо всі епізоди сезону
                   var allEpisodes = seasonData.episodes.map(function (e) {
                     return e.episode_number;
                   }).sort(function (a, b) {
                     return a - b;
                   });
 
-                  // Знаходимо невідмічені епізоди
                   var unwatchedEpisodes = allEpisodes.filter(function (e) {
                     return !watchedEpisodes[lastSeason] || !watchedEpisodes[lastSeason].includes(e);
                   });
                   if (mode === 'last_episode' && unwatchedEpisodes.length > 0) {
-                    // Додаємо перший невідмічений епізод
                     var nextEpisode = unwatchedEpisodes[0];
                     body.shows.push({
                       ids: data.ids || {
@@ -1002,7 +981,6 @@
                       }]
                     });
                   } else if (mode === 'last_season' && unwatchedEpisodes.length > 0) {
-                    // Додаємо всі невідмічені епізоди сезону
                     body.shows.push({
                       ids: data.ids || {
                         tmdb: data.id
@@ -1018,7 +996,6 @@
                       }]
                     });
                   } else {
-                    // Якщо всі епізоди вже переглянуті, додаємо весь сезон
                     body.shows.push({
                       ids: data.ids || {
                         tmdb: data.id
@@ -1031,7 +1008,6 @@
                   }
                   resolve(requestApi('POST', '/sync/history', body));
                 } else {
-                  // Якщо не вдалося отримати дані про епізоди, додаємо весь сезон
                   body.shows.push({
                     ids: data.ids || {
                       tmdb: data.id
@@ -1044,7 +1020,6 @@
                   resolve(requestApi('POST', '/sync/history', body));
                 }
               }, function () {
-                // У випадку помилки додаємо весь сезон
                 body.shows.push({
                   ids: data.ids || {
                     tmdb: data.id
@@ -1092,8 +1067,6 @@
           });
         });
       } else {
-        // Якщо mode не вказаний або інший, додаємо весь серіал
-        // Використовуємо передані ids або формуватимемо за TMDB ID
         body.shows.push({
           ids: data.ids || {
             tmdb: data.id
@@ -1103,7 +1076,6 @@
         return requestApi('POST', '/sync/history', body);
       }
     } else {
-      // Якщо тип вмісту не визначено, повертаємо помилку
       return Promise.reject(new Error(Lampa.Lang.translate('trakttv_unknown_content')));
     }
   }
@@ -1132,15 +1104,12 @@
     });
   }
 
-  // Функція для отримання інформації про серіал з TMDB або Trakt
   function getShowInfo(tmdbId) {
     var traktId = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
     return new Promise(function (resolve, reject) {
-      // Якщо переданий Trakt ID, отримуємо інформацію з Trakt
       if (traktId) {
         requestApi('GET', "/shows/".concat(traktId, "?extended=full")).then(function (showData) {
           if (showData && showData.seasons) {
-            // Знаходимо останній сезон (виключаючи спеціальні сезони з номером 0)
             var regularSeasons = showData.seasons.filter(function (s) {
               return s.number > 0;
             });
@@ -1148,11 +1117,9 @@
               return prev.number > current.number ? prev : current;
             }) : null;
 
-            // Якщо знайдено останній сезон, отримуємо інформацію про його епізоди
             if (lastSeasonData) {
               requestApi('GET', "/shows/".concat(traktId, "/seasons/").concat(lastSeasonData.number, "?extended=full")).then(function (seasonData) {
                 if (seasonData && seasonData.episodes && seasonData.episodes.length > 0) {
-                  // Знаходимо останній епізод сезону
                   var lastEpisodeData = seasonData.episodes.reduce(function (prev, current) {
                     return prev.number > current.number ? prev : current;
                   });
@@ -1169,8 +1136,7 @@
                   });
                 }
               })["catch"](function () {
-                // Якщо не вдалося отримати дані про епізоди, повертаємо хоча б номер сезону
-                resolve({
+                  resolve({
                   last_season: lastSeasonData.number,
                   last_episode: 1
                 });
@@ -1188,7 +1154,6 @@
             });
           }
         })["catch"](function () {
-          // У випадку помилки повертаємо значення за замовчуванням
           resolve({
             last_season: 1,
             last_episode: 1
@@ -1197,12 +1162,10 @@
         return;
       }
 
-      // Використовуємо Lampa.TMDB для отримання інформації про серіал
       var url = Lampa.TMDB.api('tv/' + tmdbId + '?api_key=' + Lampa.TMDB.key() + '&language=' + Lampa.Storage.get('language', 'ru'));
       var network = new Lampa.Reguest();
       network.silent(url, function (data) {
         if (data && data.seasons) {
-          // Знаходимо останній сезон (виключаючи спеціальні сезони з номером 0)
           var regularSeasons = data.seasons.filter(function (s) {
             return s.season_number > 0;
           });
@@ -1210,13 +1173,11 @@
             return prev.season_number > current.season_number ? prev : current;
           }) : null;
 
-          // Якщо знайдено останній сезон, отримуємо інформацію про його епізоди
           if (lastSeasonData) {
             var seasonUrl = Lampa.TMDB.api('tv/' + tmdbId + '/season/' + lastSeasonData.season_number + '?api_key=' + Lampa.TMDB.key() + '&language=' + Lampa.Storage.get('language', 'ru'));
             network.silent(seasonUrl, function (seasonData) {
               if (seasonData && seasonData.episodes && seasonData.episodes.length > 0) {
-                // Знаходимо останній епізод сезону
-                var lastEpisodeData = seasonData.episodes.reduce(function (prev, current) {
+                  var lastEpisodeData = seasonData.episodes.reduce(function (prev, current) {
                   return prev.episode_number > current.episode_number ? prev : current;
                 });
                 resolve({
@@ -1232,7 +1193,6 @@
                 });
               }
             }, function () {
-              // Якщо не вдалося отримати дані про епізоди, повертаємо хоча б номер сезону
               resolve({
                 last_season: lastSeasonData.season_number,
                 last_episode: 1
@@ -1251,7 +1211,6 @@
           });
         }
       }, function () {
-        // У випадку помилки повертаємо значення за замовчуванням
         resolve({
           last_season: 1,
           last_episode: 1
@@ -2205,11 +2164,9 @@
     return card;
   }
 
-  // Функція для отримання історії серіалу за TMDB ID
   function getShowHistory(tmdbId) {
     var traktId = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
     return new Promise(function (resolve, reject) {
-      // Якщо переданий Trakt ID, отримуємо інформацію з Trakt
       if (traktId) {
         requestApi('GET', "/shows/".concat(traktId, "/history")).then(function (historyData) {
           resolve(historyData);
@@ -2219,12 +2176,10 @@
         return;
       }
 
-      // Спочатку отримуємо Trakt ID за TMDB ID
       requestApi('GET', "/search/tmdb/".concat(tmdbId, "?type=show")).then(function (response) {
         if (response && response.length > 0 && response[0].show && response[0].show.ids.trakt) {
           var foundTraktId = response[0].show.ids.trakt;
 
-          // Отримуємо історію серіалу за Trakt ID
           requestApi('GET', "/sync/history/shows/".concat(foundTraktId)).then(function (historyData) {
             resolve(historyData);
           })["catch"](function (error) {
@@ -3183,7 +3138,6 @@
         return formatted;
       });
     },
-    // Новий метод для отримання списків, пов'язаних з медіа (фільмом або серіалом)
     getMediaLists: function getMediaLists(params) {
       return new Promise(function (resolve, reject) {
         var tmdbId = params.id;
@@ -3194,8 +3148,7 @@
           return;
         }
 
-        // Спочатку отримуємо Trakt ID за TMDB ID
-        requestApi('GET', "/search/tmdb/".concat(tmdbId, "?type=").concat(mediaType)).then(function (searchResponse) {
+          requestApi('GET', "/search/tmdb/".concat(tmdbId, "?type=").concat(mediaType)).then(function (searchResponse) {
           var traktId = null;
           if (searchResponse && searchResponse.length > 0) {
             if (mediaType === 'movie' && searchResponse[0].movie) {
@@ -6068,11 +6021,11 @@
   }
 
   /**
-   * Утиліти для TraktTV timetable
+   * Утилиты для TraktTV timetable
    */
 
   /**
-   * Повертає сьогоднішню дату у форматі YYYY-MM-DD
+   * Возвращает сегодняшнюю дату в формате YYYY-MM-DD
    */
   function getTodayString() {
     var now = new Date();
@@ -6083,7 +6036,7 @@
   }
 
   /**
-   * Нормалізує URL постера
+   * Нормализует URL постера
    * @param {Array<string>} posterArr
    * @returns {string}
    */
@@ -6391,7 +6344,6 @@
             this.scroll = scroll;
             this.html = html;
 
-            // Відразу активуємо фокус
             if (this.activity && typeof this.activity.toggle === 'function') {
               this.activity.toggle();
             }
@@ -6530,27 +6482,20 @@
   }
 
   /**
-   * Файл з SVG іконками для використання в плагіні
-   * Це дозволяє уникнути дублювання коду та легко змінювати іконки
    */
 
-  // Стилі для заголовків з іконками
   var HEADER_STYLE = 'display:flex; align-items:center; gap:10px;';
   var ICON_STYLE = 'width:52px; height:52px;';
   var LINE_TITLE_STYLE = 'display:inline-flex; align-items:center; gap:.4em;';
   var LINE_ICON_STYLE = 'width:1em; height:1em; display:inline-block;';
   var TRAKT_ICON_CLASS = 'trakt-brand-icon';
 
-  // Основна іконка Trakt.TV
   var TRAKT_ICON = "<svg class=\"".concat(TRAKT_ICON_CLASS, "\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 48 48\" fill=\"none\" aria-hidden=\"true\" focusable=\"false\">\n  <path fill=\"currentColor\" d=\"M47.87,9.58c-.05-.39-.13-.77-.23-1.15-.19-.74-.46-1.45-.79-2.14-.15-.3-.31-.6-.5-.88-.36-.6-.77-1.16-1.24-1.69C43.03,1.43,40.05,0,36.73,0H11.26C5.04,0,0,5.05,0,11.27v25.48C0,42.96,5.04,48,11.26,48h25.47c6.22,0,11.27-5.04,11.27-11.26V11.27c0-.57-.04-1.13-.13-1.69ZM47,36.74c0,5.66-4.61,10.25-10.26,10.25H11.26c-5.66,0-10.25-4.6-10.25-10.25V11.27C1,5.61,5.6,1,11.26,1h25.47c3.04,0,5.77,1.33,7.66,3.43l-22.85,22.86-8.62-8.62-1.46,1.46,14.4,14.4,1.46-1.47-4.31-4.31L45.61,6.14c.18.29.33.6.47.91l-21.69,21.7,3.62,3.62,1.46-1.46-2.16-2.16,19.47-19.48c.08.4.14.8.17,1.21l-18.26,18.27,1.46,1.46,16.83-16.84v23.36ZM15.77,15.82l7.93,7.93,1.46-1.48-7.93-7.92-1.46,1.46ZM13.62,17.98l7.92,7.93,1.47-1.48-7.93-7.92-1.46,1.47ZM6.67,35.12V12.88c0-3.42,2.78-6.2,6.2-6.2h20.79v-2.08H12.87c-4.56,0-8.28,3.71-8.28,8.28v22.23c0,4.57,3.72,8.29,8.28,8.29h22.24c4.57,0,8.28-3.72,8.28-8.29v-3.51h-2.08v3.51c0,3.42-2.78,6.21-6.2,6.21H12.87c-3.42,0-6.2-2.79-6.2-6.21Z\"/>\n</svg>");
 
-  // Іконка для watchlist
   var WATCHLIST_ICON = "<svg fill=\"currentColor\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 512 512\"><!--!Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.--><path d=\"M152.1 38.2c9.9 8.9 10.7 24 1.8 33.9l-72 80c-4.4 4.9-10.6 7.8-17.2 7.9s-12.9-2.4-17.6-7L7 113C-2.3 103.6-2.3 88.4 7 79s24.6-9.4 33.9 0l22.1 22.1 55.1-61.2c8.9-9.9 24-10.7 33.9-1.8zm0 160c9.9 8.9 10.7 24 1.8 33.9l-72 80c-4.4 4.9-10.6 7.8-17.2 7.9s-12.9-2.4-17.6-7L7 273c-9.4-9.4-9.4-24.6 0-33.9s24.6-9.4 33.9 0l22.1 22.1 55.1-61.2c8.9-9.9 24-10.7 33.9-1.8zM224 96c0-17.7 14.3-32 32-32l224 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-224 0c-17.7 0-32-14.3-32-32zm0 160c0-17.7 14.3-32 32-32l224 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-224 0c-17.7 0-32-14.3-32-32zM160 416c0-17.7 14.3-32 32-32l288 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-288 0c-17.7 0-32-14.3-32-32zM48 368a48 48 0 1 1 0 96 48 48 0 1 1 0-96z\"/></svg>";
 
-  // Іконка для історії (галочка)
   var HISTORY_ICON = "<svg fill=\"currentColor\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 448 512\"><!--!Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.--><path d=\"M438.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7 393.4 105.4c12.5-12.5 32.8-12.5 45.3 0z\"/></svg>";
 
-  // Функція для створення заголовка з іконкою
   function createHeaderWithIcon(icon, text) {
     return "<div class=\"trakt-header\" style=\"".concat(HEADER_STYLE, "\"><div class=\"trakt-icon\" style=\"").concat(ICON_STYLE, "\">").concat(icon, "</div><div class=\"trakt-title\">").concat(text, "</div></div>");
   }
@@ -6570,7 +6515,6 @@
     return root;
   }
 
-  // Експортуємо всі іконки та утиліти
   var icons = {
     TRAKT_ICON: TRAKT_ICON,
     WATCHLIST_ICON: WATCHLIST_ICON,
@@ -6798,7 +6742,6 @@
   };
 
   var TraktHistory = {
-    // Функція для відображення прогресу перегляду серіалу
     showWatchProgress: function showWatchProgress(data, element) {
       var _A = typeof api$1 !== 'undefined' && api$1 || null;
       var method = element && element.object && element.object.method;
@@ -7015,7 +6958,6 @@
       button.className = 'full-start__button selector trakt_history-button';
       button.innerHTML = "\n               ".concat(icons.HISTORY_ICON, " \n                <span>").concat(Lampa.Lang.translate('trakt_history_not_in'), "</span>\n");
 
-      // Перевіряємо чи є в історії
       inHistory(data.movie, function (isInHistory) {
         updateButtonStyle(button, isInHistory);
       }, function () {
@@ -7033,14 +6975,11 @@
         }
       }
 
-      // Обробник кліку для кнопки, що працює на всіх платформах
       $(button).on('hover:enter', function () {
         var isInHistory = button.classList.contains('added');
         if (isInHistory) {
-          // Вже в історії, видаляємо
           var _type = data.movie.first_air_date ? 'show' : 'movie';
 
-          // Створюємо об'єкт для передачі в API
           var _apiData = {
             method: _type === 'movie' ? 'movie' : 'show',
             id: data.movie.id,
@@ -7096,7 +7035,6 @@
         }
         var type = data.movie.first_air_date ? 'show' : 'movie';
 
-        // Створюємо об'єкт для передачі в API
         var apiData = {
           method: type === 'movie' ? 'movie' : 'show',
           id: data.movie.id,
@@ -7305,7 +7243,6 @@
       toggleOption: 'trakttv_show_recommendations'
     }];
 
-    // Додаємо пункти меню для списків Trakt
     items.push({
       title: myListsTitle,
       component: 'trakt_my_lists'
@@ -7345,13 +7282,10 @@
           });
         },
         onLong: function onLong(a) {
-          // Визначаємо ключ для перемикання
           var toggleKey = a.toggleOption || a.component;
 
-          // Отримуємо поточне значення
           var currentValue = Lampa.Storage.field(toggleKey, true);
 
-          // Перемикаємо значення
           if (currentValue === true) {
             Lampa.Bell.push({
               text: Lampa.Lang.translate('trakt_componentDisable')
@@ -7372,7 +7306,6 @@
     });
     menuList.append(combineButton);
 
-    // Перевіряємо кожен елемент локального сховища і додаємо відповідні пункти меню
     items.forEach(function (item) {
       var key = item.component;
       syncSideMenuItem(key);
@@ -8253,7 +8186,6 @@
   }
 
   function main() {
-    // Додаємо компонент Trakt.TV у налаштування
     Lampa.SettingsApi.addComponent({
       component: 'trakt',
       name: 'Trakt.TV',
@@ -8274,7 +8206,6 @@
       }
     });
 
-    // Користувацька інфа
     Lampa.SettingsApi.addParam({
       component: 'trakt',
       param: {
@@ -8380,7 +8311,6 @@
         });
       }
     });
-    // Кнопка авторизації — чистий Device OAuth
     Lampa.SettingsApi.addParam({
       component: 'trakt',
       param: {
@@ -8843,7 +8773,6 @@
       });
     }
 
-    // Параметр для ввімкнення/вимкнення відстеження перегляду
     Lampa.SettingsApi.addParam({
       component: 'trakt',
       param: {
@@ -8857,7 +8786,6 @@
       }
     });
 
-    // Параметр для вибору мінімального відсотку перегляду
     Lampa.SettingsApi.addParam({
       component: 'trakt',
       param: {
@@ -8881,7 +8809,6 @@
       }
     });
 
-    // Параметр для ввімкнення/вимкнення логування
     Lampa.SettingsApi.addParam({
       component: 'trakt',
       param: {
@@ -9400,7 +9327,6 @@
     return null;
   }
 
-  // Окрема функція для poll авторизації
   function pollAuth(data, modalInstance) {
     var originalIntervalSec = Number(data && data.interval);
     var originalIntervalMs = Number.isFinite(originalIntervalSec) && originalIntervalSec > 0 ? originalIntervalSec * 1000 : 5000;
@@ -9568,7 +9494,7 @@
 
   var completionCache = new Map(); // key -> { ts, token, status }
   var lockQueues = new Map(); // key -> array of resolvers for queued locks
-  var requestInProgress = {}; // Об'єкт для відстеження запитів, що виконуються
+  var requestInProgress = {};
   var hashMetaCache = new Map(); // hash -> { ts, card, season, episode, ids }
   var HASH_META_TTL_SEC = 60 * 60 * 24 * 7; // 7 days
 
@@ -10112,9 +10038,9 @@
     return _finish.apply(this, arguments);
   }
   /**
-   * Визначає тип вмісту (фільм чи серіал) на основі даних картки
-   * @param {Object} card - Картка вмісту
-   * @returns {string} 'movie' або 'show'
+   * Определяет тип контента (фильм или сериал) на основе данных карточки
+   * @param {Object} card - Карточка контента
+   * @returns {string} 'movie' или 'show'
    */
   function _finish() {
     _finish = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5(media) {
@@ -10395,7 +10321,7 @@
             return _context5.a(2, result);
           case 5:
             _context5.p = 5;
-            delete requestInProgress[key]; // Завжди знімаємо блокування
+            delete requestInProgress[key];
             return _context5.f(5);
           case 6:
             return _context5.a(2);
@@ -10419,18 +10345,18 @@
   var isInitialized$1 = false;
 
   /**
-   * Модуль для відстеження перегляду в Trakt.TV
+   * Модуль отслеживания просмотра в Trakt.TV
    */
   var watching = {
     /**
-     * Перевіряє, чи увімкнено логування
-     * @returns {boolean} true, якщо логування увімкнено
+     * Проверяет, включено ли логирование
+     * @returns {boolean} true если логирование включено
      */
     isLoggingEnabled: function isLoggingEnabled() {
       return Lampa.Storage.field('trakt_enable_logging');
     },
     /**
-     * Ініціалізує обробники подій відстеження перегляду
+     * Инициализирует обработчики событий отслеживания просмотра
      */
     init: function init() {
       if (isInitialized$1) {
@@ -10444,25 +10370,22 @@
       loadHashMetaCache();
       slog('watching.init');
 
-      // Слідкуємо за оновленнями Timeline
       if (window.Lampa && Lampa.Timeline && Lampa.Timeline.listener) {
         Lampa.Timeline.listener.follow('update', this.processTimelineUpdate.bind(this));
         slog('Timeline listener attached');
       }
 
-      // Слідкуємо за стартом програвача для збереження поточної картки
       if (window.Lampa && Lampa.Player && Lampa.Player.listener) {
         Lampa.Player.listener.follow('start', this.onPlayerStart.bind(this));
         slog('Player listener attached');
       }
 
-      // Підписуємось на список файлів торрента для попереднього заповнення кешу hash→episode
       if (window.Lampa && Lampa.Listener) {
         Lampa.Listener.follow('torrent_file', this.onTorrentFileList.bind(this));
       }
     },
     /**
-     * Обробник списку файлів торрента — заповнює hashMetaCache для всього сезону одразу
+     * Обработчик списка файлов торрента — заполняет hashMetaCache для всего сезона
      */
     onTorrentFileList: function onTorrentFileList(e) {
       if (!e || !Array.isArray(e.items) || !e.items.length) return;
@@ -10483,8 +10406,8 @@
       });
     },
     /**
-     * Обробник події старту програвача
-     * @param {Object} data - Дані події
+     * Обработчик события старта плеера
+     * @param {Object} data - Данные события
      */
     onPlayerStart: function onPlayerStart(data) {
       if (this.isLoggingEnabled()) {
@@ -10503,13 +10426,11 @@
         return;
       }
 
-      // Зберігаємо поточну картку для подальшої обробки
       Lampa.Storage.set('trakt_last_card', card);
       if (this.isLoggingEnabled()) {
         slog('Card saved to storage', card);
       }
 
-      // Кешуємо відповідність hash -> card/season/episode для стабільного фінішу
       var timeline = data && data.timeline;
       var hash = timeline && timeline.hash;
       if (hash) {
@@ -10537,16 +10458,14 @@
     },
     /**
      * Обробник оновлень Timeline
-     * @param {Object} data - Дані події
+     * @param {Object} data - Данные события
      */
     processTimelineUpdate: function processTimelineUpdate(data) {
-      // Додаткове логування для налагодження подвійних викликів
       slog('processTimelineUpdate called with data:', data);
       if (this.isLoggingEnabled()) {
         slog('Timeline update received', data);
       }
 
-      // Перевіряємо налаштування trakt_enable_watching
       var enableWatching = Lampa.Storage.field('trakt_enable_watching');
       slog('trakt_enable_watching setting:', enableWatching);
       if (!enableWatching) {
@@ -10636,11 +10555,9 @@
         return;
       }
 
-      // Перевіряємо, чи потрібно додати серіал в "Смотрю"
       slog('Calling checkAndAddToShow');
       this.checkAndAddToShow(card, hash, percent, token);
 
-      // Інтеграція нового фініш-флоу: при досягненні порогу формуємо key і викликаємо finish()
       slog('Checking if should finish with idempotency, percent:', percent, 'minProgress:', minProgress);
       var watchedByPercent = (typeof percent === 'number' ? percent : 0) >= minProgress;
       var watchedByTime = road && road.time && road.duration ? road.time / road.duration * 100 >= minProgress : false;
@@ -10690,14 +10607,13 @@
       }
     },
     /**
-     * Отримує поточну картку
-     * @returns {Object|null} Поточна картка
+     * Получает текущую карточку
+     * @returns {Object|null} Текущая карточка
      */
     getCurrentCard: function getCurrentCard() {
       var card = Lampa.Activity && Lampa.Activity.active && Lampa.Activity.active() && (Lampa.Activity.active().card_data || Lampa.Activity.active().card || Lampa.Activity.active().movie) || null;
       if (!card) card = Lampa.Storage.get('trakt_last_card', null);
 
-      // Додаткове логування для налагодження
       slog('getCurrentCard - Activity.active():', Lampa.Activity && Lampa.Activity.active && Lampa.Activity.active());
       slog('getCurrentCard - card_data:', Lampa.Activity && Lampa.Activity.active && Lampa.Activity.active() && Lampa.Activity.active().card_data);
       slog('getCurrentCard - card:', Lampa.Activity && Lampa.Activity.active && Lampa.Activity.active() && Lampa.Activity.active().card);
@@ -10710,17 +10626,16 @@
       return card;
     },
     /**
-     * Перевіряє, чи потрібно додати серіал в "Смотрю"
-     * @param {Object} card - Картка серіалу
-     * @param {string} hash - Хеш епізоду
-     * @param {number} percent - Відсоток перегляду
-     * @param {string} token - Токен авторизації
+     * Проверяет, нужно ли добавить сериал в "Смотрю"
+     * @param {Object} card - Карточка сериала
+     * @param {string} hash - Хеш эпизода
+     * @param {number} percent - Процент просмотра
+     * @param {string} token - Токен авторизации
      */
     checkAndAddToShow: function checkAndAddToShow(card, hash, percent, token) {
       var originalName = card.original_name || card.name || card.original_title || card.title;
       var firstEpisodeHash = Lampa.Utils.hash('11' + originalName);
 
-      // Додаткове логування для налагодження
       slog('checkAndAddToShow called with:', {
         card: card,
         hash: hash,
@@ -10747,13 +10662,12 @@
       }
     },
     /**
-     * Додає серіал в "Смотрю"
-     * @param {Object} card - Картка серіалу
-     * @param {string} token - Токен авторизації
+     * Добавляет сериал в "Смотрю"
+     * @param {Object} card - Карточка сериала
+     * @param {string} token - Токен авторизации
      */
     addShowToWatching: function addShowToWatching(card, token) {
       var _this = this;
-      // Уникнення подвійних запитів
       if (isAddingShowToWatching) {
         slog('addShowToWatching called while already adding, skipping');
         return;
@@ -10763,7 +10677,6 @@
         slog('Adding show to watching', card);
       }
 
-      // Додаткове логування для налагодження
       slog('addShowToWatching called with card:', card);
       var tmdbId = card.id || card.ids && card.ids.tmdb;
       slog('Determined tmdbId:', tmdbId);
@@ -10772,11 +10685,9 @@
         return;
       }
 
-      // Визначаємо тип вмісту
       var contentType = getContentType$1(card);
       slog('Determined content type:', contentType);
 
-      // Отримуємо Trakt ID за TMDB ID
       slog('Searching for content by tmdbId:', tmdbId, 'type:', contentType);
       api$1.get("/search/tmdb/".concat(tmdbId, "?type=").concat(contentType)).then(function (response) {
         slog('Search response:', response);
@@ -10785,14 +10696,12 @@
           var traktId = item.show && item.show.ids.trakt || item.movie && item.movie.ids.trakt;
           slog('Found traktId:', traktId);
 
-          // Додаємо вміст в "Смотрю"
           var body = {};
           if (contentType === 'show') {
             body.shows = [{
               ids: _objectSpread2({
                 trakt: traktId
               }, card.ids),
-              // Завжди додаємо traktId
               watched_at: new Date().toISOString()
             }];
           } else {
@@ -10800,7 +10709,6 @@
               ids: _objectSpread2({
                 trakt: traktId
               }, card.ids),
-              // Завжди додаємо traktId
               watched_at: new Date().toISOString()
             }];
           }
@@ -10817,33 +10725,32 @@
           debugOnly: true
         });
       })["finally"](function () {
-        // Скидаємо стан після виконання запиту
-        isAddingShowToWatching = false;
+          isAddingShowToWatching = false;
       });
     },
     /**
-     * Позначення наміру завершити (події onEnded/onStop/onHidden тощо)
-     * Використовується замість прямих фінальних запитів.
+     * Помечает намерение завершить (события onEnded/onStop/onHidden и пр.)
+     * Используется вместо прямых финальных запросов.
      */
     markFinishIntent: markFinishIntent,
     /**
-     * Отримати кешовані метадані за hash
+     * Получить кешированные метаданные по hash
      */
     getMetaByHash: getHashMeta,
     /**
-     * Запам'ятати метадані за hash
+     * Запомнить метаданные по hash
      */
     rememberHashMeta: setHashMeta,
     /**
-     * Публічний доступ до єдиного генератора completion key
+     * Публичный доступ к генератору completion key
      */
     getCompletionKey: getCompletionKey,
     /**
-     * Публічний доступ до визначення типу контенту
+     * Публичный доступ к определению типа контента
      */
     getContentType: getContentType$1,
     /**
-     * Єдиний шлях відправити фінальний запит з ідемпотентністю
+     * Единственный путь отправки финального запроса с идемпотентностью
      */
     finish: finish,
     scrobblePause: function scrobblePause(media, percent) {
@@ -10884,16 +10791,15 @@
       });
     },
     /**
-     * Знаходить інформацію про епізод за хешем
-     * @param {Object} card - Картка серіалу
-     * @param {string} hash - Хеш епізоду
-     * @param {Array} seasons - Сезони серіалу
-     * @returns {Object|null} Інформація про епізод
+     * Находит информацию об эпизоде по хешу
+     * @param {Object} card - Карточка сериала
+     * @param {string} hash - Хеш эпизода
+     * @param {Array} seasons - Сезоны сериала
+     * @returns {Object|null} Информация об эпизоде
      */
     findEpisodeByHash: function findEpisodeByHash(card, hash, seasons) {
       var originalName = card.original_name || card.name || card.original_title || card.title;
 
-      // Додаткове логування для налагодження
       slog('findEpisodeByHash called with:', {
         card: card,
         hash: hash,
@@ -10908,8 +10814,7 @@
           var episodeHashStr = [season.number, season.number > 10 ? ':' : '', episode.number, originalName].join('');
           var episodeHash = Lampa.Utils.hash(episodeHashStr);
 
-          // Додаткове логування для налагодження
-          slog('Checking episode:', {
+              slog('Checking episode:', {
             season: season.number,
             episode: episode.number,
             episodeHashStr: episodeHashStr,
@@ -11200,11 +11105,11 @@
 
 
   /**
-   * Модуль для обробки подій плагіна
+   * Модуль обработки событий плагина
    */
   var events = {
     /**
-     * Ініціалізує обробники подій
+     * Инициализирует обработчики событий
      */
     init: function init() {
       var _this = this;
@@ -11241,7 +11146,6 @@
         });
       }
 
-      // Додаємо кнопку watchlist на картку
       Lampa.Listener.follow('full', function (e) {
         if (e.type === 'complite' && Lampa.Storage.get('trakt_token')) {
           _this.onFullCardReady(e);
@@ -11258,7 +11162,6 @@
         }
       });
 
-      // Переадресація завершальних подій програвача на idempotent intent
       if (window.Lampa && Lampa.Player && Lampa.Player.listener) {
         // onEnded / onStop / onHidden -> markFinishIntent for the current media key
         var routeFinishIntent = function routeFinishIntent(evt) {
@@ -11326,13 +11229,11 @@
       }
     },
     /**
-     * Обробник події готовності додатку
+     * Обработчик события готовности приложения
      */
     onAppReady: function onAppReady() {
-      // Імпортуємо config динамічно, щоб уникнути циклічних залежностей
       config.main();
 
-      // Імпортуємо addMenuItems динамічно
       addMenuItems();
       // Кеш просмотренных и вотчлиста для бейджей
       loadWatchedCache();
@@ -11342,25 +11243,22 @@
       setTimeout(syncPlaybackFromTrakt, 2000);
     },
     /**
-     * Додає блок з пов'язаними списками в картку медіа
-     * @param {Object} e - Об'єкт події
+     * Добавляет блок со связанными списками в карточку медиа
+     * @param {Object} e - Объект события
      */
     addRelatedListsBlock: function addRelatedListsBlock(e) {
       var _e$object;
       if (!e) return;
 
-      // Перевірка чи вже додано (дедуплікація)
       if (e.object && e.object.activity && typeof e.object.activity.render === 'function') {
         if (e.object.activity.render().find('.tag-count.trakttv-lists').length > 0) {
           return;
         }
       }
 
-      // Перевіряємо наявність даних картки
       var card = e.data;
       if (!card) return;
 
-      // Визначаємо тип контенту - e.object.method є primary джерело
       var method = (_e$object = e.object) === null || _e$object === void 0 ? void 0 : _e$object.method; // 'tv' or 'movie'
 
       // Fallback через евристики з e.data.movie
@@ -11373,24 +11271,19 @@
         method = card.method || card.card_type || (card.first_air_date || card.name ? 'tv' : 'movie');
       }
 
-      // Перевіряємо наявність ID
       if (!card.id && (!card.external_ids || !card.external_ids.trakt_id)) return;
 
-      // Параметри для запиту
-      // Trakt API використовує 'show' замість 'tv'
       var params = {
         id: card.id,
         method: method === 'tv' ? 'show' : 'movie'
       };
 
-      // Додаємо trakt_id, якщо він доступний
       if (card.external_ids && card.external_ids.trakt_id) {
         params.ids = {
           trakt: card.external_ids.trakt_id
         };
       }
 
-      // Отримуємо пов'язані списки та списки, які користувач лайкнув
       // Local safe resolver for Api to support runtime-scoped execution (e.g., dev/trakt.js)
       var Api = typeof api !== 'undefined' && api || window.TraktTV && window.TraktTV.api || null;
       if (!Api) {
@@ -11400,36 +11293,31 @@
       Promise.all([Api && Api.getMediaLists(params), Api && Api.likesLists({
         page: 1,
         limit: 1000
-      }) // Отримуємо всі лайкнуті списки
+      })
       ]).then(function (_ref) {
         var _ref2 = _slicedToArray(_ref, 2),
           mediaListsResponse = _ref2[0],
           likedListsResponse = _ref2[1];
-        var formattedMediaLists = mediaListsResponse; // getMediaLists вже повертає відформатовані дані
+        var formattedMediaLists = mediaListsResponse;
         var likedListIds = likedListsResponse.results.map(function (list) {
           return list.id;
         });
 
-        // Перевіряємо наявність списків
         if (!formattedMediaLists || !Array.isArray(formattedMediaLists) || formattedMediaLists.length === 0) {
           return;
         }
 
-        // Перевіряємо наявність activity та render
         if (!e.object || !e.object.activity || typeof e.object.activity.render !== 'function') {
           return;
         }
 
-        // Знаходимо блок з тегами
         var tagsBlock = e.object.activity.render().find('.full-descr__tags');
         if (tagsBlock.length === 0) {
           return;
         }
 
-        // Створюємо елемент для відображення кількості списків
         var listsCountElement = $("\n                <div class=\"tag-count selector trakttv-lists\">\n                    <div class=\"tag-count__name\">".concat(Lampa.Lang.translate('trakttv_related_lists'), "</div>\n                </div>\n            "));
 
-        // Додаємо обробник кліку для відображення списків
         listsCountElement.on('hover:enter', function () {
           var selectItems = formattedMediaLists.map(function (list) {
             return {
@@ -11437,12 +11325,9 @@
               item_count: list.item_count,
               id: list.id,
               component: 'trakt_list_detail',
-              // Вказуємо компонент
               list_id: list.id,
-              // Передаємо list_id
               page: 1,
-              // Початкова сторінка
-              liked: likedListIds.includes(list.id) // Додаємо статус лайку
+              liked: likedListIds.includes(list.id)
             };
           });
           if (selectItems.length === 0) {
@@ -11473,7 +11358,6 @@
           });
         });
 
-        // Додаємо елемент в кінець блоку з тегами
         tagsBlock.append(listsCountElement);
       })["catch"](function (error) {
         logWarn('Related lists loading failed', error, {
@@ -11482,21 +11366,16 @@
       });
     },
     /**
-     * Обробник події готовності картки фільму/серіалу
-     * @param {Object} e - Об'єкт події
+     * Обработчик события готовности карточки фильма/сериала
+     * @param {Object} e - Объект события
      */
     onFullCardReady: function onFullCardReady(e) {
       if (!e || !e.data) return;
       if (!e.object || !e.object.activity || typeof e.object.activity.render !== 'function') return;
 
-      // Додаємо блок з пов'язаними списками
-      // Перевіряємо наявність необхідних даних для списків
-      // Виправлено: додано більше логування для налагодження
 
       if (!e.data.id) {
-        // Спробуємо отримати ID з інших джерел
 
-        // Перевіряємо наявність ID в різних можливих полях
         if (e.data.card && e.data.card.id) {
           e.data.id = e.data.card.id;
         } else if (e.data.data && e.data.data.id) {
@@ -11512,12 +11391,10 @@
         }
       }
 
-      // Перевіряємо наявність external_ids
       if (!e.data.external_ids) {
         e.data.external_ids = {};
       }
 
-      // Створюємо глибоку копію об'єкта події для передачі в addRelatedListsBlock
       var eventForLists = {
         data: JSON.parse(JSON.stringify(e.data)),
         object: {
@@ -11526,9 +11403,8 @@
         }
       };
 
-      // Додаткова перевірка копії даних
       if (!eventForLists.data.id) {
-        eventForLists.data.id = e.data.id; // Явно копіюємо ID
+        eventForLists.data.id = e.data.id;
       }
       this.addRelatedListsBlock(eventForLists);
 
@@ -11537,7 +11413,6 @@
         setTimeout(syncPlaybackFromTrakt, 500);
       }
 
-      // Додаємо прогрес перегляду для серіалів
       if (e.object.method === 'tv' || e.object.method === 'movie') {
         var showProgress = Lampa.Storage.field('trakttv_show_tv_progress');
         if (showProgress === undefined || showProgress === true) {
@@ -13791,11 +13666,9 @@
       }
     } catch (e) {/* noop */}
 
-    // Додаємо стилі
     Lampa.Template.add('trakt_style', "<style>@charset 'UTF-8';.full-start-new__details.trakt{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;color:#fff}.trakt-brand-icon{width:100%;height:100%;display:block;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0;color:inherit}.trakt-brand-icon path{fill:currentColor}.trakt-head-action.focus .trakt-brand-icon,.trakt-head-action.hover .trakt-brand-icon,.menu__item.focus .trakt-brand-icon,.menu__item.hover .trakt-brand-icon,.menu__item.traverse .trakt-brand-icon,.settings-folder.focus .trakt-brand-icon{color:inherit}.full-start-new__details.trakt .trakt-icon{margin-right:.5em;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center}.full-start-new__details.trakt .full-start-new__split{margin:0 .5em}.trakt-applecation-progress{display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.4em;margin-right:.6em;margin-left:.6em}.trakt-applecation-progress .trakt-icon{width:18px;height:18px;display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center}.trakt-applecation-progress .trakt-icon svg{width:100%;height:100%}.trakt-applecation-progress__text{white-space:nowrap}.trakt-lists-container{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:1em;padding:1em}.trakt-list-card{width:150px;background:rgba(255,255,255,0.1);-webkit-border-radius:.5em;border-radius:.5em;padding:.5em;cursor:pointer;-webkit-transition:background .3s ease;-o-transition:background .3s ease;transition:background .3s ease}.trakt-list-card:hover{background:rgba(255,255,255,0.2)}.trakt-list-card__poster{width:100%;height:225px;background-size:cover;background-position:center;-webkit-border-radius:.5em;border-radius:.5em;margin-bottom:.5em}.trakt-list-card__title{font-size:.9em;text-align:center;white-space:nowrap;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis}.trakt-list-detail-header{padding:1em;background:rgba(0,0,0,0.3);margin-bottom:1em}.trakt-list-detail-title{font-size:1.5em;margin-bottom:.5em}.trakt-list-detail-description{font-size:1em;opacity:.8}.trakt-head-action{color:#c850c0}.trakt-head-action--ok{color:#37ff54}.trakt-head-action--error{color:#ff4d4d}.trakt-head-action svg{width:100%;height:100%;display:block}.trakt-head-icon{width:100%;height:100%;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center}.trakt-list-manager-button{display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.5em}.trakt-list-manager-button svg{width:1.2em;height:1.2em}.trakt-watchlist-hub{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;height:100%}.trakt-watchlist-hub__controls{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;gap:.55em;padding:.8em 1.5em .2em}.trakt-watchlist-hub__tabs{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:1.2em}.trakt-watchlist-hub__tabs .simple-button{margin-right:0;-webkit-box-flex:1;-webkit-flex:1 1 8em;-ms-flex:1 1 8em;flex:1 1 8em;min-width:0;padding:1.1em 1.4em;font-size:1.6em;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;text-align:center;-webkit-border-radius:1.1em;border-radius:1.1em}.trakt-watchlist-hub__tabs .simple-button--filter>div{width:100%;margin-left:0;padding:0;background:transparent;text-align:center;font-weight:800;font-size:1em;letter-spacing:.02em}.trakt-watchlist-hub__sorts{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:.55em}.trakt-watchlist__sort{margin:0;-webkit-box-flex:1;-webkit-flex:1 1 10em;-ms-flex:1 1 10em;flex:1 1 10em;min-width:7.6em;padding:.65em .85em;-webkit-box-pack:start;-webkit-justify-content:flex-start;-ms-flex-pack:start;justify-content:flex-start;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.55em;-webkit-border-radius:.9em;border-radius:.9em}.trakt-watchlist__sort>div{margin-left:0}.trakt-watchlist__sort .trakt-watchlist__sort-label{min-width:0;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis;white-space:nowrap;font-weight:600;text-align:left}.trakt-watchlist__sort .trakt-watchlist__sort-state{-webkit-box-flex:0;-webkit-flex:0 0 auto;-ms-flex:0 0 auto;flex:0 0 auto;min-width:1em;font-size:1.05em;line-height:1;font-weight:700;text-align:center;opacity:.88}.trakt-watchlist__sort .trakt-watchlist__sort-state:empty{display:none}.trakt-watchlist__sort--active{background:rgba(255,255,255,0.14);-webkit-box-shadow:inset 0 0 0 1px rgba(255,255,255,0.16);box-shadow:inset 0 0 0 1px rgba(255,255,255,0.16)}.trakt-watchlist__sort--more{-webkit-flex-basis:8.4em;-ms-flex-preferred-size:8.4em;flex-basis:8.4em}.trakt-watchlist__sort--desc .trakt-watchlist__sort-state,.trakt-watchlist__sort--asc .trakt-watchlist__sort-state{opacity:1}.trakt-watchlist-hub__body{-webkit-box-flex:1;-webkit-flex:1;-ms-flex:1;flex:1;min-height:0}.trakt-watchlist__view.hide{display:none}.trakt-list-wide-card__meta{margin-top:.6em;font-size:1.1em;opacity:.8}.trakt-list-wide-card:not(.trakt-list-wide-card--create) .card__promo{display:none !important}.trakt-list-wide-card--create .card__view{background:-webkit-linear-gradient(315deg,rgba(23,129,255,0.28),rgba(53,255,145,0.22));background:-o-linear-gradient(315deg,rgba(23,129,255,0.28),rgba(53,255,145,0.22));background:linear-gradient(135deg,rgba(23,129,255,0.28),rgba(53,255,145,0.22));-webkit-border-radius:1em;border-radius:1em}.trakt-list-wide-card--create .card__view::before{content:'+';position:absolute;inset:0;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;font-size:6em;line-height:1;color:rgba(255,255,255,0.82);font-weight:500;z-index:0}.trakt-list-wide-card--create .card__img{opacity:0}.trakt-list-wide-card--create .card__promo{z-index:2}.trakt-list-wide-card--create .card__promo-title{font-weight:700}.trakt-userinfo-name{line-height:1.35;margin-bottom:.3em}.trakt-userinfo-vip{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.5em;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;line-height:1.35;margin-top:.1em}.trakt-userinfo-vip__label{opacity:.75}.trakt-vip-badge{display:inline-block;-webkit-border-radius:999px;border-radius:999px;padding:.2em .65em;font-size:.9em;line-height:1.25;border:1px solid transparent;vertical-align:middle}.trakt-vip-badge--enabled{color:#1be26f;border-color:rgba(27,226,111,0.45);background:rgba(27,226,111,0.14)}.trakt-vip-badge--disabled{color:#aeb5bc;border-color:rgba(174,181,188,0.45);background:rgba(174,181,188,0.12)}.trakt-device-auth{padding:.4em 1.2em 1.2em}.trakt-device-auth__inner{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:horizontal;-webkit-box-direction:normal;-webkit-flex-direction:row;-ms-flex-direction:row;flex-direction:row;gap:1.5em;-webkit-box-align:start;-webkit-align-items:flex-start;-ms-flex-align:start;align-items:flex-start}.trakt-device-auth__qr-col{-webkit-box-flex:0;-webkit-flex:0 0 auto;-ms-flex:0 0 auto;flex:0 0 auto;width:min(45%,14em)}.trakt-device-auth__info-col{-webkit-box-flex:1;-webkit-flex:1 1 auto;-ms-flex:1 1 auto;flex:1 1 auto;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;gap:.6em;-webkit-box-align:start;-webkit-align-items:flex-start;-ms-flex-align:start;align-items:flex-start;padding-top:.4em}.trakt-device-auth__qr-container{width:100%}.trakt-device-auth__qr-container--hidden{display:none}.trakt-device-auth__qr-link{display:block}.trakt-device-auth__qr-image{display:block;width:100%;height:auto;background:#fff;border:2px solid #e3e3e3;-webkit-border-radius:.8em;border-radius:.8em;padding:.35em;-webkit-box-sizing:border-box;box-sizing:border-box}.trakt-device-auth__qr-caption{margin-top:.6em;font-size:.95em;opacity:.72;text-align:center}.trakt-device-auth__verification{font-size:1.05em;line-height:1.5;word-break:break-word;opacity:.9}.trakt-device-auth__code{margin:0}.trakt-device-auth__code strong{letter-spacing:.08em}.trakt-check-btn{cursor:pointer;margin-top:.4em}@media screen and (max-width:480px){.trakt-device-auth{padding:0 .6em -webkit-calc(0.8em + env(safe-area-inset-bottom));padding:0 .6em calc(0.8em + env(safe-area-inset-bottom))}.trakt-device-auth__inner{-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center}.trakt-device-auth__qr-col{width:min(100%,18.5em)}.trakt-device-auth__info-col{-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;text-align:center}}.trakt-watchlist-hub__tabs .trakt-watchlist__tab{border-bottom:3px solid transparent;-webkit-transition:background .2s,border-color .2s;transition:background .2s,border-color .2s}.trakt-watchlist-hub__tabs .trakt-watchlist__tab.active{background:rgba(155,89,208,0.18);border-bottom:3px solid #9b59d0;-webkit-box-shadow:inset 0 0 0 1px rgba(155,89,208,0.3);box-shadow:inset 0 0 0 1px rgba(155,89,208,0.3)}.trakt-watchlist-hub__tabs .trakt-watchlist__tab.active>div{font-weight:800;opacity:1}.trakt-upnext-badge{position:absolute;top:.3em;right:.3em;background:rgba(0,0,0,.78);color:#fff;font-size:1.35em;font-weight:800;min-width:1.6em;height:1.6em;-webkit-border-radius:999px;border-radius:999px;z-index:2;pointer-events:none;line-height:1;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;padding:0 .3em}.trakt-upcoming-section{width:100%;flex-basis:100%;margin-top:1.8em;padding:1em 0 .5em;font-size:1.15em;font-weight:700;letter-spacing:.04em;text-transform:uppercase;opacity:.9;color:#fff;display:flex;align-items:center;gap:.9em;pointer-events:none}.trakt-upcoming-section::before{content:'';flex:0 0 3px;height:1.2em;background:linear-gradient(180deg,#e8572a,#ff9844);border-radius:3px}.trakt-upcoming-section::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(255,255,255,.25),rgba(255,255,255,0))}.trakt-watched-badge{position:absolute;bottom:.35em;left:.35em;width:1.45em;height:1.45em;border-radius:999px;display:flex;align-items:center;justify-content:center;z-index:2;pointer-events:none;background:rgba(155,89,208,.82);color:#fff}.trakt-watched-badge svg{width:.82em;height:.82em;display:block}.trakt-watchlist-badge{position:absolute;bottom:.35em;left:50%;-webkit-transform:translateX(-50%);-ms-transform:translateX(-50%);transform:translateX(-50%);width:1.45em;height:1.45em;border-radius:999px;display:flex;align-items:center;justify-content:center;z-index:2;pointer-events:none;background:rgba(52,152,219,.82);color:#fff}.trakt-watchlist-badge svg{width:.82em;height:.82em;display:block}.trakt-status-clickable{cursor:pointer;border-radius:.6em;padding:.15em .4em .15em .1em;transition:background .15s;-webkit-align-self:flex-start;-ms-flex-item-align:start;align-self:flex-start;width:-webkit-fit-content;width:fit-content}.trakt-status-clickable.hover,.trakt-status-clickable.focus{background:rgba(155,89,208,.18)}.trakt-history-date-badge{position:absolute;bottom:0;left:0;right:0;padding:.3em .45em .35em;background:linear-gradient(to top,rgba(0,0,0,.82) 0%,transparent 100%);display:flex;justify-content:space-between;align-items:flex-end;pointer-events:none;z-index:2}.trakt-history-ep{font-size:.72em;font-weight:700;color:rgba(255,255,255,.72);line-height:1.2;flex-shrink:0;margin-right:.4em}.trakt-history-date{font-size:.75em;font-weight:700;color:#fff;line-height:1.2;margin-left:auto;white-space:nowrap}@-webkit-keyframes trakt-spin{from{-webkit-transform:rotate(0deg);transform:rotate(0deg)}to{-webkit-transform:rotate(360deg);transform:rotate(360deg)}}@keyframes trakt-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}.trakt-status-clickable.trakt-loading .trakt-icon{-webkit-animation:trakt-spin .8s linear infinite;animation:trakt-spin .8s linear infinite;opacity:.5}.trakt-recs-hub__sorts{gap:.35em;-webkit-flex-wrap:nowrap;-ms-flex-wrap:nowrap;flex-wrap:nowrap}.trakt-recs-hub__sorts .trakt-watchlist__sort{-webkit-box-flex:1;-webkit-flex:1 1 0;-ms-flex:1 1 0;flex:1 1 0;min-width:0}.trakt-recs-hub__sorts .trakt-watchlist__sort--more{-webkit-box-flex:1;-webkit-flex:1 1 0;-ms-flex:1 1 0;flex:1 1 0}.trakt-hide-lampa-continue .items-line--continue{display:none!important}.trakt-hide-lampa-recomend .items-line--recomend{display:none!important}.trakt-hide-lampa-continue .items-line[data-component='continue']{display:none!important}.trakt-hide-lampa-recomend .items-line[data-component='recomend']{display:none!important}.trakt-account-switcher{color:#c850c0;position:relative;-webkit-transform:scale(1.2);-ms-transform:scale(1.2);transform:scale(1.2);-webkit-transform-origin:center center;-ms-transform-origin:center center;transform-origin:center center;overflow:visible!important}.trakt-head-icon{position:relative;overflow:visible!important}.trakt-account-badge{position:absolute;bottom:0;right:0;-webkit-transform:translate(50%,50%);-ms-transform:translate(50%,50%);transform:translate(50%,50%);min-width:1.55em;height:1.55em;border-radius:999px;background:#fff;color:#c850c0;font-size:.83em;font-weight:800;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;line-height:1;padding:0 .3em;pointer-events:none;border:none;-webkit-box-sizing:border-box;box-sizing:border-box;white-space:nowrap;-webkit-box-shadow:0 1px 4px rgba(0,0,0,.3);box-shadow:0 1px 4px rgba(0,0,0,.3)}.trakt-account-badge--multi{font-size:.75em;letter-spacing:-.02em}</style>");
     $('body').append(Lampa.Template.get('trakt_style', {}, true));
 
-    // Фонова валідація токена при старті (єдиний шлях auth lifecycle).
     if (Lampa.Storage.get('trakt_refresh_token')) {
       var _getGlobalApi;
       var authApi = (_getGlobalApi = getGlobalApi()) === null || _getGlobalApi === void 0 ? void 0 : _getGlobalApi.auth;
@@ -13822,13 +13695,11 @@
       }
     }
 
-    // Рекомендації завантажуються динамічно при потребі
     // Добавляем компоненты
     Lampa.Component.add('trakt_watchlist', function (object) {
       return new Catalog.watchlist(object);
     });
 
-    // Реєстрація source-провайдера TraktTV для Main/Category/List/Search discovery
     try {
       if (Lampa.Api) {
         Lampa.Api.sources = Lampa.Api.sources || {};
@@ -13855,7 +13726,6 @@
       return new Catalog.collection(object);
     });
 
-    // Додаємо нові компоненти
     Lampa.Component.add('trakt_timetable_all', TraktTimetableAll);
     Lampa.Component.add('trakttv_recommendations', Catalog.recommendations);
     Lampa.Component.add('trakt_list_detail', Catalog.list_detail);
@@ -13863,13 +13733,10 @@
     Lampa.Component.add('trakt_lists', Catalog.lists);
     Lampa.Component.add('trakt_my_lists', Catalog.my_lists);
 
-    // Додаємо переклади
     Main();
     registerContextListAction();
 
-    // Ініціалізуємо обробники подій
     events.init();
-    // Ініціалізуємо модуль відстеження перегляду
     watching.init();
 
     // Initialize ContentRows (Lampa 3.0+ required)
@@ -13909,7 +13776,6 @@
     };
   }
   if (!window.plugin_trakt_ready) {
-    // Додаємо глобальний обробник unhandledrejection на самому початку
     window.addEventListener('unhandledrejection', function (event) {
       logError('Unhandled promise rejection', event.reason, {
         debugOnly: true
