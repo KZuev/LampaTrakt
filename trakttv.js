@@ -2092,7 +2092,6 @@
    * Always sets:
    * - 'Content-Type': 'application/json'
    * - 'trakt-api-version': '2'
-   * - 'x-requested-with': 'lme-plugins'
    * When unauthorized === true, DO NOT add Authorization Bearer header.
    * When unauthorized === false and access token exists, add Bearer.
    * Signature: function ensureHeaders({ unauthorized } = { unauthorized: false })
