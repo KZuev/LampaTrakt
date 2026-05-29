@@ -392,7 +392,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.0.7';
+  var PLUGIN_VERSION = '2.0.8';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -5400,6 +5400,18 @@
       trakt_watchlist_add: {
         ru: "Добавить в список просмотра",
       },
+      trakt_menu_want_to_watch: {
+        ru: "Хочу посмотреть",
+        en: "Want to watch",
+      },
+      trakt_menu_wont_watch: {
+        ru: "Не буду смотреть",
+        en: "Not interested",
+      },
+      trakt_menu_not_watched: {
+        ru: "Отметить как не просмотрено",
+        en: "Mark as not watched",
+      },
       trakt_history_in: {
         ru: "В истории",
       },
@@ -6001,10 +6013,12 @@
         en: "Yes, delete everything",
       },
       trakt_watched_now: {
-        ru: "Просмотрено сейчас",
+        ru: "Отметить как просмотрено сейчас",
+        en: "Mark as watched now",
       },
       trakt_watched_unknown_date: {
-        ru: "Неизвестная дата",
+        ru: "Отметить как просмотрено с неизвестной датой",
+        en: "Mark as watched (unknown date)",
       },
       trakt_show_completed: {
         ru: "Просмотрено полностью",
@@ -6637,7 +6651,7 @@
   function buildManagerItems(watchlistState, lists) {
     var items = [];
     items.push({
-      title: watchlistState ? t$2('trakt_watchlist_remove', 'Remove from watchlist') : t$2('trakt_watchlist_add', 'Add to watchlist'),
+      title: watchlistState ? t$2('trakt_menu_wont_watch', 'Not interested') : t$2('trakt_menu_want_to_watch', 'Want to watch'),
       target: 'watchlist',
       inList: !!watchlistState
     });
@@ -6846,12 +6860,11 @@
           function showTraktMenu(watchlistState, withMembership) {
             var statusItems = isShow ? [
               { title: Lampa.Lang.translate('trakt_show_completed'), action: 'completed' },
-              { title: Lampa.Lang.translate('trakt_show_in_progress'), action: 'in_progress' },
-              { title: Lampa.Lang.translate('trakt_watched_no'), action: 'not_watched' }
+              { title: Lampa.Lang.translate('trakt_menu_not_watched'), action: 'not_watched' }
             ] : [
               { title: Lampa.Lang.translate('trakt_watched_now'), action: 'now' },
               { title: Lampa.Lang.translate('trakt_watched_unknown_date'), action: 'unknown' },
-              { title: Lampa.Lang.translate('trakt_watched_no'), action: 'not_watched' }
+              { title: Lampa.Lang.translate('trakt_menu_not_watched'), action: 'not_watched' }
             ];
             var allItems = statusItems.concat(buildManagerItems(!!watchlistState, withMembership));
             Lampa.Select.show({
