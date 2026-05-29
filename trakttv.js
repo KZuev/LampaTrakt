@@ -392,7 +392,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.0.5';
+  var PLUGIN_VERSION = '2.0.6';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -6030,6 +6030,10 @@
       trakt_watched_no: {
         ru: "Не просмотрено",
       },
+      trakt_date_unknown: {
+        ru: "неизвестно",
+        en: "unknown",
+      },
       trakt_multiwatch_yes: { ru: 'Да', en: 'Yes' },
       trakt_multiwatch_no:  { ru: 'Нет', en: 'No' },
       trakt_digital_release: {
@@ -6800,15 +6804,24 @@
         el.className = 'full-start-new__details trakt selector trakt-status-clickable';
         el.innerHTML = '<div class="trakt-icon" style="width:1.5em;height:1.5em;color:rgba(255,255,255,0.38)">' + icons.TRAKT_ICON + '</div><span>…</span>';
 
-        function updateVisual(labelType, season, episodeNum, watched) {
+        function updateVisual(labelType, season, episodeNum, watched, watchedAt) {
           var iconEl = el.querySelector('.trakt-icon');
           var spanEl = el.querySelector('span');
           if (iconEl) iconEl.style.color = watched ? '#9b59d0' : 'rgba(255,255,255,0.38)';
           if (!spanEl) return;
+          function fmtWatchedDate(iso) {
+            if (!iso) return null;
+            var d = new Date(iso);
+            if (isNaN(d.getTime()) || d.getFullYear() <= 1970) return null;
+            var now = new Date();
+            var mon = d.toLocaleString('ru', { month: 'short' }).replace('.', '');
+            return d.getDate() + ' ' + mon + (d.getFullYear() !== now.getFullYear() ? ' ' + d.getFullYear() : '');
+          }
+          var dateLabel = watched ? (fmtWatchedDate(watchedAt) || (Lampa.Lang.translate('trakt_date_unknown') || 'неизвестно')) : null;
           if (labelType === 'completed') {
-            spanEl.textContent = Lampa.Lang.translate('trakt_show_completed');
+            spanEl.textContent = Lampa.Lang.translate('trakt_show_completed') + (dateLabel ? ' (' + dateLabel + ')' : '');
           } else if (labelType === 'movie' || labelType === 'not_watched') {
-            spanEl.textContent = watched ? Lampa.Lang.translate('trakt_watched_yes') : Lampa.Lang.translate('trakt_watched_no');
+            spanEl.textContent = (watched ? Lampa.Lang.translate('trakt_watched_yes') : Lampa.Lang.translate('trakt_watched_no')) + (dateLabel ? ' (' + dateLabel + ')' : '');
           } else {
             spanEl.textContent = Lampa.Lang.translate('trakttv_watched_label') + ': ' + Lampa.Lang.translate('full_season') + ' ' + season + ' \xB7 ' + Lampa.Lang.translate('full_episode') + ' ' + episodeNum;
           }
@@ -6969,7 +6982,7 @@
           } else {
             labelType = 'not_watched';
           }
-          if (progress) progress.updateVisual(labelType, season, ep, labelType !== 'not_watched');
+          if (progress) progress.updateVisual(labelType, season, ep, labelType !== 'not_watched', progressData.last_watched_at);
         }).catch(function(error) {
           logWarn('Failed to load show progress', error, { debugOnly: true });
         });
@@ -6977,9 +6990,10 @@
       } else {
         ensureWatchedCache().then(function(cache) {
           var isWatched = cache.movies.has(String(itemId));
-          if (progress) progress.updateVisual('movie', null, null, isWatched);
+          var watchedAt = isWatched && cache.moviesWatchedAt ? cache.moviesWatchedAt.get(String(itemId)) : null;
+          if (progress) progress.updateVisual('movie', null, null, isWatched, watchedAt);
         }).catch(function() {
-          if (progress) progress.updateVisual('movie', null, null, false);
+          if (progress) progress.updateVisual('movie', null, null, false, null);
         });
       }
     },
@@ -8537,7 +8551,7 @@
                   if (slotIndex === multiAccountGetActiveSlot()) {
                     if (Api$1) Api$1.auth.logout();
                   }
-                  multiAccountUpdateSlot(slotIndex, { token: null, refresh_token: null, expires_at: null, label: null });
+                  multiAccountUpdateSlot(slotIndex, { token: null, refresh_token: null, expires_at: null, label: null, alias: null });
                   try { Lampa.Settings.update(); } catch (e) {}
                 } else if (a.action === 'login') {
                   startDeviceAuthForSlot(slotIndex);
@@ -8888,6 +8902,12 @@
             if (a.action !== 'confirm') return;
             clearAuthBlocked();
             try {
+              // Remove all trakt_* and trakt-* keys directly from localStorage
+              var keysToRemove = Object.keys(localStorage).filter(function(k) {
+                return k.indexOf('trakt_') === 0 || k.indexOf('trakt-') === 0;
+              });
+              keysToRemove.forEach(function(k) { try { localStorage.removeItem(k); } catch(e) {} });
+              // Reset via Lampa.Storage to ensure in-memory state is cleared too
               Lampa.Storage.set('trakt_token', null);
               Lampa.Storage.set('trakt_refresh_token', null);
               Lampa.Storage.set('trakt_token_created_at', null);
@@ -11058,15 +11078,15 @@
       _A.watchedMovies().catch(function() { return []; }),
       _A.watchedShows().catch(function() { return []; })
     ]).then(function(res) {
-      var ms = new Set(), ss = new Set();
-      (res[0] || []).forEach(function(x) { var id = x.movie && x.movie.ids && x.movie.ids.tmdb; if (id) ms.add(String(id)); });
+      var ms = new Set(), ss = new Set(), mDates = new Map();
+      (res[0] || []).forEach(function(x) { var id = x.movie && x.movie.ids && x.movie.ids.tmdb; if (id) { ms.add(String(id)); if (x.last_watched_at) mDates.set(String(id), x.last_watched_at); } });
       (res[1] || []).forEach(function(x) { var id = x.show && x.show.ids && x.show.ids.tmdb; if (id) ss.add(String(id)); });
-      _watchedCache = { movies: ms, shows: ss };
+      _watchedCache = { movies: ms, shows: ss, moviesWatchedAt: mDates };
       _watchedCachePromise = null;
       return _watchedCache;
     }).catch(function() {
       _watchedCachePromise = null;
-      _watchedCache = { movies: new Set(), shows: new Set() };
+      _watchedCache = { movies: new Set(), shows: new Set(), moviesWatchedAt: new Map() };
       return _watchedCache;
     });
     return _watchedCachePromise;
@@ -12215,6 +12235,17 @@
       checkPermission: checkUpNextPermissions,
       visibleOn: function visibleOn() {
         return true;
+      },
+      filter: function filter(results) {
+        var todayStr = new Date().toISOString().slice(0, 10);
+        var currentYear = new Date().getFullYear();
+        return results.filter(function(item) {
+          var rel = item.trakt_released;
+          if (rel && /^\d{4}-\d{2}-\d{2}/.test(String(rel))) {
+            return String(rel).slice(0, 10) <= todayStr;
+          }
+          return (parseInt(item.release_date, 10) || 0) <= currentYear;
+        });
       }
     }];
     var catRows = [{
