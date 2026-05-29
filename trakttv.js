@@ -388,7 +388,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.1.4';
+  var PLUGIN_VERSION = '2.1.5';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -11034,6 +11034,7 @@
 
   var _watchlistBadgeCache = null;
   var _watchlistBadgeCachePromise = null;
+  var _renderedCardInstances = [];
 
   function ensureWatchlistBadgeCache() {
     if (_watchlistBadgeCache) return Promise.resolve(_watchlistBadgeCache);
@@ -11203,6 +11204,9 @@
         if (e.type === 'append' || e.type === 'visible' || e.type === 'toggle') {
           decorateUpnextLine(e);
           if (Lampa.Storage.get('trakt_token') && Array.isArray(e.items)) {
+            e.items.forEach(function(ci) {
+              if (_renderedCardInstances.indexOf(ci) < 0) _renderedCardInstances.push(ci);
+            });
             e.items.forEach(renderWatchedBadge);
             e.items.forEach(renderWatchlistBadge);
             e.items.forEach(renderDigitalReleaseBadge);
@@ -12391,6 +12395,7 @@
               saveSoonMovieIds(new Set(
                 soonMovies.map(function(m) { return m.movie && m.movie.ids && String(m.movie.ids.tmdb); }).filter(Boolean)
               ));
+              _renderedCardInstances.forEach(renderDigitalReleaseBadge);
 
               // Build show cards
               var showResults = shows.map(function (item) {
