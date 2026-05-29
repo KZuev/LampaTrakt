@@ -388,7 +388,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.1.3';
+  var PLUGIN_VERSION = '2.1.4';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -10989,6 +10989,20 @@
   function saveUpcomingMovieIds(ids) {
     try { Lampa.Storage.set(_UPCOMING_MOVIE_KEY, JSON.stringify(Array.from(ids))); } catch(e) {}
   }
+  var _UPCOMING_MOVIE_DATES_KEY = 'trakt_upcoming_movie_dates';
+  function getUpcomingMovieDates() {
+    try { var r = Lampa.Storage.get(_UPCOMING_MOVIE_DATES_KEY); return r ? JSON.parse(r) : {}; } catch(e) { return {}; }
+  }
+  function saveUpcomingMovieDates(map) {
+    try { Lampa.Storage.set(_UPCOMING_MOVIE_DATES_KEY, JSON.stringify(map)); } catch(e) {}
+  }
+  var _SOON_MOVIE_KEY = 'trakt_soon_movie_ids';
+  function getSoonMovieIds() {
+    try { var r = Lampa.Storage.get(_SOON_MOVIE_KEY); return r ? new Set(JSON.parse(r)) : new Set(); } catch(e) { return new Set(); }
+  }
+  function saveSoonMovieIds(ids) {
+    try { Lampa.Storage.set(_SOON_MOVIE_KEY, JSON.stringify(Array.from(ids))); } catch(e) {}
+  }
 
   function ensureWatchedCache() {
     if (_watchedCache) return Promise.resolve(_watchedCache);
@@ -11094,6 +11108,39 @@
     cardView.appendChild(badge);
   }
 
+  var _DIGITAL_MONTHS = ['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];
+  function renderDigitalReleaseBadge(cardInstance) {
+    var data = cardInstance && cardInstance.data;
+    if (!data || !data.id) return;
+    var type = data.method || data.card_type || data.type;
+    if (type !== 'movie') return;
+    var tmdbId = String(data.id);
+    var cardNode = typeof cardInstance.render === 'function' ? cardInstance.render(true) : null;
+    var cardView = cardNode && cardNode.querySelector('.card__view');
+    if (!cardView || cardView.querySelector('.trakt-digital-release')) return;
+    var datesMap = getUpcomingMovieDates();
+    var digitalDate = datesMap[tmdbId];
+    var label;
+    if (digitalDate) {
+      var today = new Date(); today.setHours(0, 0, 0, 0);
+      var release = new Date(digitalDate); release.setHours(0, 0, 0, 0);
+      var diff = Math.round((release - today) / 86400000);
+      if (diff < 0) return;
+      if (diff === 0) label = 'Сегодня';
+      else if (diff === 1) label = 'Завтра';
+      else if (diff === 2) label = 'Через 2 дня';
+      else if (diff === 3) label = 'Через 3 дня';
+      else label = release.getDate() + ' ' + _DIGITAL_MONTHS[release.getMonth()];
+    } else {
+      if (!getSoonMovieIds().has(tmdbId)) return;
+      label = 'Скоро';
+    }
+    var badge = document.createElement('div');
+    badge.className = 'card__type trakt-digital-release';
+    badge.textContent = label;
+    cardView.appendChild(badge);
+  }
+
   function decorateUpnextLine(event) {
     if (!event || !event.data || event.data.trakt_row !== 'upnext') return;
     if (!Array.isArray(event.items)) return;
@@ -11158,6 +11205,7 @@
           if (Lampa.Storage.get('trakt_token') && Array.isArray(e.items)) {
             e.items.forEach(renderWatchedBadge);
             e.items.forEach(renderWatchlistBadge);
+            e.items.forEach(renderDigitalReleaseBadge);
           }
         }
       });
@@ -12308,8 +12356,14 @@
                       if (us) digitalDate = us.date;
                       else if (allDates.length) digitalDate = allDates[0].date;
                     }
-                    if (!digitalDate || digitalDate < todayStr) return resolve(null);
-                    resolve({ movie: movie, data: data, digitalDate: digitalDate });
+                    if (digitalDate && digitalDate >= todayStr) {
+                      return resolve({ movie: movie, data: data, digitalDate: digitalDate });
+                    }
+                    var theatrical = data && data.release_date ? String(data.release_date).slice(0, 10) : null;
+                    if (!theatrical || theatrical >= todayStr) {
+                      return resolve({ movie: movie, soon: true });
+                    }
+                    resolve(null);
                   }, function () { resolve(null); });
                 } catch (e) { resolve(null); }
               });
@@ -12321,11 +12375,21 @@
             var moduleMask = EpisodeModule ? EpisodeModule.only('Card', 'Callback') : undefined;
 
             return Promise.all(movieReleasePromises).then(function (movieFetched) {
-              var validMovies = movieFetched.filter(function (m) { return m !== null; });
+              var validMovies = movieFetched.filter(function (m) { return m && m.digitalDate; });
+              var soonMovies  = movieFetched.filter(function (m) { return m && m.soon; });
 
               // Persist IDs of movies with upcoming digital releases so the watchlist row can exclude them
               saveUpcomingMovieIds(new Set(
                 validMovies.map(function(m) { return m.movie && m.movie.ids && String(m.movie.ids.tmdb); }).filter(Boolean)
+              ));
+              var _datesMap = {};
+              validMovies.forEach(function(m) {
+                var _id = m.movie && m.movie.ids && m.movie.ids.tmdb;
+                if (_id) _datesMap[String(_id)] = m.digitalDate;
+              });
+              saveUpcomingMovieDates(_datesMap);
+              saveSoonMovieIds(new Set(
+                soonMovies.map(function(m) { return m.movie && m.movie.ids && String(m.movie.ids.tmdb); }).filter(Boolean)
               ));
 
               // Build show cards
