@@ -392,7 +392,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.1.1';
+  var PLUGIN_VERSION = '2.1.2';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -13064,7 +13064,7 @@
     }).map(function (genre) {
       return {
         path: path,
-        title: "".concat(trendingTitle, ": ").concat(genre.name),
+        title: "".concat(trendingTitle, ": ").concat(TRAKT_GENRE_NAMES_RU[genre.slug] || genre.name),
         typeHint: typeHint,
         query: {
           genres: genre.slug
@@ -13215,7 +13215,7 @@
     return fetchWithMeta(endpoint).then(function (_ref3) {
       var data = _ref3.data,
         headers = _ref3.headers;
-      return createLinePayload({
+      var line = createLinePayload({
         title: title,
         path: path,
         items: data,
@@ -13225,6 +13225,7 @@
         typeHint: typeHint,
         query: query
       });
+      return enrichWithTmdbLocale(line);
     });
   }
   function loadSearchLine(type, query) {
