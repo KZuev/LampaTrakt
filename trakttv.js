@@ -388,7 +388,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.1.6';
+  var PLUGIN_VERSION = '2.1.7';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -11035,6 +11035,7 @@
   var _watchlistBadgeCache = null;
   var _watchlistBadgeCachePromise = null;
   var _renderedCardInstances = [];
+  var _digitalDatesAvailable = false;
 
   function ensureWatchlistBadgeCache() {
     if (_watchlistBadgeCache) return Promise.resolve(_watchlistBadgeCache);
@@ -11148,14 +11149,9 @@
     _applyDigitalBadge(cardView, tmdbId);
   }
   function refreshDigitalBadgesDOM() {
-    var views = document.querySelectorAll('.card__view');
-    views.forEach(function(cardView) {
+    document.querySelectorAll('.card__view[data-trakt-movie-id]').forEach(function(cardView) {
       if (cardView.querySelector('.trakt-digital-release')) return;
-      var tmdbBadge = cardView.querySelector('[data-tmdb]');
-      if (!tmdbBadge) return;
-      var tmdbId = tmdbBadge.getAttribute('data-tmdb');
-      if (!tmdbId) return;
-      _applyDigitalBadge(cardView, tmdbId);
+      _applyDigitalBadge(cardView, cardView.getAttribute('data-trakt-movie-id'));
     });
   }
 
@@ -11223,10 +11219,18 @@
           if (Lampa.Storage.get('trakt_token') && Array.isArray(e.items)) {
             e.items.forEach(function(ci) {
               if (_renderedCardInstances.indexOf(ci) < 0) _renderedCardInstances.push(ci);
+              var d = ci && ci.data;
+              if (!d || !d.id) return;
+              var t = d.method || d.card_type || d.type || (d.first_air_date ? 'tv' : 'movie');
+              if (t !== 'movie') return;
+              var cn = typeof ci.render === 'function' ? ci.render(true) : null;
+              var cv = cn && cn.querySelector('.card__view');
+              if (cv && !cv.getAttribute('data-trakt-movie-id')) cv.setAttribute('data-trakt-movie-id', String(d.id));
             });
             e.items.forEach(renderWatchedBadge);
             e.items.forEach(renderWatchlistBadge);
             e.items.forEach(renderDigitalReleaseBadge);
+            if (_digitalDatesAvailable) refreshDigitalBadgesDOM();
           }
         }
       });
@@ -12412,8 +12416,11 @@
               saveSoonMovieIds(new Set(
                 soonMovies.map(function(m) { return m.movie && m.movie.ids && String(m.movie.ids.tmdb); }).filter(Boolean)
               ));
+              _digitalDatesAvailable = true;
               _renderedCardInstances.forEach(renderDigitalReleaseBadge);
               refreshDigitalBadgesDOM();
+              setTimeout(refreshDigitalBadgesDOM, 1500);
+              setTimeout(refreshDigitalBadgesDOM, 4000);
 
               // Build show cards
               var showResults = shows.map(function (item) {
