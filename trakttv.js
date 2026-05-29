@@ -392,7 +392,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.0.4';
+  var PLUGIN_VERSION = '2.0.5';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -12388,6 +12388,11 @@
               });
             });
 
+            // Resolve Episode interaction & Module from Lampa runtime
+            var EpisodeClass = Lampa.Maker && Lampa.Maker.get('Episode');
+            var EpisodeModule = Lampa.Maker && Lampa.Maker.module('Episode');
+            var moduleMask = EpisodeModule ? EpisodeModule.only('Card', 'Callback') : undefined;
+
             return Promise.all(movieReleasePromises).then(function (movieFetched) {
               var validMovies = movieFetched.filter(function (m) { return m !== null; });
 
@@ -12407,28 +12412,44 @@
                   name: show.title,
                   poster: getImageUrl(show, 'poster'),
                   image: getImageUrl(show, 'fanart'),
-                  source: 'tmdb',
-                  method: 'tv',
-                  card_type: 'tv'
+                  source: 'tmdb'
                 };
-                var out = Object.assign({}, card, {
-                  time: airTime,
+                var epData = {
                   air_date: airDate,
                   season_number: episode ? episode.season : null,
                   episode_number: episode ? episode.number : null,
-                  params: {
-                    emit: {
-                      onlyEnter: function onlyEnter() {
-                        Lampa.Activity.push({ url: '', component: 'full', id: card.id, method: 'tv', card: card, source: 'tmdb' });
-                      },
-                      onlyFocus: function onlyFocus() {
-                        if (Lampa.Utils && Lampa.Utils.cardImgBackgroundBlur) {
-                          Lampa.Background.change(Lampa.Utils.cardImgBackgroundBlur(card));
-                        }
-                      }
+                  name: episode ? episode.title : '',
+                  still_path: ''
+                };
+                var out = {
+                  card: card, episode: epData, time: airTime,
+                  title: show.title, id: show.ids.tmdb, ids: show.ids, params: {}
+                };
+                Lampa.Arrays && Lampa.Arrays.extend
+                  ? Lampa.Arrays.extend(out, epData)
+                  : Object.keys(epData).forEach(function (k) { out[k] = epData[k]; });
+                if (EpisodeClass) {
+                  out.params.createInstance = function (data) {
+                    var merged = _typeof(data) === 'object' && data !== null
+                      ? Object.assign({}, data, data.episode || {}, { card: data.card || data })
+                      : {};
+                    var instance = new EpisodeClass(merged);
+                    // Pre-build so this.html is set before Lampa calls visible()
+                    if (typeof instance.build === 'function') { try { instance.build(); } catch(e) {} }
+                    return instance;
+                  };
+                }
+                if (moduleMask) out.params.module = moduleMask;
+                out.params.emit = {
+                  onlyEnter: function onlyEnter() {
+                    Lampa.Activity.push({ url: '', component: 'full', id: card.id, method: 'tv', card: card, source: 'tmdb' });
+                  },
+                  onlyFocus: function onlyFocus() {
+                    if (Lampa.Utils && Lampa.Utils.cardImgBackgroundBlur) {
+                      Lampa.Background.change(Lampa.Utils.cardImgBackgroundBlur(card));
                     }
                   }
-                });
+                };
                 return out;
               });
 
@@ -12441,30 +12462,53 @@
                 var title = (data && (data.title || data.name)) || movie.title || '';
                 var poster = data && data.poster_path ? 'https://image.tmdb.org/t/p/w500' + data.poster_path : getImageUrl(movie, 'poster');
                 var image = data && data.backdrop_path ? 'https://image.tmdb.org/t/p/w1280' + data.backdrop_path : getImageUrl(movie, 'fanart');
+                var stillPath = data && data.backdrop_path ? data.backdrop_path : '';
                 var airTime = Lampa.Utils.parseToDate(digitalDate).getTime();
                 var card = {
                   id: tmdbId, ids: movie.ids, title: title,
                   original_title: movie.title || title, original_name: title, name: title,
-                  poster: poster, image: image, source: 'tmdb',
-                  method: 'movie', card_type: 'movie', type: 'movie'
+                  poster: poster, image: image, source: 'tmdb', type: 'movie'
                 };
-                var out = Object.assign({}, card, {
-                  time: airTime,
+                // Episode-card structure with season/episode = 1 (truthy) for module validation
+                var epData = {
                   air_date: digitalDate,
-                  isMovie: true,
-                  params: {
-                    emit: {
-                      onlyEnter: function onlyEnter() {
-                        Lampa.Activity.push({ url: '', component: 'full', id: tmdbId, method: 'movie', card: card, source: 'tmdb' });
-                      },
-                      onlyFocus: function onlyFocus() {
-                        if (Lampa.Utils && Lampa.Utils.cardImgBackgroundBlur) {
-                          Lampa.Background.change(Lampa.Utils.cardImgBackgroundBlur(card));
-                        }
-                      }
+                  season_number: 1,
+                  episode_number: 1,
+                  name: title,
+                  still_path: stillPath
+                };
+                var out = {
+                  card: card, episode: epData, time: airTime, title: title,
+                  id: tmdbId, ids: movie.ids, params: {},
+                  air_date: digitalDate, still_path: stillPath, isMovie: true
+                };
+                if (EpisodeClass) {
+                  out.params.createInstance = function (data) {
+                    var merged = _typeof(data) === 'object' && data !== null
+                      ? Object.assign({}, data, data.episode || {}, { card: data.card || data })
+                      : {};
+                    // Strip episode numbers from rendered instance so badge is hidden
+                    delete merged.season_number;
+                    delete merged.episode_number;
+                    delete merged.season;
+                    delete merged.number;
+                    var instance = new EpisodeClass(merged);
+                    // Pre-build so this.html is set before Lampa calls visible()
+                    if (typeof instance.build === 'function') { try { instance.build(); } catch(e) {} }
+                    return instance;
+                  };
+                }
+                if (moduleMask) out.params.module = moduleMask;
+                out.params.emit = {
+                  onlyEnter: function onlyEnter() {
+                    Lampa.Activity.push({ url: '', component: 'full', id: tmdbId, method: 'movie', card: card, source: 'tmdb' });
+                  },
+                  onlyFocus: function onlyFocus() {
+                    if (Lampa.Utils && Lampa.Utils.cardImgBackgroundBlur) {
+                      Lampa.Background.change(Lampa.Utils.cardImgBackgroundBlur(card));
                     }
                   }
-                });
+                };
                 return out;
               });
 
@@ -12480,6 +12524,25 @@
               });
               var baseResults = combined.slice(0, CALENDAR_ROW_LIMIT);
 
+              // Fetch episode stills for shows
+              var stillPromises = baseResults.map(function (out) {
+                if (out.isMovie) return Promise.resolve('');
+                var showTmdbId = out.id;
+                var seasonNum = out.episode && out.episode.season_number;
+                var epNum = out.episode && out.episode.episode_number;
+                if (!showTmdbId || seasonNum == null || epNum == null) return Promise.resolve('');
+                return new Promise(function (resolve) {
+                  try {
+                    var lang = Lampa.Storage.get('language', 'en');
+                    var url = Lampa.TMDB.api('tv/' + showTmdbId + '/season/' + seasonNum + '/episode/' + epNum + '?api_key=' + Lampa.TMDB.key() + '&language=' + lang);
+                    var network = new Lampa.Reguest();
+                    network.silent(url, function (data) {
+                      resolve(data && data.still_path ? String(data.still_path) : '');
+                    }, function () { resolve(''); });
+                  } catch (e) { resolve(''); }
+                });
+              });
+
               // Fetch locale enrichment for shows
               var _calLang = Lampa.Storage ? Lampa.Storage.get('language', 'ru') : 'ru';
               var enrichPromises = baseResults.map(function (out) {
@@ -12489,9 +12552,10 @@
                 var cacheKey = 'tv/' + tmdbId + '/' + _calLang;
                 if (_tmdbLocaleCache[cacheKey]) {
                   var cached = _tmdbLocaleCache[cacheKey];
-                  if (cached.title) { out.title = cached.title; out.name = cached.title; out.original_name = cached.title; }
-                  if (cached.poster) out.poster = cached.poster;
-                  if (cached.image) out.image = cached.image;
+                  if (cached.title) { out.title = cached.title; if (out.card) { out.card.title = cached.title; out.card.name = cached.title; } }
+                  if (cached.poster && out.card) out.card.poster = cached.poster;
+                  if (cached.image && out.card) out.card.image = cached.image;
+                  if (cached.backdrop_path) out._backdropRaw = cached.backdrop_path;
                   return Promise.resolve();
                 }
                 return new Promise(function (resolve) {
@@ -12500,16 +12564,34 @@
                   network.silent(url, function (d) {
                     var entry = {};
                     var localTitle = d && (d.title || d.name);
-                    if (localTitle) { out.title = localTitle; out.name = localTitle; out.original_name = localTitle; entry.title = localTitle; }
-                    if (d && d.poster_path) { var calPoster = 'https://image.tmdb.org/t/p/w500' + d.poster_path; out.poster = calPoster; entry.poster = calPoster; }
-                    if (d && d.backdrop_path) { var calImage = 'https://image.tmdb.org/t/p/w1280' + d.backdrop_path; out.image = calImage; entry.image = calImage; entry.backdrop_path = d.backdrop_path; }
+                    if (localTitle) { out.title = localTitle; if (out.card) { out.card.title = localTitle; out.card.name = localTitle; } entry.title = localTitle; }
+                    if (d && d.poster_path) { var calPoster = 'https://image.tmdb.org/t/p/w500' + d.poster_path; if (out.card) out.card.poster = calPoster; entry.poster = calPoster; }
+                    if (d && d.backdrop_path) {
+                      var calImage = 'https://image.tmdb.org/t/p/w1280' + d.backdrop_path;
+                      if (out.card) out.card.image = calImage;
+                      entry.image = calImage;
+                      entry.backdrop_path = d.backdrop_path;
+                      out._backdropRaw = d.backdrop_path;
+                    }
                     _tmdbLocaleCache[cacheKey] = entry;
                     resolve();
                   }, function () { resolve(); });
                 });
               });
 
-              return Promise.all(enrichPromises).then(function () {
+              return Promise.all([Promise.all(stillPromises), Promise.all(enrichPromises)]).then(function (res) {
+                var stillPaths = res[0];
+                baseResults.forEach(function (out, index) {
+                  var path = stillPaths[index];
+                  if (path) {
+                    out.still_path = path;
+                    if (out.episode) out.episode.still_path = path;
+                  } else if (!out.isMovie && out._backdropRaw) {
+                    out.still_path = out._backdropRaw;
+                    if (out.episode) out.episode.still_path = out._backdropRaw;
+                  }
+                  delete out._backdropRaw;
+                });
                 if (!baseResults.length) return call();
                 var calTitle = Lampa.Lang.translate('trakttv_calendar');
                 call({
