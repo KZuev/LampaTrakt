@@ -388,7 +388,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.3.4';
+  var PLUGIN_VERSION = '2.3.5';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -7125,22 +7125,31 @@
     var countryMap = { RU: 'RU', EN: 'US', UK: 'GB', DE: 'DE', FR: 'FR', ES: 'ES', IT: 'IT', PT: 'PT' };
     var isoCountry = countryMap[langCode] || 'US';
 
-    // Fast path: use shared cache populated by poster renders or previous detail opens
+    // Быстрый путь: берём из общего кэша
     var cachedDates = getUpcomingMovieDates();
     if (tmdbId in cachedDates && cachedDates[tmdbId]) {
       applyDate(cachedDates[tmdbId]);
       return;
     }
-    // Own direct request — bypasses pending state from poster fetches, always reliable
-    var url = Lampa.TMDB.api('movie/' + tmdbId + '/release_dates?api_key=' + Lampa.TMDB.key());
+    // Прямой запрос через append_to_response (тот же метод что у Календаря)
+    var url = Lampa.TMDB.api('movie/' + tmdbId + '?api_key=' + Lampa.TMDB.key() + '&append_to_response=release_dates');
     var network = new Lampa.Reguest();
     network.silent(url, function(resp) {
-      if (!resp || !Array.isArray(resp.results)) return;
+      var results = resp && resp.release_dates && Array.isArray(resp.release_dates.results)
+        ? resp.release_dates.results : null;
+      // Диагностика: показываем что нашли в TMDB
+      var movieTitle = (resp && (resp.title || resp.name)) || ('id:' + tmdbId);
+      if (!results) {
+        Lampa.Noty.show('Trakt Digital: нет ответа release_dates (' + movieTitle + ')');
+        return;
+      }
       var exactDate = null, usDate = null, anyDate = null;
-      resp.results.forEach(function(entry) {
+      var type4count = 0;
+      results.forEach(function(entry) {
         if (!Array.isArray(entry.release_dates)) return;
         entry.release_dates.forEach(function(rd) {
           if (rd.type === 4 && rd.release_date) {
+            type4count++;
             if (!anyDate) anyDate = rd.release_date;
             if (entry.iso_3166_1 === 'US' && !usDate) usDate = rd.release_date;
             if (entry.iso_3166_1 === isoCountry) exactDate = rd.release_date;
@@ -7148,17 +7157,22 @@
         });
       });
       var chosen = exactDate || usDate || anyDate;
-      if (chosen) {
-        var map = getUpcomingMovieDates();
-        map[tmdbId] = chosen;
-        saveUpcomingMovieDates(map);
-        _digitalDateFetchDone.add(tmdbId);
-        var today = new Date(); today.setHours(0, 0, 0, 0);
-        var release = new Date(chosen); release.setHours(0, 0, 0, 0);
-        if (release >= today) { _digitalDatesAvailable = true; scheduleRefreshDigitalBadgesDOM(); }
-        applyDate(chosen);
+      if (!chosen) {
+        Lampa.Noty.show('Trakt Digital: нет type-4 дат в TMDB (' + movieTitle + ', стран: ' + results.length + ')');
+        return;
       }
-    }, function() {});
+      Lampa.Noty.show('Trakt Digital: найдено ' + type4count + ' дат, выбрана ' + chosen.split('T')[0] + ' (' + movieTitle + ')');
+      var map = getUpcomingMovieDates();
+      map[tmdbId] = chosen;
+      saveUpcomingMovieDates(map);
+      _digitalDateFetchDone.add(tmdbId);
+      var today = new Date(); today.setHours(0, 0, 0, 0);
+      var release = new Date(chosen); release.setHours(0, 0, 0, 0);
+      if (release >= today) { _digitalDatesAvailable = true; scheduleRefreshDigitalBadgesDOM(); }
+      applyDate(chosen);
+    }, function() {
+      Lampa.Noty.show('Trakt Digital: ошибка запроса TMDB (id:' + tmdbId + ')');
+    });
   }
 
   /**
