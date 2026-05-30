@@ -388,7 +388,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.4.2';
+  var PLUGIN_VERSION = '2.4.3';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -11575,7 +11575,32 @@
         });
       }
       var chosen = exactDate || usDate || anyDate || null;
-      if (!chosen) _digitalDateNoData++;
+      if (!chosen) {
+        _digitalDateNoData++;
+        var latestTheatrical = null;
+        if (results) {
+          results.forEach(function(entry) {
+            if (!Array.isArray(entry.release_dates)) return;
+            entry.release_dates.forEach(function(rd) {
+              if (rd.type === 3 && rd.release_date) {
+                if (!latestTheatrical || rd.release_date > latestTheatrical) latestTheatrical = rd.release_date;
+              }
+            });
+          });
+        }
+        if (latestTheatrical) {
+          var tDate = new Date(latestTheatrical); tDate.setHours(0, 0, 0, 0);
+          var todayT = new Date(); todayT.setHours(0, 0, 0, 0);
+          var diffDays = Math.round((todayT - tDate) / 86400000);
+          if (diffDays >= 0 && diffDays <= 180) {
+            var soonSet = getSoonMovieIds();
+            soonSet.add(tmdbId);
+            saveSoonMovieIds(soonSet);
+            _digitalDatesAvailable = true;
+            scheduleRefreshDigitalBadgesDOM();
+          }
+        }
+      }
       _done(chosen);
     }, function() { _digitalDateErrors++; _done(null); });
   }
@@ -11753,6 +11778,16 @@
             refreshDigitalBadgesDOM();
           }
         }
+      });
+      Lampa.Listener.follow('catalog', function (e) {
+        if (!Lampa.Storage.get('trakt_token') || !Array.isArray(e.items) || !e.items.length) return;
+        e.items.forEach(function(ci) {
+          if (_renderedCardInstances.indexOf(ci) < 0) _renderedCardInstances.push(ci);
+        });
+        e.items.forEach(renderWatchedBadge);
+        e.items.forEach(renderWatchlistBadge);
+        e.items.forEach(renderDigitalReleaseBadge);
+        refreshDigitalBadgesDOM();
       });
       _initCardObserver();
 
