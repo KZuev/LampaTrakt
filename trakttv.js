@@ -388,7 +388,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.3.1';
+  var PLUGIN_VERSION = '2.3.2';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -8824,13 +8824,13 @@
         var soonIds = getSoonMovieIds();
         var domCount = document.querySelectorAll('.trakt-digital-release').length;
         var lines = [];
-        lines.push({ title: 'available=' + _digitalDatesAvailable + ' | dates:' + dateKeys.length + ' | soon:' + soonIds.size });
+        lines.push({ title: 'available=' + _digitalDatesAvailable + ' | dates:' + dateKeys.length + ' | soon:' + soonIds.size + ' | pending:' + _digitalDateFetchPending.size + ' | done:' + _digitalDateFetchDone.size });
         lines.push({ title: 'DOM бейджей сейчас: ' + domCount });
         if (dateKeys.length) {
           var sample = dateKeys.slice(0, 5).map(function(k) { return k + ':' + datesMap[k]; }).join(', ');
           lines.push({ title: 'Даты (первые 5): ' + sample });
         } else {
-          lines.push({ title: 'trakt_upcoming_movie_dates ПУСТ — откройте Календарь' });
+          lines.push({ title: 'trakt_upcoming_movie_dates ПУСТ — открывайте фильмы, даты загружаются автоматически' });
         }
         lines.push({ title: 'Карточек в _renderedCardInstances: ' + _renderedCardInstances.length });
         var checked = 0, noType = 0, noView = 0, noLabel = 0, applied = 0;
@@ -11444,6 +11444,14 @@
   }
   var _digitalDateFetchPending = new Set();
   var _digitalDateFetchDone = new Set();
+  var _refreshBadgesTimer = null;
+  function scheduleRefreshDigitalBadgesDOM() {
+    if (_refreshBadgesTimer) clearTimeout(_refreshBadgesTimer);
+    _refreshBadgesTimer = setTimeout(function() {
+      _refreshBadgesTimer = null;
+      refreshDigitalBadgesDOM();
+    }, 300);
+  }
 
   function fetchAndCacheDigitalDate(tmdbId, callback) {
     if (_digitalDateFetchPending.has(tmdbId)) return;
@@ -11480,7 +11488,7 @@
         var release = new Date(chosen); release.setHours(0, 0, 0, 0);
         if (release >= today) {
           _digitalDatesAvailable = true;
-          setTimeout(refreshDigitalBadgesDOM, 0);
+          scheduleRefreshDigitalBadgesDOM();
         }
       }
       if (callback) callback(chosen || null);
@@ -12780,7 +12788,9 @@
                 var _id = m.movie && m.movie.ids && m.movie.ids.tmdb;
                 if (_id) _datesMap[String(_id)] = m.digitalDate;
               });
-              saveUpcomingMovieDates(_datesMap);
+              var _existingMovieDates = getUpcomingMovieDates();
+              Object.assign(_existingMovieDates, _datesMap);
+              saveUpcomingMovieDates(_existingMovieDates);
               saveSoonMovieIds(new Set(
                 soonMovies.map(function(m) { return m.movie && m.movie.ids && String(m.movie.ids.tmdb); }).filter(Boolean)
               ));
