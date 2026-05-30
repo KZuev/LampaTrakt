@@ -388,7 +388,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.4.4';
+  var PLUGIN_VERSION = '2.4.5';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -11493,12 +11493,14 @@
       var today = new Date(); today.setHours(0, 0, 0, 0);
       var release = new Date(digitalDate); release.setHours(0, 0, 0, 0);
       var diff = Math.round((release - today) / 86400000);
-      if (diff < 0) return null;
-      if (diff === 0) return 'Сегодня';
-      if (diff === 1) return 'Завтра';
-      if (diff === 2) return 'Через 2 дня';
-      if (diff === 3) return 'Через 3 дня';
-      return release.getDate() + ' ' + _DIGITAL_MONTHS[release.getMonth()];
+      if (diff >= 0) {
+        if (diff === 0) return 'Сегодня';
+        if (diff === 1) return 'Завтра';
+        if (diff === 2) return 'Через 2 дня';
+        if (diff === 3) return 'Через 3 дня';
+        return release.getDate() + ' ' + _DIGITAL_MONTHS[release.getMonth()];
+      }
+      // Дата уже прошла — падаем до проверки soonMovieIds
     }
     if (getSoonMovieIds().has(tmdbId)) return 'Скоро';
     return null;
@@ -11575,9 +11577,14 @@
         });
       }
       var chosen = exactDate || usDate || anyDate || null;
+      var todayT = new Date(); todayT.setHours(0, 0, 0, 0);
+      // Игнорируем прошедшие цифровые даты — бейдж для них не нужен
+      if (chosen) {
+        var chosenD = new Date(chosen); chosenD.setHours(0, 0, 0, 0);
+        if (chosenD < todayT) chosen = null;
+      }
       if (!chosen) {
         _digitalDateNoData++;
-        var todayT = new Date(); todayT.setHours(0, 0, 0, 0);
         var firstPastTheatrical = null;
         if (results) {
           results.forEach(function(entry) {
@@ -11704,10 +11711,10 @@
   }
 
   function _patchLampaCard() {
-    if (!window.Lampa || !Lampa.Card || typeof Lampa.Card.create !== 'function') return;
-    if (Lampa.Card.create._traktPatched) return;
-    var _orig = Lampa.Card.create;
-    Lampa.Card.create = function(data, params) {
+    if (!window.Lampa || typeof Lampa.Card !== 'function') return;
+    if (Lampa.Card._traktPatched) return;
+    var _orig = Lampa.Card;
+    Lampa.Card = function(data, params) {
       var inst = _orig.apply(this, arguments);
       if (!Lampa.Storage.get('trakt_token')) return inst;
       if (inst && data && data.id) {
@@ -11721,7 +11728,10 @@
       }
       return inst;
     };
-    Lampa.Card.create._traktPatched = true;
+    for (var _pk in _orig) {
+      if (Object.prototype.hasOwnProperty.call(_orig, _pk)) Lampa.Card[_pk] = _orig[_pk];
+    }
+    Lampa.Card._traktPatched = true;
   }
 
   function decorateUpnextLine(event) {
