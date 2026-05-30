@@ -388,7 +388,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.4.7';
+  var PLUGIN_VERSION = '2.4.8';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -3716,6 +3716,20 @@
               if (type === 'upnext' && element._trakt_upnext_first_unstarted) {
                 var node2 = typeof this.render === 'function' ? this.render(true) : null;
                 if (node2) node2.classList.add('trakt-upnext-first-unstarted');
+              }
+              // Бейджи цифрового релиза и вотчлиста на всех страницах
+              if (Lampa.Storage.get('trakt_token')) {
+                var _bi = this;
+                var _bd = (_bi && _bi.data) || element;
+                if (_bd && _bd.id) {
+                  var _bt = _bd.method || _bd.card_type || _bd.type || (_bd.first_air_date ? 'tv' : 'movie');
+                  if (_bt === 'movie') {
+                    if (_renderedCardInstances.indexOf(_bi) < 0) _renderedCardInstances.push(_bi);
+                    renderDigitalReleaseBadge(_bi);
+                    renderWatchedBadge(_bi);
+                    renderWatchlistBadge(_bi);
+                  }
+                }
               }
             }
           });
@@ -11618,18 +11632,10 @@
           });
         });
       }
-      var todayT = new Date(); todayT.setHours(0, 0, 0, 0);
-      // chosen: приоритет exactDate > usDate > anyDate (как оригинал)
       var chosen = exactDate || usDate || anyDate || null;
-      // Если хоть одна type-4 дата найдена — не запускаем theatrical check
-      var hasAnyDigitalDate = !!chosen;
-      // Сохраняем только будущие даты; прошлые обнуляем, но hasAnyDigitalDate остаётся true
-      if (chosen) {
-        var _chosenDt = new Date(chosen); _chosenDt.setHours(0, 0, 0, 0);
-        if (_chosenDt < todayT) chosen = null;
-      }
-      if (!chosen && !hasAnyDigitalDate) {
+      if (!chosen) {
         _digitalDateNoData++;
+        var todayT = new Date(); todayT.setHours(0, 0, 0, 0);
         var firstPastTheatrical = null;
         if (results) {
           results.forEach(function(entry) {
