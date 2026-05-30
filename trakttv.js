@@ -388,7 +388,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.2.1';
+  var PLUGIN_VERSION = '2.2.2';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -10426,6 +10426,7 @@
           }, 0);
         }
       });
+      if (Date.now() - _lastPlaybackSyncAt > 120000) syncPlaybackFromTrakt();
     },
     /**
      * Обработчик события старта плеера
@@ -10874,9 +10875,11 @@
     return 'file_view';
   }
 
+  var _lastPlaybackSyncAt = 0;
   function syncPlaybackFromTrakt() {
     var token = Lampa.Storage.get('trakt_token');
     if (!token) return;
+    _lastPlaybackSyncAt = Date.now();
     requestApi('GET', '/sync/playback?extended=full').then(function(items) {
       var debugItems = [];
       if (Array.isArray(items)) {
