@@ -388,7 +388,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.1.9';
+  var PLUGIN_VERSION = '2.2.0';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -10392,6 +10392,7 @@
       var card = Lampa.Activity && Lampa.Activity.active && Lampa.Activity.active() &&
         (Lampa.Activity.active().card_data || Lampa.Activity.active().card || Lampa.Activity.active().movie);
       if (!card) return;
+      var tmdbId = String(card.id);
       e.items.forEach(function(item) {
         var hash = item.timeline && item.timeline.hash;
         var season = item.season;
@@ -10402,6 +10403,20 @@
           season: season,
           episode: episode,
           ids: card.ids
+        });
+      });
+      ensureWatchedCache().then(function() {
+        if (!_watchedEpisodesCache.size) return;
+        e.items.forEach(function(item) {
+          var hash = item.timeline && item.timeline.hash;
+          var season = item.season;
+          var episode = item.episode;
+          if (!hash || !season || !episode) return;
+          if (!_watchedEpisodesCache.has(tmdbId + '-' + String(season) + '-' + String(episode))) return;
+          var views = Lampa.Storage.get(getFileViewKey()) || {};
+          var current = views[hash] ? parseFloat(views[hash].percent || 0) : 0;
+          if (current >= 90) return;
+          try { Lampa.Timeline.update({ hash: hash, percent: 100, time: 0, duration: 0 }); } catch(err) {}
         });
       });
     },
@@ -11016,7 +11031,21 @@
     ]).then(function(res) {
       var ms = new Set(), ss = new Set(), mDates = new Map();
       (res[0] || []).forEach(function(x) { var id = x.movie && x.movie.ids && x.movie.ids.tmdb; if (id) { ms.add(String(id)); if (x.last_watched_at) mDates.set(String(id), x.last_watched_at); } });
-      (res[1] || []).forEach(function(x) { var id = x.show && x.show.ids && x.show.ids.tmdb; if (id) ss.add(String(id)); });
+      _watchedEpisodesCache.clear();
+      (res[1] || []).forEach(function(x) {
+        var id = x.show && x.show.ids && x.show.ids.tmdb;
+        if (!id) return;
+        ss.add(String(id));
+        if (Array.isArray(x.seasons)) {
+          x.seasons.forEach(function(s) {
+            if (!s || !Array.isArray(s.episodes)) return;
+            s.episodes.forEach(function(ep) {
+              if (!ep || !ep.number) return;
+              _watchedEpisodesCache.add(String(id) + '-' + String(s.number) + '-' + String(ep.number));
+            });
+          });
+        }
+      });
       _watchedCache = { movies: ms, shows: ss, moviesWatchedAt: mDates };
       _watchedCachePromise = null;
       return _watchedCache;
@@ -11030,7 +11059,8 @@
 
   function loadWatchedCache() { ensureWatchedCache(); }
 
-  function invalidateWatchedCache() { _watchedCache = null; _watchedCachePromise = null; }
+  var _watchedEpisodesCache = new Set();
+  function invalidateWatchedCache() { _watchedCache = null; _watchedCachePromise = null; _watchedEpisodesCache.clear(); }
 
   var _watchlistBadgeCache = null;
   var _watchlistBadgeCachePromise = null;
