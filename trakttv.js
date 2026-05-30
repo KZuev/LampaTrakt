@@ -388,7 +388,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.2.5';
+  var PLUGIN_VERSION = '2.2.6';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -8879,9 +8879,40 @@
           }
         }
         if (!lines.length) lines.push({ title: 'Нет данных. Откройте список серий в торренте.' });
+        var fullText = lines.map(function(l) { return l.title; }).join('\n');
+        lines.push({ title: '[ Скопировать в буфер обмена ]', action: 'copy', _text: fullText });
         Lampa.Select.show({
           title: t$1('trakt_debug_torrent_btn', 'Отладка: прогресс торрента'),
           items: lines,
+          onSelect: function(item) {
+            if (item && item.action === 'copy') {
+              try {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                  navigator.clipboard.writeText(item._text).then(function() {
+                    Lampa.Noty.show('Скопировано');
+                  }).catch(function() {
+                    var ta = document.createElement('textarea');
+                    ta.value = item._text;
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(ta);
+                    Lampa.Noty.show('Скопировано');
+                  });
+                } else {
+                  var ta = document.createElement('textarea');
+                  ta.value = item._text;
+                  document.body.appendChild(ta);
+                  ta.select();
+                  document.execCommand('copy');
+                  document.body.removeChild(ta);
+                  Lampa.Noty.show('Скопировано');
+                }
+              } catch(e) {
+                Lampa.Noty.show('Ошибка копирования');
+              }
+            }
+          },
           onBack: function() { Lampa.Controller.toggle('settings_component'); }
         });
       }
