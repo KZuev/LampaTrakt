@@ -388,7 +388,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.2.7';
+  var PLUGIN_VERSION = '2.2.8';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -8822,6 +8822,90 @@
       }
     });
 
+    // ── Отладка бейджей ──────────────────────────────────────────────────────
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: { name: 'trakt_debug_badges_show', type: 'button' },
+      field: {
+        name: t$1('trakt_debug_badges_btn', 'Отладка: бейджи цифровых дат'),
+        description: t$1('trakt_debug_badges_btn_descr', 'Диагностика почему бейджи не отображаются')
+      },
+      onRender: function(item) { item.show(); },
+      onChange: function() {
+        var datesMap = getUpcomingMovieDates();
+        var dateKeys = Object.keys(datesMap);
+        var soonIds = getSoonMovieIds();
+        var domCount = document.querySelectorAll('.trakt-digital-release').length;
+        var lines = [];
+        lines.push({ title: 'available=' + _digitalDatesAvailable + ' | dates:' + dateKeys.length + ' | soon:' + soonIds.size });
+        lines.push({ title: 'DOM бейджей сейчас: ' + domCount });
+        if (dateKeys.length) {
+          var sample = dateKeys.slice(0, 5).map(function(k) { return k + ':' + datesMap[k]; }).join(', ');
+          lines.push({ title: 'Даты (первые 5): ' + sample });
+        } else {
+          lines.push({ title: 'trakt_upcoming_movie_dates ПУСТ — откройте Календарь' });
+        }
+        lines.push({ title: 'Карточек в _renderedCardInstances: ' + _renderedCardInstances.length });
+        var checked = 0, noType = 0, noView = 0, noLabel = 0, applied = 0;
+        _renderedCardInstances.forEach(function(ci) {
+          var data = ci && ci.data;
+          if (!data || !data.id) return;
+          checked++;
+          var type = data.method || data.card_type || data.type || (data.first_air_date ? 'tv' : 'movie');
+          if (type !== 'movie') { noType++; return; }
+          var tmdbId = String(data.id);
+          var cardNode = typeof ci.render === 'function' ? ci.render(true) : null;
+          var cardView = cardNode && cardNode.querySelector('.card__view');
+          if (!cardView) { noView++; return; }
+          var label = _buildDigitalLabel(tmdbId);
+          if (!label) { noLabel++; return; }
+          applied++;
+        });
+        lines.push({ title: 'Проверено: ' + checked + ' | не movie: ' + noType + ' | нет view: ' + noView + ' | нет label: ' + noLabel + ' | итого готово: ' + applied });
+        // Show a few cards that should have badges
+        var shown = 0;
+        _renderedCardInstances.forEach(function(ci) {
+          if (shown >= 8) return;
+          var data = ci && ci.data;
+          if (!data || !data.id) return;
+          var type = data.method || data.card_type || data.type || (data.first_air_date ? 'tv' : 'movie');
+          var tmdbId = String(data.id);
+          var inDates = !!datesMap[tmdbId];
+          var inSoon = soonIds.has(tmdbId);
+          if (!inDates && !inSoon) return;
+          shown++;
+          var cardNode = typeof ci.render === 'function' ? ci.render(true) : null;
+          var cardView = cardNode && cardNode.querySelector('.card__view');
+          var label = _buildDigitalLabel(tmdbId);
+          var hasBadge = cardView && !!cardView.querySelector('.trakt-digital-release');
+          lines.push({ title: 'id:' + tmdbId + ' type:' + type + ' view:' + !!cardView + ' label:' + (label||'null') + ' badge:' + hasBadge });
+        });
+        if (!shown) lines.push({ title: 'Ни одна карточка с датой не найдена в _renderedCardInstances' });
+        var fullText = lines.map(function(l) { return l.title; }).join('
+');
+        lines.push({ title: '[ Скопировать ]', action: 'copy', _text: fullText });
+        Lampa.Select.show({
+          title: t$1('trakt_debug_badges_btn', 'Отладка: бейджи цифровых дат'),
+          items: lines,
+          onSelect: function(item) {
+            if (item && item.action === 'copy') {
+              try {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                  navigator.clipboard.writeText(item._text).then(function() { Lampa.Noty.show('Скопировано'); });
+                } else {
+                  var ta = document.createElement('textarea');
+                  ta.value = item._text;
+                  document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+                  Lampa.Noty.show('Скопировано');
+                }
+              } catch(e) { Lampa.Noty.show('Ошибка копирования'); }
+            }
+          },
+          onBack: function() { Lampa.Controller.toggle('settings_component'); }
+        });
+      }
+    });
+
     // ── Отладка торрента ─────────────────────────────────────────────────────
     Lampa.SettingsApi.addParam({
       component: 'trakt',
@@ -11546,6 +11630,10 @@
       setTimeout(syncPlaybackFromTrakt, 2000);
       if (Object.keys(getUpcomingMovieDates()).length > 0 || getSoonMovieIds().size > 0) {
         _digitalDatesAvailable = true;
+        setTimeout(function() {
+          _renderedCardInstances.forEach(renderDigitalReleaseBadge);
+          refreshDigitalBadgesDOM();
+        }, 0);
       }
     },
     /**
