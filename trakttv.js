@@ -388,7 +388,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.3.2';
+  var PLUGIN_VERSION = '2.3.3';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -7094,10 +7094,9 @@
   function showDigitalReleaseDate(data, element) {
     var movieData = (data && data.movie) || data || {};
     var movieId = movieData.id || (data && data.id);
-    if (!movieId) return;
-    var act = element && element.object && (element.object.activity || element.object);
+    if (!movieId || !Lampa.TMDB || !Lampa.Reguest) return;
+    var act = element && element.object && element.object.activity;
     var renderRoot = act && typeof act.render === 'function' ? act.render() : null;
-    if (renderRoot && !renderRoot.find) renderRoot = $(renderRoot);
     if (!renderRoot) return;
 
     function applyDate(isoDate) {
@@ -7118,14 +7117,41 @@
     }
 
     var tmdbId = String(movieId);
+    // Fast path: use shared cache populated by poster renders or previous detail opens
     var cachedDates = getUpcomingMovieDates();
     if (tmdbId in cachedDates && cachedDates[tmdbId]) {
       applyDate(cachedDates[tmdbId]);
       return;
     }
-    fetchAndCacheDigitalDate(tmdbId, function(date) {
-      if (date) applyDate(date);
-    });
+    // Own direct request — bypasses pending state from poster fetches, always reliable
+    var url = Lampa.TMDB.api('movie/' + tmdbId + '/release_dates?api_key=' + Lampa.TMDB.key());
+    var network = new Lampa.Reguest();
+    network.silent(url, function(resp) {
+      var usDate = null, anyDate = null;
+      if (resp && Array.isArray(resp.results)) {
+        resp.results.forEach(function(entry) {
+          if (!Array.isArray(entry.release_dates)) return;
+          entry.release_dates.forEach(function(rd) {
+            if (rd.type === 4 && rd.release_date) {
+              if (!anyDate) anyDate = rd.release_date;
+              if (entry.iso_3166_1 === 'US' && !usDate) usDate = rd.release_date;
+            }
+          });
+        });
+      }
+      var chosen = usDate || anyDate;
+      if (chosen) {
+        // Write to shared cache so poster badges can use it
+        var map = getUpcomingMovieDates();
+        map[tmdbId] = chosen;
+        saveUpcomingMovieDates(map);
+        _digitalDateFetchDone.add(tmdbId);
+        var today = new Date(); today.setHours(0, 0, 0, 0);
+        var release = new Date(chosen); release.setHours(0, 0, 0, 0);
+        if (release >= today) { _digitalDatesAvailable = true; scheduleRefreshDigitalBadgesDOM(); }
+        applyDate(chosen);
+      }
+    }, function() {});
   }
 
   /**
