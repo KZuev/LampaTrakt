@@ -388,7 +388,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.3.5';
+  var PLUGIN_VERSION = '2.3.6';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -7137,19 +7137,12 @@
     network.silent(url, function(resp) {
       var results = resp && resp.release_dates && Array.isArray(resp.release_dates.results)
         ? resp.release_dates.results : null;
-      // Диагностика: показываем что нашли в TMDB
-      var movieTitle = (resp && (resp.title || resp.name)) || ('id:' + tmdbId);
-      if (!results) {
-        Lampa.Noty.show('Trakt Digital: нет ответа release_dates (' + movieTitle + ')');
-        return;
-      }
+      if (!results) return;
       var exactDate = null, usDate = null, anyDate = null;
-      var type4count = 0;
       results.forEach(function(entry) {
         if (!Array.isArray(entry.release_dates)) return;
         entry.release_dates.forEach(function(rd) {
           if (rd.type === 4 && rd.release_date) {
-            type4count++;
             if (!anyDate) anyDate = rd.release_date;
             if (entry.iso_3166_1 === 'US' && !usDate) usDate = rd.release_date;
             if (entry.iso_3166_1 === isoCountry) exactDate = rd.release_date;
@@ -7157,11 +7150,7 @@
         });
       });
       var chosen = exactDate || usDate || anyDate;
-      if (!chosen) {
-        Lampa.Noty.show('Trakt Digital: нет type-4 дат в TMDB (' + movieTitle + ', стран: ' + results.length + ')');
-        return;
-      }
-      Lampa.Noty.show('Trakt Digital: найдено ' + type4count + ' дат, выбрана ' + chosen.split('T')[0] + ' (' + movieTitle + ')');
+      if (!chosen) return;
       var map = getUpcomingMovieDates();
       map[tmdbId] = chosen;
       saveUpcomingMovieDates(map);
@@ -7170,9 +7159,7 @@
       var release = new Date(chosen); release.setHours(0, 0, 0, 0);
       if (release >= today) { _digitalDatesAvailable = true; scheduleRefreshDigitalBadgesDOM(); }
       applyDate(chosen);
-    }, function() {
-      Lampa.Noty.show('Trakt Digital: ошибка запроса TMDB (id:' + tmdbId + ')');
-    });
+    }, function() {});
   }
 
   /**
@@ -8871,7 +8858,7 @@
         var soonIds = getSoonMovieIds();
         var domCount = document.querySelectorAll('.trakt-digital-release').length;
         var lines = [];
-        lines.push({ title: 'available=' + _digitalDatesAvailable + ' | dates:' + dateKeys.length + ' | soon:' + soonIds.size + ' | pending:' + _digitalDateFetchPending.size + ' | done:' + _digitalDateFetchDone.size });
+        lines.push({ title: 'available=' + _digitalDatesAvailable + ' | dates:' + dateKeys.length + ' | soon:' + soonIds.size + ' | pending:' + _digitalDateFetchPending.size + ' | queue:' + _digitalDateQueue.length + ' | done:' + _digitalDateFetchDone.size });
         lines.push({ title: 'DOM бейджей сейчас: ' + domCount });
         if (dateKeys.length) {
           var sample = dateKeys.slice(0, 5).map(function(k) { return k + ':' + datesMap[k]; }).join(', ');
@@ -11500,21 +11487,38 @@
     }, 300);
   }
 
-  function fetchAndCacheDigitalDate(tmdbId, callback) {
-    if (_digitalDateFetchPending.has(tmdbId)) return;
-    if (_digitalDateFetchDone.has(tmdbId)) {
-      var cached = getUpcomingMovieDates()[tmdbId] || null;
-      if (callback) callback(cached);
-      return;
+  var _digitalDateQueue = [];
+  var _digitalDateActive = 0;
+  var _DIGITAL_CONCURRENCY = 3;
+
+  function _drainDigitalQueue() {
+    while (_digitalDateActive < _DIGITAL_CONCURRENCY && _digitalDateQueue.length > 0) {
+      var item = _digitalDateQueue.shift();
+      _digitalDateActive++;
+      _execDigitalFetch(item.tmdbId, item.isoCountry, item.callback);
     }
-    if (!Lampa.TMDB || !Lampa.Reguest) { if (callback) callback(null); return; }
-    _digitalDateFetchPending.add(tmdbId);
+  }
+
+  function _execDigitalFetch(tmdbId, isoCountry, callback) {
     var url = Lampa.TMDB.api('movie/' + tmdbId + '/release_dates?api_key=' + Lampa.TMDB.key());
     var network = new Lampa.Reguest();
-    network.silent(url, function(resp) {
+    function _done(chosen) {
       _digitalDateFetchPending.delete(tmdbId);
       _digitalDateFetchDone.add(tmdbId);
-      var usDate = null, anyDate = null;
+      _digitalDateActive--;
+      if (chosen) {
+        var map = getUpcomingMovieDates();
+        map[tmdbId] = chosen;
+        saveUpcomingMovieDates(map);
+        var today = new Date(); today.setHours(0, 0, 0, 0);
+        var release = new Date(chosen); release.setHours(0, 0, 0, 0);
+        if (release >= today) { _digitalDatesAvailable = true; scheduleRefreshDigitalBadgesDOM(); }
+      }
+      if (callback) callback(chosen || null);
+      _drainDigitalQueue();
+    }
+    network.silent(url, function(resp) {
+      var exactDate = null, usDate = null, anyDate = null;
       if (resp && Array.isArray(resp.results)) {
         resp.results.forEach(function(entry) {
           if (!Array.isArray(entry.release_dates)) return;
@@ -11522,28 +11526,30 @@
             if (rd.type === 4 && rd.release_date) {
               if (!anyDate) anyDate = rd.release_date;
               if (entry.iso_3166_1 === 'US' && !usDate) usDate = rd.release_date;
+              if (entry.iso_3166_1 === isoCountry) exactDate = rd.release_date;
             }
           });
         });
       }
-      var chosen = usDate || anyDate;
-      if (chosen) {
-        var map = getUpcomingMovieDates();
-        map[tmdbId] = chosen;
-        saveUpcomingMovieDates(map);
-        var today = new Date(); today.setHours(0, 0, 0, 0);
-        var release = new Date(chosen); release.setHours(0, 0, 0, 0);
-        if (release >= today) {
-          _digitalDatesAvailable = true;
-          scheduleRefreshDigitalBadgesDOM();
-        }
-      }
-      if (callback) callback(chosen || null);
-    }, function() {
-      _digitalDateFetchPending.delete(tmdbId);
-      _digitalDateFetchDone.add(tmdbId);
-      if (callback) callback(null);
-    });
+      _done(exactDate || usDate || anyDate || null);
+    }, function() { _done(null); });
+  }
+
+  function fetchAndCacheDigitalDate(tmdbId, callback) {
+    if (_digitalDateFetchDone.has(tmdbId)) {
+      var cached = getUpcomingMovieDates()[tmdbId] || null;
+      if (callback) callback(cached);
+      return;
+    }
+    if (_digitalDateFetchPending.has(tmdbId)) return;
+    if (!Lampa.TMDB || !Lampa.Reguest) { if (callback) callback(null); return; }
+    _digitalDateFetchPending.add(tmdbId);
+    var lang = Lampa.Storage ? Lampa.Storage.get('language', 'ru') : 'ru';
+    var langCode = lang.slice(0, 2).toUpperCase();
+    var countryMap = { RU: 'RU', EN: 'US', UK: 'GB', DE: 'DE', FR: 'FR', ES: 'ES', IT: 'IT', PT: 'PT' };
+    var isoCountry = countryMap[langCode] || 'US';
+    _digitalDateQueue.push({ tmdbId: tmdbId, isoCountry: isoCountry, callback: callback });
+    _drainDigitalQueue();
   }
 
   function renderDigitalReleaseBadge(cardInstance) {
