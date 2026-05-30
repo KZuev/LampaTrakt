@@ -388,7 +388,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.4.6';
+  var PLUGIN_VERSION = '2.4.7';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -8848,31 +8848,34 @@
       component: 'trakt',
       param: { name: 'trakt_debug_badges_show', type: 'button' },
       field: {
-        name: t$1('trakt_debug_badges_btn', 'Отладка: бейджи цифровых дат'),
-        description: t$1('trakt_debug_badges_btn_descr', 'Диагностика почему бейджи не отображаются')
+        name: t$1('trakt_debug_badges_btn', 'Диагностика бейджей'),
+        description: t$1('trakt_debug_badges_btn_descr', 'Текущая страница + состояние патча + кэш дат')
       },
       onRender: function(item) { item.show(); },
       onChange: function() {
         var datesMap = getUpcomingMovieDates();
         var dateKeys = Object.keys(datesMap);
         var soonIds = getSoonMovieIds();
-        var domCount = document.querySelectorAll('.trakt-digital-release').length;
-        var lines = [];
-        var _keyLen = Lampa.TMDB && typeof Lampa.TMDB.key === 'function' ? String(Lampa.TMDB.key()).length : 0;
-        lines.push({ title: 'available=' + _digitalDatesAvailable + ' | dates:' + dateKeys.length + ' | soon:' + soonIds.size + ' | done:' + _digitalDateFetchDone.size + ' | errors:' + _digitalDateErrors + ' | nodata:' + _digitalDateNoData });
-        lines.push({ title: 'TMDB key len:' + _keyLen + ' | key prefix:' + (_digitalDateFirstKey || '(ещё не использовался)') });
-        lines.push({ title: 'DOM бейджей сейчас: ' + domCount });
+
+        // ── Патч Lampa.Card ──────────────────────────────────────────────────
         var _cardType = window.Lampa && Lampa.Card ? typeof Lampa.Card : 'undefined';
         var _cardPatched = window.Lampa && Lampa.Card && Lampa.Card._traktPatched ? 'yes' : 'no';
-        lines.push({ title: 'Lampa.Card: type=' + _cardType + ' | patched=' + _cardPatched });
-        var _rawLS = (function() { try { var v = localStorage.getItem(_UPCOMING_MOVIE_DATES_KEY); return v ? v.slice(0, 80) : 'null'; } catch(e) { return 'err:' + e.message; } })();
-        lines.push({ title: 'localStorage raw: ' + _rawLS });
-        if (dateKeys.length) {
-          var sample = dateKeys.slice(0, 5).map(function(k) { return k + ':' + datesMap[k]; }).join(', ');
-          lines.push({ title: 'Даты (первые 5): ' + sample });
-        } else {
-          lines.push({ title: 'trakt_upcoming_movie_dates ПУСТ' });
-        }
+
+        // ── Текущая страница ─────────────────────────────────────────────────
+        var _actInfo = 'n/a';
+        try {
+          var _act = Lampa.Activity && typeof Lampa.Activity.active === 'function' && Lampa.Activity.active();
+          if (_act) {
+            var _actKeys = Object.keys(_act).filter(function(k) { return typeof _act[k] !== 'function'; });
+            _actInfo = _actKeys.map(function(k) { var v = _act[k]; return k + '=' + (typeof v === 'object' ? '[obj]' : String(v).slice(0, 30)); }).join(' | ');
+          }
+        } catch(e) { _actInfo = 'err:' + e.message; }
+
+        var _allViews = document.querySelectorAll('.card__view').length;
+        var _taggedViews = document.querySelectorAll('.card__view[data-trakt-movie-id]').length;
+        var _domBadges = document.querySelectorAll('.trakt-digital-release').length;
+
+        // ── Карточки в _renderedCardInstances ────────────────────────────────
         var _movieIds = [];
         _renderedCardInstances.forEach(function(ci) {
           if (_movieIds.length >= 5) return;
@@ -8882,57 +8885,85 @@
           if (t !== 'movie') return;
           if (_movieIds.indexOf(String(d.id)) < 0) _movieIds.push(String(d.id));
         });
-        lines.push({ title: 'Карточек в _renderedCardInstances: ' + _renderedCardInstances.length + ' | первые id: ' + _movieIds.join(', ') });
-        var checked = 0, noType = 0, noView = 0, noLabel = 0, applied = 0;
+
+        // ── Карточки с лейблом ───────────────────────────────────────────────
+        var _withLabel = [], _noView = 0;
         _renderedCardInstances.forEach(function(ci) {
           var data = ci && ci.data;
           if (!data || !data.id) return;
-          checked++;
           var type = data.method || data.card_type || data.type || (data.first_air_date ? 'tv' : 'movie');
-          if (type !== 'movie') { noType++; return; }
+          if (type !== 'movie') return;
           var tmdbId = String(data.id);
-          var cardNode = typeof ci.render === 'function' ? ci.render(true) : null;
-          var cardView = cardNode && cardNode.querySelector('.card__view');
-          if (!cardView) { noView++; return; }
           var label = _buildDigitalLabel(tmdbId);
-          if (!label) { noLabel++; return; }
-          applied++;
-        });
-        lines.push({ title: 'Проверено: ' + checked + ' | не movie: ' + noType + ' | нет view: ' + noView + ' | нет label: ' + noLabel + ' | итого готово: ' + applied });
-        // Show a few cards that should have badges
-        var shown = 0;
-        _renderedCardInstances.forEach(function(ci) {
-          if (shown >= 8) return;
-          var data = ci && ci.data;
-          if (!data || !data.id) return;
-          var type = data.method || data.card_type || data.type || (data.first_air_date ? 'tv' : 'movie');
-          var tmdbId = String(data.id);
-          var inDates = !!datesMap[tmdbId];
-          var inSoon = soonIds.has(tmdbId);
-          if (!inDates && !inSoon) return;
-          shown++;
+          if (!label) return;
           var cardNode = typeof ci.render === 'function' ? ci.render(true) : null;
-          var cardView = cardNode && cardNode.querySelector('.card__view');
-          var label = _buildDigitalLabel(tmdbId);
-          var hasBadge = cardView && !!cardView.querySelector('.trakt-digital-release');
-          lines.push({ title: 'id:' + tmdbId + ' type:' + type + ' view:' + !!cardView + ' label:' + (label||'null') + ' badge:' + hasBadge });
+          var cardView = cardNode && cardNode.querySelector && cardNode.querySelector('.card__view');
+          if (!cardView) { _noView++; return; }
+          var hasBadge = !!cardView.querySelector('.trakt-digital-release');
+          _withLabel.push({ tmdbId: tmdbId, label: label, hasBadge: hasBadge });
         });
-        if (!shown) lines.push({ title: 'Ни одна карточка с датой не найдена в _renderedCardInstances' });
+
+        var lines = [];
+
+        lines.push({ title: '─── Патч Lampa.Card ─────────────────────────────' });
+        lines.push({ title: 'Lampa.Card: type=' + _cardType + ' | patched=' + _cardPatched });
+        lines.push({ title: 'Статус: ' + _patchStatus });
+
+        lines.push({ title: '─── Текущая страница ────────────────────────────' });
+        lines.push({ title: 'Activity: ' + _actInfo });
+        lines.push({ title: '.card__view всего: ' + _allViews + ' | с data-trakt-movie-id: ' + _taggedViews + ' | DOM бейджей: ' + _domBadges });
+        lines.push({ title: '_renderedCardInstances: ' + _renderedCardInstances.length + ' | movie id примеры: ' + (_movieIds.join(', ') || 'нет') });
+
+        lines.push({ title: '─── Последнее событие catalog ───────────────────' });
+        if (_lastCatalogEvent) {
+          lines.push({ title: 'type=' + _lastCatalogEvent.type + ' | keys: ' + _lastCatalogEvent.keys + ' | items: ' + _lastCatalogEvent.hasItems });
+        } else {
+          lines.push({ title: 'событие catalog ещё не приходило' });
+        }
+
+        lines.push({ title: '─── Кэш дат ─────────────────────────────────────' });
+        var _keyLen = Lampa.TMDB && typeof Lampa.TMDB.key === 'function' ? String(Lampa.TMDB.key()).length : 0;
+        lines.push({ title: 'available=' + _digitalDatesAvailable + ' | dates:' + dateKeys.length + ' | soon:' + soonIds.size });
+        lines.push({ title: 'done:' + _digitalDateFetchDone.size + ' | errors:' + _digitalDateErrors + ' | nodata:' + _digitalDateNoData });
+        lines.push({ title: 'TMDB key len:' + _keyLen + ' | prefix:' + (_digitalDateFirstKey || '–') });
+        if (dateKeys.length) {
+          lines.push({ title: 'Даты: ' + dateKeys.slice(0, 5).map(function(k) { return k + ':' + datesMap[k]; }).join(', ') });
+        }
+        var _soonArr = Array.from(soonIds).slice(0, 5);
+        if (_soonArr.length) {
+          lines.push({ title: 'Скоро ids: ' + _soonArr.join(', ') });
+        }
+
+        lines.push({ title: '─── Карточки с бейджем ──────────────────────────' });
+        if (_withLabel.length) {
+          _withLabel.slice(0, 8).forEach(function(e) {
+            lines.push({ title: 'id:' + e.tmdbId + ' label:"' + e.label + '" badge:' + e.hasBadge });
+          });
+          if (_noView > 0) lines.push({ title: '(ещё ' + _noView + ' без DOM view)' });
+        } else {
+          lines.push({ title: 'Нет карточек с лейблом в _renderedCardInstances' });
+        }
+
         var fullText = lines.map(function(l) { return l.title; }).join('\n');
+
+        lines.push({ title: '─── Действия ────────────────────────────────────' });
         lines.push({ title: '[ Применить бейджи сейчас ]', action: 'apply' });
-        lines.push({ title: '[ Тестовый бейдж на первую карточку ]', action: 'testbadge' });
-        lines.push({ title: '[ Скопировать ]', action: 'copy', _text: fullText });
+        lines.push({ title: '[ Тестовый бейдж (первые 3) ]', action: 'testbadge' });
+        lines.push({ title: '[ Очистить кэш дат и soonIds ]', action: 'clearcache' });
+        lines.push({ title: '[ Скопировать всё ]', action: 'copy', _text: fullText });
+
         Lampa.Select.show({
-          title: t$1('trakt_debug_badges_btn', 'Отладка: бейджи цифровых дат'),
+          title: 'Диагностика бейджей',
           items: lines,
           onSelect: function(item) {
-            if (item && item.action === 'apply') {
+            if (!item) return;
+            if (item.action === 'apply') {
               _renderedCardInstances.forEach(renderDigitalReleaseBadge);
               refreshDigitalBadgesDOM();
               Lampa.Noty.show('Бейджи обновлены');
               return;
             }
-            if (item && item.action === 'testbadge') {
+            if (item.action === 'testbadge') {
               var testApplied = 0;
               _renderedCardInstances.forEach(function(ci) {
                 if (testApplied >= 3) return;
@@ -8952,10 +8983,18 @@
                 cv.appendChild(tb);
                 testApplied++;
               });
-              Lampa.Noty.show(testApplied ? ('Тестовых бейджей: ' + testApplied) : 'Нет movie-карточек');
+              Lampa.Noty.show(testApplied ? ('Тестовых: ' + testApplied) : 'Нет movie-карточек');
               return;
             }
-            if (item && item.action === 'copy') {
+            if (item.action === 'clearcache') {
+              try { localStorage.removeItem(_UPCOMING_MOVIE_DATES_KEY); } catch(e) {}
+              try { localStorage.removeItem(_SOON_MOVIE_KEY); } catch(e) {}
+              _digitalDateFetchDone.clear();
+              _digitalDatesAvailable = false;
+              Lampa.Noty.show('Кэш дат очищен — обновите страницу');
+              return;
+            }
+            if (item.action === 'copy') {
               try {
                 if (navigator.clipboard && navigator.clipboard.writeText) {
                   navigator.clipboard.writeText(item._text).then(function() { Lampa.Noty.show('Скопировано'); });
@@ -8965,7 +9004,7 @@
                   document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
                   Lampa.Noty.show('Скопировано');
                 }
-              } catch(e) { Lampa.Noty.show('Ошибка копирования'); }
+              } catch(e) { Lampa.Noty.show('Ошибка: ' + e.message); }
             }
           },
           onBack: function() { Lampa.Controller.toggle('settings_component'); }
@@ -11414,6 +11453,8 @@
   var _watchlistBadgeCachePromise = null;
   var _renderedCardInstances = [];
   var _digitalDatesAvailable = false;
+  var _patchStatus = 'not called';
+  var _lastCatalogEvent = null;
 
   function ensureWatchlistBadgeCache() {
     if (_watchlistBadgeCache) return Promise.resolve(_watchlistBadgeCache);
@@ -11578,12 +11619,15 @@
         });
       }
       var todayT = new Date(); todayT.setHours(0, 0, 0, 0);
-      // Собираем только будущие цифровые даты для бейджа
-      var hasAnyDigitalDate = !!(exactDate || usDate || anyDate);
-      var chosen = null;
-      [exactDate, usDate, anyDate].forEach(function(d) {
-        if (!chosen && d) { var dt = new Date(d); dt.setHours(0,0,0,0); if (dt >= todayT) chosen = d; }
-      });
+      // chosen: приоритет exactDate > usDate > anyDate (как оригинал)
+      var chosen = exactDate || usDate || anyDate || null;
+      // Если хоть одна type-4 дата найдена — не запускаем theatrical check
+      var hasAnyDigitalDate = !!chosen;
+      // Сохраняем только будущие даты; прошлые обнуляем, но hasAnyDigitalDate остаётся true
+      if (chosen) {
+        var _chosenDt = new Date(chosen); _chosenDt.setHours(0, 0, 0, 0);
+        if (_chosenDt < todayT) chosen = null;
+      }
       if (!chosen && !hasAnyDigitalDate) {
         _digitalDateNoData++;
         var firstPastTheatrical = null;
@@ -11712,8 +11756,11 @@
   }
 
   function _patchLampaCard() {
-    if (!window.Lampa || typeof Lampa.Card !== 'function') return;
-    if (Lampa.Card._traktPatched) return;
+    if (!window.Lampa || typeof Lampa.Card !== 'function') {
+      _patchStatus = 'skip: Lampa.Card=' + (window.Lampa ? typeof Lampa.Card : 'no Lampa');
+      return;
+    }
+    if (Lampa.Card._traktPatched) { _patchStatus = 'already patched'; return; }
     var _orig = Lampa.Card;
     Lampa.Card = function(data, params) {
       var inst = _orig.apply(this, arguments);
@@ -11736,6 +11783,7 @@
       if (Object.prototype.hasOwnProperty.call(_orig, _pk)) Lampa.Card[_pk] = _orig[_pk];
     }
     Lampa.Card._traktPatched = true;
+    _patchStatus = 'patched OK: Lampa.Card wrapped';
   }
 
   function decorateUpnextLine(event) {
@@ -11818,6 +11866,7 @@
         }
       });
       Lampa.Listener.follow('catalog', function (e) {
+        _lastCatalogEvent = { type: e && e.type, keys: e ? Object.keys(e).join(',') : '', hasItems: !!(e && Array.isArray(e.items) && e.items.length) };
         if (!Lampa.Storage.get('trakt_token') || !Array.isArray(e.items) || !e.items.length) return;
         e.items.forEach(function(ci) {
           if (_renderedCardInstances.indexOf(ci) < 0) _renderedCardInstances.push(ci);
