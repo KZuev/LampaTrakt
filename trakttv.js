@@ -388,7 +388,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.3.0';
+  var PLUGIN_VERSION = '2.3.1';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -7094,10 +7094,10 @@
   function showDigitalReleaseDate(data, element) {
     var movieData = (data && data.movie) || data || {};
     var movieId = movieData.id || (data && data.id);
-    if (!movieId || !Lampa.TMDB || !Lampa.Reguest) return;
-    var renderRoot = element && element.object && element.object.activity &&
-      typeof element.object.activity.render === 'function'
-      ? element.object.activity.render() : null;
+    if (!movieId) return;
+    var act = element && element.object && (element.object.activity || element.object);
+    var renderRoot = act && typeof act.render === 'function' ? act.render() : null;
+    if (renderRoot && !renderRoot.find) renderRoot = $(renderRoot);
     if (!renderRoot) return;
 
     function applyDate(isoDate) {
@@ -7108,6 +7108,7 @@
       var displayDate = parts[2] + '.' + parts[1] + '.' + parts[0];
       var label = (Lampa.Lang && Lampa.Lang.translate('trakt_digital_release')) || 'Digital';
       var detailsEl = renderRoot.find('.full-start-new__details:not(.trakt):not(.trakt-digital-date)').last();
+      if (!detailsEl.length) detailsEl = renderRoot.find('.full-start__details').last();
       if (detailsEl.length) {
         var span = document.createElement('span');
         span.className = 'trakt-digital-date';
@@ -7116,29 +7117,15 @@
       }
     }
 
-    var lang = Lampa.Storage ? Lampa.Storage.get('language', 'ru') : 'ru';
-    var langCode = lang.slice(0, 2).toUpperCase();
-    var countryMap = { RU: 'RU', EN: 'US', UK: 'GB', DE: 'DE', FR: 'FR', ES: 'ES', IT: 'IT', PT: 'PT' };
-    var isoCountry = countryMap[langCode] || 'US';
-
-    var url = Lampa.TMDB.api('movie/' + movieId + '/release_dates?api_key=' + Lampa.TMDB.key());
-    var network = new Lampa.Reguest();
-    network.silent(url, function(resp) {
-      if (!resp || !Array.isArray(resp.results)) return;
-      var exactDate = null, usDate = null, anyDate = null;
-      resp.results.forEach(function(entry) {
-        if (!Array.isArray(entry.release_dates)) return;
-        entry.release_dates.forEach(function(rd) {
-          if (rd.type === 4 && rd.release_date) {
-            if (!anyDate) anyDate = rd.release_date;
-            if (entry.iso_3166_1 === 'US' && !usDate) usDate = rd.release_date;
-            if (entry.iso_3166_1 === isoCountry) exactDate = rd.release_date;
-          }
-        });
-      });
-      var chosen = exactDate || usDate || anyDate;
-      if (chosen) applyDate(chosen);
-    }, function() {});
+    var tmdbId = String(movieId);
+    var cachedDates = getUpcomingMovieDates();
+    if (tmdbId in cachedDates && cachedDates[tmdbId]) {
+      applyDate(cachedDates[tmdbId]);
+      return;
+    }
+    fetchAndCacheDigitalDate(tmdbId, function(date) {
+      if (date) applyDate(date);
+    });
   }
 
   /**
@@ -11455,6 +11442,55 @@
     badge.textContent = label;
     cardView.appendChild(badge);
   }
+  var _digitalDateFetchPending = new Set();
+  var _digitalDateFetchDone = new Set();
+
+  function fetchAndCacheDigitalDate(tmdbId, callback) {
+    if (_digitalDateFetchPending.has(tmdbId)) return;
+    if (_digitalDateFetchDone.has(tmdbId)) {
+      var cached = getUpcomingMovieDates()[tmdbId] || null;
+      if (callback) callback(cached);
+      return;
+    }
+    if (!Lampa.TMDB || !Lampa.Reguest) { if (callback) callback(null); return; }
+    _digitalDateFetchPending.add(tmdbId);
+    var url = Lampa.TMDB.api('movie/' + tmdbId + '/release_dates?api_key=' + Lampa.TMDB.key());
+    var network = new Lampa.Reguest();
+    network.silent(url, function(resp) {
+      _digitalDateFetchPending.delete(tmdbId);
+      _digitalDateFetchDone.add(tmdbId);
+      var usDate = null, anyDate = null;
+      if (resp && Array.isArray(resp.results)) {
+        resp.results.forEach(function(entry) {
+          if (!Array.isArray(entry.release_dates)) return;
+          entry.release_dates.forEach(function(rd) {
+            if (rd.type === 4 && rd.release_date) {
+              if (!anyDate) anyDate = rd.release_date;
+              if (entry.iso_3166_1 === 'US' && !usDate) usDate = rd.release_date;
+            }
+          });
+        });
+      }
+      var chosen = usDate || anyDate;
+      if (chosen) {
+        var map = getUpcomingMovieDates();
+        map[tmdbId] = chosen;
+        saveUpcomingMovieDates(map);
+        var today = new Date(); today.setHours(0, 0, 0, 0);
+        var release = new Date(chosen); release.setHours(0, 0, 0, 0);
+        if (release >= today) {
+          _digitalDatesAvailable = true;
+          setTimeout(refreshDigitalBadgesDOM, 0);
+        }
+      }
+      if (callback) callback(chosen || null);
+    }, function() {
+      _digitalDateFetchPending.delete(tmdbId);
+      _digitalDateFetchDone.add(tmdbId);
+      if (callback) callback(null);
+    });
+  }
+
   function renderDigitalReleaseBadge(cardInstance) {
     var data = cardInstance && cardInstance.data;
     if (!data || !data.id) return;
@@ -11466,7 +11502,12 @@
     if (cardView && !cardView.getAttribute('data-trakt-movie-id')) {
       cardView.setAttribute('data-trakt-movie-id', tmdbId);
     }
-    _applyDigitalBadge(cardView, tmdbId);
+    var cachedDates = getUpcomingMovieDates();
+    if (tmdbId in cachedDates) {
+      if (cachedDates[tmdbId]) _applyDigitalBadge(cardView, tmdbId);
+    } else {
+      fetchAndCacheDigitalDate(tmdbId, null);
+    }
   }
   function refreshDigitalBadgesDOM() {
     document.querySelectorAll('.card__view[data-trakt-movie-id]').forEach(function(cardView) {
@@ -11550,7 +11591,7 @@
             e.items.forEach(renderWatchedBadge);
             e.items.forEach(renderWatchlistBadge);
             e.items.forEach(renderDigitalReleaseBadge);
-            if (_digitalDatesAvailable) refreshDigitalBadgesDOM();
+            refreshDigitalBadgesDOM();
           }
         }
       });
