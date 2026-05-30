@@ -388,7 +388,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.4.3';
+  var PLUGIN_VERSION = '2.4.4';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -11577,22 +11577,25 @@
       var chosen = exactDate || usDate || anyDate || null;
       if (!chosen) {
         _digitalDateNoData++;
-        var latestTheatrical = null;
+        var todayT = new Date(); todayT.setHours(0, 0, 0, 0);
+        var firstPastTheatrical = null;
         if (results) {
           results.forEach(function(entry) {
             if (!Array.isArray(entry.release_dates)) return;
             entry.release_dates.forEach(function(rd) {
               if (rd.type === 3 && rd.release_date) {
-                if (!latestTheatrical || rd.release_date > latestTheatrical) latestTheatrical = rd.release_date;
+                var rdDate = new Date(rd.release_date); rdDate.setHours(0, 0, 0, 0);
+                if (rdDate <= todayT) {
+                  if (!firstPastTheatrical || rd.release_date < firstPastTheatrical) firstPastTheatrical = rd.release_date;
+                }
               }
             });
           });
         }
-        if (latestTheatrical) {
-          var tDate = new Date(latestTheatrical); tDate.setHours(0, 0, 0, 0);
-          var todayT = new Date(); todayT.setHours(0, 0, 0, 0);
+        if (firstPastTheatrical) {
+          var tDate = new Date(firstPastTheatrical); tDate.setHours(0, 0, 0, 0);
           var diffDays = Math.round((todayT - tDate) / 86400000);
-          if (diffDays >= 0 && diffDays <= 180) {
+          if (diffDays <= 180) {
             var soonSet = getSoonMovieIds();
             soonSet.add(tmdbId);
             saveSoonMovieIds(soonSet);
@@ -11700,6 +11703,27 @@
     if (document.body) mo.observe(document.body, { childList: true, subtree: true });
   }
 
+  function _patchLampaCard() {
+    if (!window.Lampa || !Lampa.Card || typeof Lampa.Card.create !== 'function') return;
+    if (Lampa.Card.create._traktPatched) return;
+    var _orig = Lampa.Card.create;
+    Lampa.Card.create = function(data, params) {
+      var inst = _orig.apply(this, arguments);
+      if (!Lampa.Storage.get('trakt_token')) return inst;
+      if (inst && data && data.id) {
+        var type = data.method || data.card_type || data.type || (data.first_air_date ? 'tv' : 'movie');
+        if (type === 'movie') {
+          if (_renderedCardInstances.indexOf(inst) < 0) _renderedCardInstances.push(inst);
+          renderDigitalReleaseBadge(inst);
+          renderWatchedBadge(inst);
+          renderWatchlistBadge(inst);
+        }
+      }
+      return inst;
+    };
+    Lampa.Card.create._traktPatched = true;
+  }
+
   function decorateUpnextLine(event) {
     if (!event || !event.data || event.data.trakt_row !== 'upnext') return;
     if (!Array.isArray(event.items)) return;
@@ -11790,6 +11814,7 @@
         refreshDigitalBadgesDOM();
       });
       _initCardObserver();
+      _patchLampaCard();
 
       if (window.Lampa && Lampa.Player && Lampa.Player.listener) {
         // onEnded / onStop / onHidden -> markFinishIntent for the current media key
@@ -11870,6 +11895,10 @@
       applyLampaHideClasses();
       initTraktAccountSwitchButton();
       setTimeout(syncPlaybackFromTrakt, 2000);
+      _patchLampaCard();
+      // Повторная попытка патча на случай позднего создания Lampa.Card
+      setTimeout(_patchLampaCard, 1000);
+      setTimeout(_patchLampaCard, 3000);
       if (Object.keys(getUpcomingMovieDates()).length > 0 || getSoonMovieIds().size > 0) {
         _digitalDatesAvailable = true;
         setTimeout(function() {
