@@ -388,7 +388,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.2.6';
+  var PLUGIN_VERSION = '2.2.7';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -10535,9 +10535,8 @@
       if (playbackUpdates.length) {
         setTimeout(function() {
           playbackUpdates.forEach(function(u) {
-            try { Lampa.Timeline.update(u); } catch(err) {}
+            setFileViewProgress(u.hash, u.percent, u.time, u.duration);
           });
-          views = Lampa.Storage.get(getFileViewKey()) || {};
         }, 0);
       }
       ensureWatchedCache().then(function() {
@@ -10578,7 +10577,7 @@
         if (updates.length) {
           setTimeout(function() {
             updates.forEach(function(hash) {
-              try { Lampa.Timeline.update({ hash: hash, percent: 100, time: 0, duration: 0 }); } catch(err) {}
+              setFileViewProgress(hash, 100, 0, 0);
             });
           }, 0);
         }
@@ -11034,6 +11033,14 @@
 
   var _lastPlaybackSyncAt = 0;
   var _lastTraktPlayback = [];
+  function setFileViewProgress(hash, percent, time, duration) {
+    try {
+      var key = getFileViewKey();
+      var views = Lampa.Storage.get(key) || {};
+      views[hash] = { percent: percent, time: time || 0, duration: duration || 0 };
+      Lampa.Storage.set(key, views);
+    } catch(e) {}
+  }
   function syncPlaybackFromTrakt() {
     var token = Lampa.Storage.get('trakt_token');
     if (!token) return;
@@ -11079,7 +11086,7 @@
           if (percent > localPct) {
             var timeSec = durationSec ? Math.round(percent / 100 * durationSec) : 0;
             try {
-              Lampa.Timeline.update({ hash: hash, percent: percent, time: timeSec, duration: durationSec });
+              setFileViewProgress(hash, percent, timeSec, durationSec);
               debugItems.push({ label: debugLabel, hash: hash, traktPct: percent, localPct: localPct, action: 'updated' });
             } catch(e) {
               debugItems.push({ label: debugLabel, hash: hash, traktPct: percent, localPct: localPct, action: 'error', error: String(e) });
