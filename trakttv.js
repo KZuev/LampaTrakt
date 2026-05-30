@@ -388,7 +388,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.3.6';
+  var PLUGIN_VERSION = '2.3.7';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -11500,7 +11500,7 @@
   }
 
   function _execDigitalFetch(tmdbId, isoCountry, callback) {
-    var url = Lampa.TMDB.api('movie/' + tmdbId + '/release_dates?api_key=' + Lampa.TMDB.key());
+    var url = Lampa.TMDB.api('movie/' + tmdbId + '?api_key=' + Lampa.TMDB.key() + '&append_to_response=release_dates');
     var network = new Lampa.Reguest();
     function _done(chosen) {
       _digitalDateFetchPending.delete(tmdbId);
@@ -11518,9 +11518,11 @@
       _drainDigitalQueue();
     }
     network.silent(url, function(resp) {
+      var results = resp && resp.release_dates && Array.isArray(resp.release_dates.results)
+        ? resp.release_dates.results : null;
       var exactDate = null, usDate = null, anyDate = null;
-      if (resp && Array.isArray(resp.results)) {
-        resp.results.forEach(function(entry) {
+      if (results) {
+        results.forEach(function(entry) {
           if (!Array.isArray(entry.release_dates)) return;
           entry.release_dates.forEach(function(rd) {
             if (rd.type === 4 && rd.release_date) {
