@@ -388,7 +388,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.2.4';
+  var PLUGIN_VERSION = '2.2.5';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -8853,16 +8853,29 @@
           }
         }
         if (sync.ts) {
-          lines.push({ title: '— Sync playback (' + sync.ts.replace('T',' ').slice(0,19) + ') —' });
-          if (sync.error) lines.push({ title: 'Ошибка: ' + sync.error });
-          else lines.push({ title: 'Всего в Trakt: ' + (sync.total || 0) });
-          if (Array.isArray(sync.items)) {
-            sync.items.forEach(function(it) {
-              var line = (it.label || '?') + ' → ' + it.action;
-              if (it.traktPct) line += ' trakt:' + Math.round(it.traktPct) + '%';
-              if (it.localPct !== undefined) line += ' local:' + Math.round(it.localPct) + '%';
-              lines.push({ title: line });
-            });
+          lines.push({ title: '— Trakt /sync/playback (' + sync.ts.replace('T',' ').slice(0,19) + ') —' });
+          if (sync.error) {
+            lines.push({ title: 'Ошибка: ' + sync.error });
+          } else {
+            lines.push({ title: 'Всего в Trakt: ' + (sync.total || 0) });
+            if (Array.isArray(sync.traktRaw) && sync.traktRaw.length) {
+              sync.traktRaw.forEach(function(r) {
+                var line = r.show + ' ' + r.ep + ' ' + r.pct + '%';
+                if (r.paused_at) line += ' (' + r.paused_at + ')';
+                lines.push({ title: line });
+              });
+            } else {
+              lines.push({ title: '(нет данных из Trakt)' });
+            }
+            if (Array.isArray(sync.items) && sync.items.length) {
+              lines.push({ title: '— Результат применения —' });
+              sync.items.forEach(function(it) {
+                var line = (it.label || '?') + ' → ' + it.action;
+                if (it.traktPct) line += ' trakt:' + Math.round(it.traktPct) + '%';
+                if (it.localPct !== undefined) line += ' local:' + Math.round(it.localPct) + '%';
+                lines.push({ title: line });
+              });
+            }
           }
         }
         if (!lines.length) lines.push({ title: 'Нет данных. Откройте список серий в торренте.' });
@@ -11046,10 +11059,31 @@
         });
       }
       try {
+        var traktRaw = (Array.isArray(items) ? items : []).slice(0, 30).map(function(pb) {
+          if (!pb) return null;
+          if (pb.type === 'episode' && pb.show && pb.episode) {
+            return {
+              show: (pb.show.title || '') + ' (tmdb:' + (pb.show.ids && pb.show.ids.tmdb || '?') + ')',
+              ep: 'S' + pb.episode.season + 'E' + pb.episode.number,
+              pct: Math.round(parseFloat(pb.progress || 0)),
+              paused_at: pb.paused_at ? pb.paused_at.replace('T',' ').slice(0,19) : null
+            };
+          }
+          if (pb.type === 'movie' && pb.movie) {
+            return {
+              show: (pb.movie.title || '') + ' (tmdb:' + (pb.movie.ids && pb.movie.ids.tmdb || '?') + ')',
+              ep: 'movie',
+              pct: Math.round(parseFloat(pb.progress || 0)),
+              paused_at: pb.paused_at ? pb.paused_at.replace('T',' ').slice(0,19) : null
+            };
+          }
+          return null;
+        }).filter(Boolean);
         Lampa.Storage.set('trakt_debug_sync', {
           ts: new Date().toISOString(),
           total: Array.isArray(items) ? items.length : 0,
-          items: debugItems.slice(0, 20)
+          items: debugItems.slice(0, 20),
+          traktRaw: traktRaw
         });
       } catch(e) {}
     }).catch(function(err) {
