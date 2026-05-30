@@ -388,7 +388,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.4.5';
+  var PLUGIN_VERSION = '2.4.6';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -8862,6 +8862,9 @@
         lines.push({ title: 'available=' + _digitalDatesAvailable + ' | dates:' + dateKeys.length + ' | soon:' + soonIds.size + ' | done:' + _digitalDateFetchDone.size + ' | errors:' + _digitalDateErrors + ' | nodata:' + _digitalDateNoData });
         lines.push({ title: 'TMDB key len:' + _keyLen + ' | key prefix:' + (_digitalDateFirstKey || '(ещё не использовался)') });
         lines.push({ title: 'DOM бейджей сейчас: ' + domCount });
+        var _cardType = window.Lampa && Lampa.Card ? typeof Lampa.Card : 'undefined';
+        var _cardPatched = window.Lampa && Lampa.Card && Lampa.Card._traktPatched ? 'yes' : 'no';
+        lines.push({ title: 'Lampa.Card: type=' + _cardType + ' | patched=' + _cardPatched });
         var _rawLS = (function() { try { var v = localStorage.getItem(_UPCOMING_MOVIE_DATES_KEY); return v ? v.slice(0, 80) : 'null'; } catch(e) { return 'err:' + e.message; } })();
         lines.push({ title: 'localStorage raw: ' + _rawLS });
         if (dateKeys.length) {
@@ -11493,14 +11496,12 @@
       var today = new Date(); today.setHours(0, 0, 0, 0);
       var release = new Date(digitalDate); release.setHours(0, 0, 0, 0);
       var diff = Math.round((release - today) / 86400000);
-      if (diff >= 0) {
-        if (diff === 0) return 'Сегодня';
-        if (diff === 1) return 'Завтра';
-        if (diff === 2) return 'Через 2 дня';
-        if (diff === 3) return 'Через 3 дня';
-        return release.getDate() + ' ' + _DIGITAL_MONTHS[release.getMonth()];
-      }
-      // Дата уже прошла — падаем до проверки soonMovieIds
+      if (diff < 0) return null;
+      if (diff === 0) return 'Сегодня';
+      if (diff === 1) return 'Завтра';
+      if (diff === 2) return 'Через 2 дня';
+      if (diff === 3) return 'Через 3 дня';
+      return release.getDate() + ' ' + _DIGITAL_MONTHS[release.getMonth()];
     }
     if (getSoonMovieIds().has(tmdbId)) return 'Скоро';
     return null;
@@ -11576,14 +11577,14 @@
           });
         });
       }
-      var chosen = exactDate || usDate || anyDate || null;
       var todayT = new Date(); todayT.setHours(0, 0, 0, 0);
-      // Игнорируем прошедшие цифровые даты — бейдж для них не нужен
-      if (chosen) {
-        var chosenD = new Date(chosen); chosenD.setHours(0, 0, 0, 0);
-        if (chosenD < todayT) chosen = null;
-      }
-      if (!chosen) {
+      // Собираем только будущие цифровые даты для бейджа
+      var hasAnyDigitalDate = !!(exactDate || usDate || anyDate);
+      var chosen = null;
+      [exactDate, usDate, anyDate].forEach(function(d) {
+        if (!chosen && d) { var dt = new Date(d); dt.setHours(0,0,0,0); if (dt >= todayT) chosen = d; }
+      });
+      if (!chosen && !hasAnyDigitalDate) {
         _digitalDateNoData++;
         var firstPastTheatrical = null;
         if (results) {
@@ -11721,9 +11722,12 @@
         var type = data.method || data.card_type || data.type || (data.first_air_date ? 'tv' : 'movie');
         if (type === 'movie') {
           if (_renderedCardInstances.indexOf(inst) < 0) _renderedCardInstances.push(inst);
-          renderDigitalReleaseBadge(inst);
-          renderWatchedBadge(inst);
-          renderWatchlistBadge(inst);
+          // Откладываем бейджи на следующий тик — card.render() ещё не вызван в момент создания
+          setTimeout(function() {
+            renderDigitalReleaseBadge(inst);
+            renderWatchedBadge(inst);
+            renderWatchlistBadge(inst);
+          }, 0);
         }
       }
       return inst;
@@ -13017,9 +13021,12 @@
               var _existingMovieDates = getUpcomingMovieDates();
               Object.assign(_existingMovieDates, _datesMap);
               saveUpcomingMovieDates(_existingMovieDates);
-              saveSoonMovieIds(new Set(
-                soonMovies.map(function(m) { return m.movie && m.movie.ids && String(m.movie.ids.tmdb); }).filter(Boolean)
-              ));
+              var _existingSoon = getSoonMovieIds();
+              soonMovies.forEach(function(m) {
+                var _sid = m.movie && m.movie.ids && String(m.movie.ids.tmdb);
+                if (_sid) _existingSoon.add(_sid);
+              });
+              saveSoonMovieIds(_existingSoon);
               _digitalDatesAvailable = true;
               _renderedCardInstances.forEach(renderDigitalReleaseBadge);
               refreshDigitalBadgesDOM();
