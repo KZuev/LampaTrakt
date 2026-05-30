@@ -388,7 +388,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.2.8';
+  var PLUGIN_VERSION = '2.2.9';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -8881,8 +8881,7 @@
           lines.push({ title: 'id:' + tmdbId + ' type:' + type + ' view:' + !!cardView + ' label:' + (label||'null') + ' badge:' + hasBadge });
         });
         if (!shown) lines.push({ title: 'Ни одна карточка с датой не найдена в _renderedCardInstances' });
-        var fullText = lines.map(function(l) { return l.title; }).join('
-');
+        var fullText = lines.map(function(l) { return l.title; }).join('\n');
         lines.push({ title: '[ Скопировать ]', action: 'copy', _text: fullText });
         Lampa.Select.show({
           title: t$1('trakt_debug_badges_btn', 'Отладка: бейджи цифровых дат'),
