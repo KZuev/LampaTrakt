@@ -388,7 +388,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.3.9';
+  var PLUGIN_VERSION = '2.4.0';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -8862,11 +8862,13 @@
         lines.push({ title: 'available=' + _digitalDatesAvailable + ' | dates:' + dateKeys.length + ' | soon:' + soonIds.size + ' | done:' + _digitalDateFetchDone.size + ' | errors:' + _digitalDateErrors + ' | nodata:' + _digitalDateNoData });
         lines.push({ title: 'TMDB key len:' + _keyLen + ' | key prefix:' + (_digitalDateFirstKey || '(ещё не использовался)') });
         lines.push({ title: 'DOM бейджей сейчас: ' + domCount });
+        var _rawLS = (function() { try { var v = localStorage.getItem(_UPCOMING_MOVIE_DATES_KEY); return v ? v.slice(0, 80) : 'null'; } catch(e) { return 'err:' + e.message; } })();
+        lines.push({ title: 'localStorage raw: ' + _rawLS });
         if (dateKeys.length) {
           var sample = dateKeys.slice(0, 5).map(function(k) { return k + ':' + datesMap[k]; }).join(', ');
           lines.push({ title: 'Даты (первые 5): ' + sample });
         } else {
-          lines.push({ title: 'trakt_upcoming_movie_dates ПУСТ — открывайте фильмы, даты загружаются автоматически' });
+          lines.push({ title: 'trakt_upcoming_movie_dates ПУСТ' });
         }
         var _movieIds = [];
         _renderedCardInstances.forEach(function(ci) {
@@ -11349,17 +11351,17 @@
   }
   var _UPCOMING_MOVIE_DATES_KEY = 'trakt_upcoming_movie_dates';
   function getUpcomingMovieDates() {
-    try { var r = Lampa.Storage.get(_UPCOMING_MOVIE_DATES_KEY); return r ? JSON.parse(r) : {}; } catch(e) { return {}; }
+    try { var r = localStorage.getItem(_UPCOMING_MOVIE_DATES_KEY); return r ? JSON.parse(r) : {}; } catch(e) { return {}; }
   }
   function saveUpcomingMovieDates(map) {
-    try { Lampa.Storage.set(_UPCOMING_MOVIE_DATES_KEY, JSON.stringify(map)); } catch(e) {}
+    try { localStorage.setItem(_UPCOMING_MOVIE_DATES_KEY, JSON.stringify(map)); } catch(e) {}
   }
   var _SOON_MOVIE_KEY = 'trakt_soon_movie_ids';
   function getSoonMovieIds() {
-    try { var r = Lampa.Storage.get(_SOON_MOVIE_KEY); return r ? new Set(JSON.parse(r)) : new Set(); } catch(e) { return new Set(); }
+    try { var r = localStorage.getItem(_SOON_MOVIE_KEY); return r ? new Set(JSON.parse(r)) : new Set(); } catch(e) { return new Set(); }
   }
   function saveSoonMovieIds(ids) {
-    try { Lampa.Storage.set(_SOON_MOVIE_KEY, JSON.stringify(Array.from(ids))); } catch(e) {}
+    try { localStorage.setItem(_SOON_MOVIE_KEY, JSON.stringify(Array.from(ids))); } catch(e) {}
   }
 
   function ensureWatchedCache() {
