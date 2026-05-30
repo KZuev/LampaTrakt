@@ -388,7 +388,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.3.3';
+  var PLUGIN_VERSION = '2.3.4';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -7106,17 +7106,25 @@
       if (parts.length !== 3 || !parts[1] || !parts[2]) return;
       var displayDate = parts[2] + '.' + parts[1] + '.' + parts[0];
       var label = (Lampa.Lang && Lampa.Lang.translate('trakt_digital_release')) || 'Digital';
-      var detailsEl = renderRoot.find('.full-start-new__details:not(.trakt):not(.trakt-digital-date)').last();
-      if (!detailsEl.length) detailsEl = renderRoot.find('.full-start__details').last();
-      if (detailsEl.length) {
-        var span = document.createElement('span');
-        span.className = 'trakt-digital-date';
-        span.textContent = ' • ' + label + ': ' + displayDate;
-        detailsEl[0].appendChild(span);
+      var chip = document.createElement('div');
+      chip.className = 'full-start-new__details trakt-digital-date';
+      chip.textContent = label + ': ' + displayDate;
+      var anchor = renderRoot.find('.full-start-new__details:not(.trakt):not(.trakt-digital-date)').last();
+      if (anchor.length) {
+        anchor.after(chip);
+      } else {
+        var rateLine = renderRoot.find('.full-start-new__rate-line');
+        if (rateLine.length) rateLine.before(chip);
+        else renderRoot.find('.full-start-new').append(chip);
       }
     }
 
     var tmdbId = String(movieId);
+    var lang = Lampa.Storage ? Lampa.Storage.get('language', 'ru') : 'ru';
+    var langCode = lang.slice(0, 2).toUpperCase();
+    var countryMap = { RU: 'RU', EN: 'US', UK: 'GB', DE: 'DE', FR: 'FR', ES: 'ES', IT: 'IT', PT: 'PT' };
+    var isoCountry = countryMap[langCode] || 'US';
+
     // Fast path: use shared cache populated by poster renders or previous detail opens
     var cachedDates = getUpcomingMovieDates();
     if (tmdbId in cachedDates && cachedDates[tmdbId]) {
@@ -7127,21 +7135,20 @@
     var url = Lampa.TMDB.api('movie/' + tmdbId + '/release_dates?api_key=' + Lampa.TMDB.key());
     var network = new Lampa.Reguest();
     network.silent(url, function(resp) {
-      var usDate = null, anyDate = null;
-      if (resp && Array.isArray(resp.results)) {
-        resp.results.forEach(function(entry) {
-          if (!Array.isArray(entry.release_dates)) return;
-          entry.release_dates.forEach(function(rd) {
-            if (rd.type === 4 && rd.release_date) {
-              if (!anyDate) anyDate = rd.release_date;
-              if (entry.iso_3166_1 === 'US' && !usDate) usDate = rd.release_date;
-            }
-          });
+      if (!resp || !Array.isArray(resp.results)) return;
+      var exactDate = null, usDate = null, anyDate = null;
+      resp.results.forEach(function(entry) {
+        if (!Array.isArray(entry.release_dates)) return;
+        entry.release_dates.forEach(function(rd) {
+          if (rd.type === 4 && rd.release_date) {
+            if (!anyDate) anyDate = rd.release_date;
+            if (entry.iso_3166_1 === 'US' && !usDate) usDate = rd.release_date;
+            if (entry.iso_3166_1 === isoCountry) exactDate = rd.release_date;
+          }
         });
-      }
-      var chosen = usDate || anyDate;
+      });
+      var chosen = exactDate || usDate || anyDate;
       if (chosen) {
-        // Write to shared cache so poster badges can use it
         var map = getUpcomingMovieDates();
         map[tmdbId] = chosen;
         saveUpcomingMovieDates(map);
