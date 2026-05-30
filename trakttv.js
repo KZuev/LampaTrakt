@@ -388,7 +388,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.2.2';
+  var PLUGIN_VERSION = '2.2.3';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -8822,6 +8822,58 @@
       }
     });
 
+    // ── Отладка торрента ─────────────────────────────────────────────────────
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: { name: 'trakt_debug_torrent_show', type: 'button' },
+      field: {
+        name: t$1('trakt_debug_torrent_btn', 'Отладка: прогресс торрента'),
+        description: t$1('trakt_debug_torrent_btn_descr', 'Данные последнего открытия списка серий и синхронизации прогресса')
+      },
+      onRender: function(item) { item.show(); },
+      onChange: function() {
+        var dbg = Lampa.Storage.get('trakt_debug_torrent') || {};
+        var sync = Lampa.Storage.get('trakt_debug_sync') || {};
+        var lines = [];
+        if (dbg.ts) {
+          lines.push({ title: '— Список серий (' + dbg.ts.replace('T',' ').slice(0,19) + ') —' });
+          if (dbg.show) lines.push({ title: dbg.show });
+          lines.push({ title: 'Sync: ' + dbg.syncAgo + ' назад' + (dbg.syncTriggered ? ' (запущен)' : '') });
+          if (Array.isArray(dbg.files) && dbg.files.length) {
+            dbg.files.forEach(function(f) {
+              var line = 'S' + String(f.s).padStart(2,'0') + 'E' + String(f.e).padStart(2,'0');
+              line += ' | local:' + f['local%'] + '%';
+              if (f['trakt%'] !== null) line += ' trakt:' + f['trakt%'] + '%';
+              if (f.traktWatched) line += ' [просмотрено]';
+              if (!f.hash) line += ' [нет hash]';
+              lines.push({ title: line });
+            });
+          } else {
+            lines.push({ title: 'Файлы без season/episode данных' });
+          }
+        }
+        if (sync.ts) {
+          lines.push({ title: '— Sync playback (' + sync.ts.replace('T',' ').slice(0,19) + ') —' });
+          if (sync.error) lines.push({ title: 'Ошибка: ' + sync.error });
+          else lines.push({ title: 'Всего в Trakt: ' + (sync.total || 0) });
+          if (Array.isArray(sync.items)) {
+            sync.items.forEach(function(it) {
+              var line = (it.label || '?') + ' → ' + it.action;
+              if (it.traktPct) line += ' trakt:' + Math.round(it.traktPct) + '%';
+              if (it.localPct !== undefined) line += ' local:' + Math.round(it.localPct) + '%';
+              lines.push({ title: line });
+            });
+          }
+        }
+        if (!lines.length) lines.push({ title: 'Нет данных. Откройте список серий в торренте.' });
+        Lampa.Select.show({
+          title: t$1('trakt_debug_torrent_btn', 'Отладка: прогресс торрента'),
+          items: lines,
+          onBack: function() { Lampa.Controller.toggle('settings_component'); }
+        });
+      }
+    });
+
     // ── Сброс всех настроек ───────────────────────────────────────────────────
     Lampa.SettingsApi.addParam({
       component: 'trakt',
@@ -10405,19 +10457,44 @@
           ids: card.ids
         });
       });
+      var syncAgoSec = Math.round((Date.now() - _lastPlaybackSyncAt) / 1000);
+      var syncTriggered = syncAgoSec > 120;
       ensureWatchedCache().then(function() {
-        if (!_watchedEpisodesCache.size) return;
+        var views = Lampa.Storage.get(getFileViewKey()) || {};
         var updates = [];
+        var debugFiles = [];
         e.items.forEach(function(item) {
           var hash = item.timeline && item.timeline.hash;
           var season = item.season;
           var episode = item.episode;
-          if (!hash || !season || !episode) return;
-          if (!_watchedEpisodesCache.has(tmdbId + '-' + String(season) + '-' + String(episode))) return;
-          var views = Lampa.Storage.get(getFileViewKey()) || {};
-          var current = views[hash] ? parseFloat(views[hash].percent || 0) : 0;
-          if (current < 90) updates.push(hash);
+          if (!season || !episode) return;
+          var localPct = hash && views[hash] ? Math.round(parseFloat(views[hash].percent || 0)) : 0;
+          var traktWatched = hash ? _watchedEpisodesCache.has(tmdbId + '-' + String(season) + '-' + String(episode)) : false;
+          var traktPct = null;
+          for (var pi = 0; pi < _lastTraktPlayback.length; pi++) {
+            var pb = _lastTraktPlayback[pi];
+            if (pb && pb.type === 'episode' && pb.show && pb.episode &&
+                String(pb.show.ids && pb.show.ids.tmdb) === tmdbId &&
+                String(pb.episode.season) === String(season) &&
+                String(pb.episode.number) === String(episode)) {
+              traktPct = Math.round(parseFloat(pb.progress || 0));
+              break;
+            }
+          }
+          debugFiles.push({ s: season, e: episode, hash: hash ? hash.slice(0, 10) : null, 'local%': localPct, 'trakt%': traktPct, traktWatched: traktWatched });
+          if (hash && traktWatched) {
+            if (localPct < 90) updates.push(hash);
+          }
         });
+        try {
+          Lampa.Storage.set('trakt_debug_torrent', {
+            ts: new Date().toISOString(),
+            show: (card.original_title || card.title || card.name || '?') + ' (tmdb:' + tmdbId + ')',
+            syncAgo: syncAgoSec + 's',
+            syncTriggered: syncTriggered,
+            files: debugFiles
+          });
+        } catch(dbgErr) {}
         if (updates.length) {
           setTimeout(function() {
             updates.forEach(function(hash) {
@@ -10426,7 +10503,7 @@
           }, 0);
         }
       });
-      if (Date.now() - _lastPlaybackSyncAt > 120000) syncPlaybackFromTrakt();
+      if (syncTriggered) syncPlaybackFromTrakt();
     },
     /**
      * Обработчик события старта плеера
@@ -10876,11 +10953,13 @@
   }
 
   var _lastPlaybackSyncAt = 0;
+  var _lastTraktPlayback = [];
   function syncPlaybackFromTrakt() {
     var token = Lampa.Storage.get('trakt_token');
     if (!token) return;
     _lastPlaybackSyncAt = Date.now();
     requestApi('GET', '/sync/playback?extended=full').then(function(items) {
+      _lastTraktPlayback = Array.isArray(items) ? items : [];
       var debugItems = [];
       if (Array.isArray(items)) {
         var fileViewKey = getFileViewKey();
