@@ -388,7 +388,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.4.1';
+  var PLUGIN_VERSION = '2.4.2';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -11608,18 +11608,71 @@
     if (cardView && !cardView.getAttribute('data-trakt-movie-id')) {
       cardView.setAttribute('data-trakt-movie-id', tmdbId);
     }
-    var cachedDates = getUpcomingMovieDates();
-    if (tmdbId in cachedDates) {
-      if (cachedDates[tmdbId]) _applyDigitalBadge(cardView, tmdbId);
-    } else {
-      fetchAndCacheDigitalDate(tmdbId, null);
-    }
+    _applyDigitalBadge(cardView, tmdbId);
+    fetchAndCacheDigitalDate(tmdbId, null);
   }
   function refreshDigitalBadgesDOM() {
     document.querySelectorAll('.card__view[data-trakt-movie-id]').forEach(function(cardView) {
       if (cardView.querySelector('.trakt-digital-release')) return;
       _applyDigitalBadge(cardView, cardView.getAttribute('data-trakt-movie-id'));
     });
+  }
+
+  function _getMovieDataFromCardEl(cardEl) {
+    var $ = window.jQuery || window.$;
+    if (!$ || !cardEl) return null;
+    try {
+      var jd = $(cardEl).data();
+      if (!jd) return null;
+      var keys = ['card', 'data', 'movie', 'item', 'object'];
+      for (var ki = 0; ki < keys.length; ki++) {
+        var v = jd[keys[ki]];
+        if (v && typeof v === 'object') {
+          if (v.data && v.data.id) return v.data;
+          if (v.id && typeof v.id === 'number') return v;
+        }
+      }
+      for (var k in jd) {
+        var vv = jd[k];
+        if (vv && typeof vv === 'object' && vv.id && typeof vv.id === 'number') return vv;
+      }
+    } catch(e) {}
+    return null;
+  }
+
+  function _tagUnlabeledCards() {
+    document.querySelectorAll('.card__view:not([data-trakt-movie-id])').forEach(function(cv) {
+      var movieData = _getMovieDataFromCardEl(cv.parentElement);
+      if (!movieData || !movieData.id) return;
+      var type = movieData.method || movieData.card_type || movieData.type || (movieData.first_air_date ? 'tv' : 'movie');
+      if (type !== 'movie') return;
+      var tmdbId = String(movieData.id);
+      cv.setAttribute('data-trakt-movie-id', tmdbId);
+      fetchAndCacheDigitalDate(tmdbId, null);
+      _applyDigitalBadge(cv, tmdbId);
+    });
+    refreshDigitalBadgesDOM();
+  }
+
+  function _initCardObserver() {
+    if (typeof MutationObserver === 'undefined') return;
+    var _scanTimer = null;
+    var mo = new MutationObserver(function(mutations) {
+      var hasCards = false;
+      for (var i = 0; i < mutations.length && !hasCards; i++) {
+        var added = mutations[i].addedNodes;
+        for (var j = 0; j < added.length && !hasCards; j++) {
+          var n = added[j];
+          if (n.nodeType !== 1) continue;
+          if ((n.classList && n.classList.contains('card__view')) ||
+              (n.querySelector && n.querySelector('.card__view'))) hasCards = true;
+        }
+      }
+      if (!hasCards) return;
+      if (_scanTimer) clearTimeout(_scanTimer);
+      _scanTimer = setTimeout(function() { _scanTimer = null; _tagUnlabeledCards(); }, 300);
+    });
+    if (document.body) mo.observe(document.body, { childList: true, subtree: true });
   }
 
   function decorateUpnextLine(event) {
@@ -11701,6 +11754,7 @@
           }
         }
       });
+      _initCardObserver();
 
       if (window.Lampa && Lampa.Player && Lampa.Player.listener) {
         // onEnded / onStop / onHidden -> markFinishIntent for the current media key
