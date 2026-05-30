@@ -388,7 +388,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.3.7';
+  var PLUGIN_VERSION = '2.3.8';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -8858,7 +8858,9 @@
         var soonIds = getSoonMovieIds();
         var domCount = document.querySelectorAll('.trakt-digital-release').length;
         var lines = [];
-        lines.push({ title: 'available=' + _digitalDatesAvailable + ' | dates:' + dateKeys.length + ' | soon:' + soonIds.size + ' | pending:' + _digitalDateFetchPending.size + ' | queue:' + _digitalDateQueue.length + ' | done:' + _digitalDateFetchDone.size });
+        var _keyLen = Lampa.TMDB && typeof Lampa.TMDB.key === 'function' ? String(Lampa.TMDB.key()).length : 0;
+        lines.push({ title: 'available=' + _digitalDatesAvailable + ' | dates:' + dateKeys.length + ' | soon:' + soonIds.size + ' | done:' + _digitalDateFetchDone.size + ' | errors:' + _digitalDateErrors + ' | nodata:' + _digitalDateNoData });
+        lines.push({ title: 'TMDB key len:' + _keyLen + ' | key prefix:' + (_digitalDateFirstKey || '(ещё не использовался)') });
         lines.push({ title: 'DOM бейджей сейчас: ' + domCount });
         if (dateKeys.length) {
           var sample = dateKeys.slice(0, 5).map(function(k) { return k + ':' + datesMap[k]; }).join(', ');
@@ -8866,7 +8868,16 @@
         } else {
           lines.push({ title: 'trakt_upcoming_movie_dates ПУСТ — открывайте фильмы, даты загружаются автоматически' });
         }
-        lines.push({ title: 'Карточек в _renderedCardInstances: ' + _renderedCardInstances.length });
+        var _movieIds = [];
+        _renderedCardInstances.forEach(function(ci) {
+          if (_movieIds.length >= 5) return;
+          var d = ci && ci.data;
+          if (!d || !d.id) return;
+          var t = d.method || d.card_type || d.type || (d.first_air_date ? 'tv' : 'movie');
+          if (t !== 'movie') return;
+          if (_movieIds.indexOf(String(d.id)) < 0) _movieIds.push(String(d.id));
+        });
+        lines.push({ title: 'Карточек в _renderedCardInstances: ' + _renderedCardInstances.length + ' | первые id: ' + _movieIds.join(', ') });
         var checked = 0, noType = 0, noView = 0, noLabel = 0, applied = 0;
         _renderedCardInstances.forEach(function(ci) {
           var data = ci && ci.data;
@@ -11490,6 +11501,9 @@
   var _digitalDateQueue = [];
   var _digitalDateActive = 0;
   var _DIGITAL_CONCURRENCY = 3;
+  var _digitalDateErrors = 0;
+  var _digitalDateNoData = 0;
+  var _digitalDateFirstKey = '';
 
   function _drainDigitalQueue() {
     while (_digitalDateActive < _DIGITAL_CONCURRENCY && _digitalDateQueue.length > 0) {
@@ -11517,6 +11531,7 @@
       if (callback) callback(chosen || null);
       _drainDigitalQueue();
     }
+    if (!_digitalDateFirstKey) _digitalDateFirstKey = String(Lampa.TMDB.key()).slice(0, 4);
     network.silent(url, function(resp) {
       var results = resp && resp.release_dates && Array.isArray(resp.release_dates.results)
         ? resp.release_dates.results : null;
@@ -11533,8 +11548,10 @@
           });
         });
       }
-      _done(exactDate || usDate || anyDate || null);
-    }, function() { _done(null); });
+      var chosen = exactDate || usDate || anyDate || null;
+      if (!chosen) _digitalDateNoData++;
+      _done(chosen);
+    }, function() { _digitalDateErrors++; _done(null); });
   }
 
   function fetchAndCacheDigitalDate(tmdbId, callback) {
