@@ -388,7 +388,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.3.8';
+  var PLUGIN_VERSION = '2.3.9';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -8915,6 +8915,7 @@
         if (!shown) lines.push({ title: 'Ни одна карточка с датой не найдена в _renderedCardInstances' });
         var fullText = lines.map(function(l) { return l.title; }).join('\n');
         lines.push({ title: '[ Применить бейджи сейчас ]', action: 'apply' });
+        lines.push({ title: '[ Тестовый бейдж на первую карточку ]', action: 'testbadge' });
         lines.push({ title: '[ Скопировать ]', action: 'copy', _text: fullText });
         Lampa.Select.show({
           title: t$1('trakt_debug_badges_btn', 'Отладка: бейджи цифровых дат'),
@@ -8924,6 +8925,29 @@
               _renderedCardInstances.forEach(renderDigitalReleaseBadge);
               refreshDigitalBadgesDOM();
               Lampa.Noty.show('Бейджи обновлены');
+              return;
+            }
+            if (item && item.action === 'testbadge') {
+              var testApplied = 0;
+              _renderedCardInstances.forEach(function(ci) {
+                if (testApplied >= 3) return;
+                var d = ci && ci.data;
+                if (!d || !d.id) return;
+                var tp = d.method || d.card_type || d.type || (d.first_air_date ? 'tv' : 'movie');
+                if (tp !== 'movie') return;
+                var cn = typeof ci.render === 'function' ? ci.render(true) : null;
+                var cv = cn && cn.querySelector('.card__view');
+                if (!cv) return;
+                var existing = cv.querySelector('.trakt-digital-test');
+                if (existing) existing.parentNode.removeChild(existing);
+                var tb = document.createElement('div');
+                tb.className = 'trakt-digital-release trakt-digital-test';
+                tb.setAttribute('data-tmdb', String(d.id));
+                tb.textContent = 'Тест';
+                cv.appendChild(tb);
+                testApplied++;
+              });
+              Lampa.Noty.show(testApplied ? ('Тестовых бейджей: ' + testApplied) : 'Нет movie-карточек');
               return;
             }
             if (item && item.action === 'copy') {
