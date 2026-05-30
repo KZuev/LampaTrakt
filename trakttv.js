@@ -388,7 +388,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.2.0';
+  var PLUGIN_VERSION = '2.2.1';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -10407,6 +10407,7 @@
       });
       ensureWatchedCache().then(function() {
         if (!_watchedEpisodesCache.size) return;
+        var updates = [];
         e.items.forEach(function(item) {
           var hash = item.timeline && item.timeline.hash;
           var season = item.season;
@@ -10415,9 +10416,15 @@
           if (!_watchedEpisodesCache.has(tmdbId + '-' + String(season) + '-' + String(episode))) return;
           var views = Lampa.Storage.get(getFileViewKey()) || {};
           var current = views[hash] ? parseFloat(views[hash].percent || 0) : 0;
-          if (current >= 90) return;
-          try { Lampa.Timeline.update({ hash: hash, percent: 100, time: 0, duration: 0 }); } catch(err) {}
+          if (current < 90) updates.push(hash);
         });
+        if (updates.length) {
+          setTimeout(function() {
+            updates.forEach(function(hash) {
+              try { Lampa.Timeline.update({ hash: hash, percent: 100, time: 0, duration: 0 }); } catch(err) {}
+            });
+          }, 0);
+        }
       });
     },
     /**
