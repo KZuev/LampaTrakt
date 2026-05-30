@@ -388,7 +388,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.2.3';
+  var PLUGIN_VERSION = '2.2.4';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -10441,26 +10441,63 @@
      */
     onTorrentFileList: function onTorrentFileList(e) {
       if (!e || !Array.isArray(e.items) || !e.items.length) return;
-      var card = Lampa.Activity && Lampa.Activity.active && Lampa.Activity.active() &&
-        (Lampa.Activity.active().card_data || Lampa.Activity.active().card || Lampa.Activity.active().movie);
-      if (!card) return;
+      // Try multiple ways to get the active card
+      var act = Lampa.Activity && Lampa.Activity.active && Lampa.Activity.active();
+      var card = act && (act.card_data || act.card || act.movie || act.object);
+      // Fallback: try card from e itself or from first item with card data
+      if (!card && e.card) card = e.card;
+      if (!card) {
+        try {
+          Lampa.Storage.set('trakt_debug_torrent', {
+            ts: new Date().toISOString(),
+            show: 'card=null (activity=' + (act ? JSON.stringify(Object.keys(act)).slice(0,80) : 'null') + ')',
+            syncAgo: '?',
+            syncTriggered: false,
+            files: []
+          });
+        } catch(dbgErr) {}
+        return;
+      }
       var tmdbId = String(card.id);
+      // Build episode→hash map from current file list and populate hashMetaCache
+      var episodeHashes = {};
       e.items.forEach(function(item) {
         var hash = item.timeline && item.timeline.hash;
         var season = item.season;
         var episode = item.episode;
         if (!hash || !season || !episode) return;
-        setHashMeta(hash, {
-          card: card,
-          season: season,
-          episode: episode,
-          ids: card.ids
-        });
+        setHashMeta(hash, { card: card, season: season, episode: episode, ids: card.ids });
+        episodeHashes[String(season) + '-' + String(episode)] = hash;
       });
       var syncAgoSec = Math.round((Date.now() - _lastPlaybackSyncAt) / 1000);
       var syncTriggered = syncAgoSec > 120;
+      // Apply cached Trakt playback progress directly using hashes from current file list
+      var views = Lampa.Storage.get(getFileViewKey()) || {};
+      var playbackUpdates = [];
+      _lastTraktPlayback.forEach(function(pb) {
+        if (!pb || pb.type !== 'episode' || !pb.show || !pb.episode) return;
+        if (String(pb.show.ids && pb.show.ids.tmdb) !== tmdbId) return;
+        var key = String(pb.episode.season) + '-' + String(pb.episode.number);
+        var hash = episodeHashes[key];
+        if (!hash) return;
+        var traktPct = parseFloat(pb.progress || 0);
+        if (!traktPct) return;
+        var localPct = views[hash] ? parseFloat(views[hash].percent || 0) : 0;
+        if (traktPct > localPct) {
+          var dur = pb.episode.runtime ? pb.episode.runtime * 60 : 0;
+          playbackUpdates.push({ hash: hash, percent: traktPct, time: dur ? Math.round(traktPct / 100 * dur) : 0, duration: dur });
+        }
+      });
+      if (playbackUpdates.length) {
+        setTimeout(function() {
+          playbackUpdates.forEach(function(u) {
+            try { Lampa.Timeline.update(u); } catch(err) {}
+          });
+          views = Lampa.Storage.get(getFileViewKey()) || {};
+        }, 0);
+      }
       ensureWatchedCache().then(function() {
-        var views = Lampa.Storage.get(getFileViewKey()) || {};
+        views = Lampa.Storage.get(getFileViewKey()) || {};
         var updates = [];
         var debugFiles = [];
         e.items.forEach(function(item) {
@@ -10469,7 +10506,7 @@
           var episode = item.episode;
           if (!season || !episode) return;
           var localPct = hash && views[hash] ? Math.round(parseFloat(views[hash].percent || 0)) : 0;
-          var traktWatched = hash ? _watchedEpisodesCache.has(tmdbId + '-' + String(season) + '-' + String(episode)) : false;
+          var traktWatched = _watchedEpisodesCache.has(tmdbId + '-' + String(season) + '-' + String(episode));
           var traktPct = null;
           for (var pi = 0; pi < _lastTraktPlayback.length; pi++) {
             var pb = _lastTraktPlayback[pi];
@@ -10482,9 +10519,7 @@
             }
           }
           debugFiles.push({ s: season, e: episode, hash: hash ? hash.slice(0, 10) : null, 'local%': localPct, 'trakt%': traktPct, traktWatched: traktWatched });
-          if (hash && traktWatched) {
-            if (localPct < 90) updates.push(hash);
-          }
+          if (hash && traktWatched && localPct < 90) updates.push(hash);
         });
         try {
           Lampa.Storage.set('trakt_debug_torrent', {
@@ -10492,6 +10527,7 @@
             show: (card.original_title || card.title || card.name || '?') + ' (tmdb:' + tmdbId + ')',
             syncAgo: syncAgoSec + 's',
             syncTriggered: syncTriggered,
+            playbackApplied: playbackUpdates.length,
             files: debugFiles
           });
         } catch(dbgErr) {}
