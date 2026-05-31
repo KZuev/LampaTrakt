@@ -388,7 +388,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.5.4';
+  var PLUGIN_VERSION = '2.5.5';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -12437,6 +12437,8 @@
     });
   }
   var _navDebugLog = [];
+  var _traktRowsByTitle = {};
+
   function _navLogEvent(source, data) {
     var entry = { ts: new Date().toISOString(), source: source };
     if (data) {
@@ -12460,6 +12462,13 @@
     var _orig = Lampa.Activity.push;
     Lampa.Activity.push = function(data) {
       try {
+        // Lampa 3.0 игнорирует onMore и строит category_full из source:'tmdb'.
+        // Перехватываем и перенаправляем на правильный Trakt-компонент.
+        if (data && data.component === 'category_full' && data.title && _traktRowsByTitle[data.title]) {
+          var traktComp = _traktRowsByTitle[data.title];
+          _navLogEvent('activity_push_redirect', { from: 'category_full', to: traktComp, title: data.title });
+          return _orig.call(this, { title: data.title, component: traktComp, page: 1 });
+        }
         var comp = data && (data.component || '');
         var isTrakt = comp && (String(comp).indexOf('trakt') >= 0 || String(comp).indexOf('trakttv') >= 0);
         _navLogEvent(isTrakt ? 'activity_push_trakt' : 'activity_push', data || {});
@@ -12784,6 +12793,9 @@
       checkPermission: checkRecommendationsPermissions,
       visibleOn: function visibleOn() { return true; }
     };
+    if (_recMainConfig.displayTitle && _recMainConfig.component) {
+      _traktRowsByTitle[_recMainConfig.displayTitle] = _recMainConfig.component;
+    }
     Lampa.ContentRows.add({
       name: 'TraktRecommendationsRow',
       title: Lampa.Lang.translate('trakttv_row_recommendations_main'),
@@ -12804,6 +12816,7 @@
     }
     // 2. Watchlist, 1. Up Next (registered last → shown first)
     mainRows.slice().reverse().forEach(function (row) {
+      if (row.displayTitle && row.component) _traktRowsByTitle[row.displayTitle] = row.component;
       Lampa.ContentRows.add({
         name: row.name,
         title: row.title,
@@ -12815,6 +12828,7 @@
     });
     // Category rows
     catRows.forEach(function (row) {
+      if (row.displayTitle && row.component) _traktRowsByTitle[row.displayTitle] = row.component;
       Lampa.ContentRows.add({
         name: row.name,
         title: row.title,
