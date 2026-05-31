@@ -388,7 +388,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.5.0';
+  var PLUGIN_VERSION = '2.5.1';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -3608,36 +3608,41 @@
     // Use modular system for Lampa 3.0+, fallback to old system for compatibility
     if (isLampa3 && Lampa.Maker) {
       comp = Lampa.Maker.make('Category', object);
+      var _dataLoadStarted = false;
+      var _loadData = function (_self) {
+        if (_dataLoadStarted) return;
+        _dataLoadStarted = true;
+        var params = _objectSpread2({}, object);
+        if ((type === 'list' || type === 'myListItems') && object.id) {
+          params.id = object.id;
+        } else if ((type === 'list' || type === 'myListItems') && object.list_id) {
+          params.id = object.list_id;
+        }
+        params.limit = type === 'watchlist' ? 500 : 36;
+        params.page = params.page || 1;
+        if (!Api$2) {
+          logApiMissing$1();
+          _self.empty();
+          return;
+        }
+        Api$2[type](params).then(function (data) {
+          if (data && data.total_pages) {
+            total_pages = data.total_pages;
+          }
+          if (type === 'watchlist') { data = applyWatchlistClientFilters(data, object); data = rearrangeWatchlistUpcoming(data); }
+          if (type === 'upnext') data = rearrangeUpnextNotStarted(data);
+          _self.build(data && _typeof(data) === 'object' && Array.isArray(data.results) ? data : {
+            results: []
+          });
+          if (type === 'watchlist') setTimeout(function () { try { insertUpcomingDivider(_self); } catch(e) {} }, 0);
+          if (type === 'upnext') setTimeout(function () { try { insertUpnextNotStartedDivider(_self); } catch(e) {} }, 0);
+        })["catch"](function () {
+          _self.empty();
+        });
+      };
       comp.use({
         onCreate: function onCreate() {
-          var _this = this;
-          var params = _objectSpread2({}, object);
-          if ((type === 'list' || type === 'myListItems') && object.id) {
-            params.id = object.id;
-          } else if ((type === 'list' || type === 'myListItems') && object.list_id) {
-            params.id = object.list_id;
-          }
-          params.limit = type === 'watchlist' ? 500 : 36;
-          params.page = params.page || 1;
-          if (!Api$2) {
-            logApiMissing$1();
-            this.empty();
-            return;
-          }
-          Api$2[type](params).then(function (data) {
-            if (data && data.total_pages) {
-              total_pages = data.total_pages;
-            }
-            if (type === 'watchlist') { data = applyWatchlistClientFilters(data, object); data = rearrangeWatchlistUpcoming(data); }
-            if (type === 'upnext') data = rearrangeUpnextNotStarted(data);
-            _this.build(data && _typeof(data) === 'object' && Array.isArray(data.results) ? data : {
-              results: []
-            });
-            if (type === 'watchlist') setTimeout(function () { try { insertUpcomingDivider(_this); } catch(e) {} }, 0);
-            if (type === 'upnext') setTimeout(function () { try { insertUpnextNotStartedDivider(_this); } catch(e) {} }, 0);
-          })["catch"](function () {
-            _this.empty();
-          });
+          _loadData(this);
         },
         onNext: function onNext(resolve, reject) {
           var _this2 = this;
@@ -3748,6 +3753,13 @@
           });
         }
       });
+      // Гарантируем загрузку данных при ручном вызове create() (суб-компонент в watchlistHub/etc.)
+      var _makerCreate = typeof comp.create === 'function' ? comp.create.bind(comp) : null;
+      comp.create = function () {
+        var result = _makerCreate ? _makerCreate.apply(this, arguments) : undefined;
+        _loadData(comp);
+        return result;
+      };
     } else {
       // Backward compatibility for Lampa < 3.0
       comp = new Lampa.InteractionCategory(object);
@@ -3840,27 +3852,32 @@
     // Use modular system for Lampa 3.0+, fallback to old system for compatibility
     if (isLampa3 && Lampa.Maker) {
       comp = Lampa.Maker.make('Category', object);
+      var _recLoadStarted = false;
+      var _loadRecData = function (_self) {
+        if (_recLoadStarted) return;
+        _recLoadStarted = true;
+        var params = _objectSpread2({}, object);
+        params.limit = 36;
+        params.page = params.page || 1;
+        if (!Api$2) {
+          logApiMissing$1();
+          _self.empty();
+          return;
+        }
+        Api$2.recommendations(params).then(function (recommendations) {
+          _self.build(recommendations && _typeof(recommendations) === 'object' && Array.isArray(recommendations.results) ? recommendations : {
+            results: []
+          });
+          if (recommendations && recommendations.total_pages) {
+            total_pages = recommendations.total_pages;
+          }
+        })["catch"](function () {
+          _self.empty();
+        });
+      };
       comp.use({
         onCreate: function onCreate() {
-          var _this5 = this;
-          var params = _objectSpread2({}, object);
-          params.limit = 36;
-          params.page = params.page || 1;
-          if (!Api$2) {
-            logApiMissing$1();
-            this.empty();
-            return;
-          }
-          Api$2.recommendations(params).then(function (recommendations) {
-            _this5.build(recommendations && _typeof(recommendations) === 'object' && Array.isArray(recommendations.results) ? recommendations : {
-              results: []
-            });
-            if (recommendations && recommendations.total_pages) {
-              total_pages = recommendations.total_pages;
-            }
-          })["catch"](function () {
-            _this5.empty();
-          });
+          _loadRecData(this);
         },
         onNext: function onNext(resolve, reject) {
           var _this6 = this;
@@ -3930,6 +3947,12 @@
           });
         }
       });
+      var _makerRecCreate = typeof comp.create === 'function' ? comp.create.bind(comp) : null;
+      comp.create = function () {
+        var result = _makerRecCreate ? _makerRecCreate.apply(this, arguments) : undefined;
+        _loadRecData(comp);
+        return result;
+      };
     } else {
       // Backward compatibility for Lampa < 3.0
       comp = new Lampa.InteractionCategory(object);
