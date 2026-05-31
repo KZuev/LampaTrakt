@@ -388,7 +388,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.5.10';
+  var PLUGIN_VERSION = '2.5.11';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -8853,21 +8853,54 @@
     }
 
     function _showDebugGrid() {
-      var cards = document.querySelectorAll('.category-full .card');
-      var withCategory = 0, withBadge = 0;
-      var rect0 = null;
+      // Find the currently visible .category-full
+      var allCF = document.querySelectorAll('.category-full');
+      var catFull = null;
+      for (var i = 0; i < allCF.length; i++) {
+        if (allCF[i].offsetParent !== null) { catFull = allCF[i]; break; }
+      }
+      if (!catFull && allCF.length) catFull = allCF[allCF.length - 1];
+
+      if (!catFull) {
+        Lampa.Select.show({ title: 'Диагностика сетки', items: [{ title: '.category-full не найден' }],
+          onSelect: function() {}, onBack: function() { Lampa.Controller.toggle('settings_component'); } });
+        return;
+      }
+
+      var cards = catFull.querySelectorAll('.card');
+      var total = cards.length;
+      var withCategory = 0, withBadge = 0, cardsPerRow = 0;
+      var rect0 = null, firstRowTop = null;
+
       for (var i = 0; i < cards.length; i++) {
         if (cards[i].classList.contains('card--category')) withCategory++;
         if (cards[i].querySelector('.trakt-digital-release')) withBadge++;
-        if (i === 0) rect0 = cards[i].getBoundingClientRect();
+        var r = cards[i].getBoundingClientRect();
+        if (i === 0) { rect0 = r; firstRowTop = Math.round(r.top); }
+        if (firstRowTop !== null && Math.round(r.top) === firstRowTop) cardsPerRow++;
       }
-      var total = cards.length;
+
+      var cfRect = catFull.getBoundingClientRect();
+      var computedW = cards[0] ? window.getComputedStyle(cards[0]).width : 'N/A';
+
+      // Walk up the DOM and collect parent widths
+      var parentLines = [];
+      var node = catFull.parentElement;
+      for (var depth = 0; depth < 7 && node && node !== document.body; depth++) {
+        var cls = (node.className || '').toString().replace(/\s+/g, ' ').trim().slice(0, 55);
+        var pw = Math.round(node.getBoundingClientRect().width);
+        parentLines.push('↑ ' + (cls || node.tagName) + ' [' + pw + 'px]');
+        node = node.parentElement;
+      }
+
       var lines = [];
-      lines.push('Карточек в .category-full: ' + total);
-      lines.push('С классом .card--category: ' + withCategory + (total ? ' (' + Math.round(withCategory / total * 100) + '%)' : ''));
+      lines.push('Карточек: ' + total + '  |  в 1-й строке: ' + cardsPerRow);
+      lines.push('С .card--category: ' + withCategory + (total ? ' (' + Math.round(withCategory / total * 100) + '%)' : ''));
       lines.push('С бейджем цифр. релиза: ' + withBadge);
-      if (rect0) lines.push('Размер 1-й карточки: ' + Math.round(rect0.width) + '×' + Math.round(rect0.height) + 'px');
-      lines.push('Бейджи сейчас: ' + (_badgesHidden ? 'СКРЫТЫ' : 'видны'));
+      if (rect0) lines.push('Карточка: ' + Math.round(rect0.width) + '×' + Math.round(rect0.height) + 'px  CSS: ' + computedW);
+      lines.push('.category-full: ' + Math.round(cfRect.width) + 'px  экран: ' + window.innerWidth + 'px');
+      lines = lines.concat(parentLines);
+      lines.push('Бейджи: ' + (_badgesHidden ? 'СКРЫТЫ' : 'видны'));
 
       var fullText = lines.join('\n');
       var items = lines.map(function(l) { return { title: l }; });
