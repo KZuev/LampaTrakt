@@ -388,7 +388,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.5.2';
+  var PLUGIN_VERSION = '2.5.3';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -8642,16 +8642,21 @@
       }
     });
 
-    // ── Отладка бейджей ──────────────────────────────────────────────────────
-    Lampa.SettingsApi.addParam({
-      component: 'trakt',
-      param: { name: 'trakt_debug_badges_show', type: 'button' },
-      field: {
-        name: t$1('trakt_debug_badges_btn', 'Диагностика бейджей'),
-        description: t$1('trakt_debug_badges_btn_descr', 'Текущая страница + состояние патча + кэш дат')
-      },
-      onRender: function(item) { item.show(); },
-      onChange: function() {
+    function _copyFallback(text) {
+      try {
+        var ta = document.createElement('textarea');
+        ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+        Lampa.Noty.show('Скопировано');
+      } catch(e) { Lampa.Noty.show('Ошибка копирования'); }
+    }
+    function _copyToClipboard(text) {
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(function() { Lampa.Noty.show('Скопировано'); }).catch(function() { _copyFallback(text); });
+        } else { _copyFallback(text); }
+      } catch(e) { Lampa.Noty.show('Ошибка: ' + e.message); }
+    }
+    function _showDebugBadges() {
         var datesMap = getUpcomingMovieDates();
         var dateKeys = Object.keys(datesMap);
         var soonIds = getSoonMovieIds();
@@ -8752,7 +8757,7 @@
         lines.push({ title: '[ Скопировать всё ]', action: 'copy', _text: fullText });
 
         Lampa.Select.show({
-          title: 'Диагностика бейджей',
+          title: 'Отладка: показ бейджей',
           items: lines,
           onSelect: function(item) {
             if (!item) return;
@@ -8793,34 +8798,40 @@
               Lampa.Noty.show('Кэш дат очищен — обновите страницу');
               return;
             }
-            if (item.action === 'copy') {
-              try {
-                if (navigator.clipboard && navigator.clipboard.writeText) {
-                  navigator.clipboard.writeText(item._text).then(function() { Lampa.Noty.show('Скопировано'); });
-                } else {
-                  var ta = document.createElement('textarea');
-                  ta.value = item._text;
-                  document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
-                  Lampa.Noty.show('Скопировано');
-                }
-              } catch(e) { Lampa.Noty.show('Ошибка: ' + e.message); }
-            }
+            if (item.action === 'copy') { _copyToClipboard(item._text); }
+          },
+          onBack: function() { Lampa.Controller.toggle('settings_component'); }
+        });
+    }
+    // ── Отладка ──────────────────────────────────────────────────────────────────
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: { name: 'trakt_debug_menu', type: 'button' },
+      field: {
+        name: 'Отладка',
+        description: 'Бейджи, прогресс торрента, навигация Ещё'
+      },
+      onRender: function(item) { item.show(); },
+      onChange: function() {
+        Lampa.Select.show({
+          title: 'Отладка',
+          items: [
+            { title: 'Отладка: показ бейджей',    action: 'badges'  },
+            { title: 'Отладка: прогресс торрента', action: 'torrent' },
+            { title: 'Отладка: навигация Ещё',     action: 'nav'     }
+          ],
+          onSelect: function(item) {
+            if (!item) return;
+            if (item.action === 'badges')  { _showDebugBadges();  }
+            if (item.action === 'torrent') { _showDebugTorrent(); }
+            if (item.action === 'nav')     { _showDebugNav();     }
           },
           onBack: function() { Lampa.Controller.toggle('settings_component'); }
         });
       }
     });
 
-    // ── Отладка торрента ─────────────────────────────────────────────────────
-    Lampa.SettingsApi.addParam({
-      component: 'trakt',
-      param: { name: 'trakt_debug_torrent_show', type: 'button' },
-      field: {
-        name: t$1('trakt_debug_torrent_btn', 'Отладка: прогресс торрента'),
-        description: t$1('trakt_debug_torrent_btn_descr', 'Данные последнего открытия списка серий и синхронизации прогресса')
-      },
-      onRender: function(item) { item.show(); },
-      onChange: function() {
+    function _showDebugTorrent() {
         var dbg = Lampa.Storage.get('trakt_debug_torrent') || {};
         var sync = Lampa.Storage.get('trakt_debug_sync') || {};
         var lines = [];
@@ -8871,41 +8882,48 @@
         var fullText = lines.map(function(l) { return l.title; }).join('\n');
         lines.push({ title: '[ Скопировать в буфер обмена ]', action: 'copy', _text: fullText });
         Lampa.Select.show({
-          title: t$1('trakt_debug_torrent_btn', 'Отладка: прогресс торрента'),
+          title: 'Отладка: прогресс торрента',
           items: lines,
           onSelect: function(item) {
-            if (item && item.action === 'copy') {
-              try {
-                if (navigator.clipboard && navigator.clipboard.writeText) {
-                  navigator.clipboard.writeText(item._text).then(function() {
-                    Lampa.Noty.show('Скопировано');
-                  }).catch(function() {
-                    var ta = document.createElement('textarea');
-                    ta.value = item._text;
-                    document.body.appendChild(ta);
-                    ta.select();
-                    document.execCommand('copy');
-                    document.body.removeChild(ta);
-                    Lampa.Noty.show('Скопировано');
-                  });
-                } else {
-                  var ta = document.createElement('textarea');
-                  ta.value = item._text;
-                  document.body.appendChild(ta);
-                  ta.select();
-                  document.execCommand('copy');
-                  document.body.removeChild(ta);
-                  Lampa.Noty.show('Скопировано');
-                }
-              } catch(e) {
-                Lampa.Noty.show('Ошибка копирования');
-              }
-            }
+            if (item && item.action === 'copy') { _copyToClipboard(item._text); }
           },
           onBack: function() { Lampa.Controller.toggle('settings_component'); }
         });
-      }
-    });
+    }
+    function _showDebugNav() {
+        var log = _navDebugLog.slice();
+        var lines = [];
+        if (!log.length) {
+          lines.push({ title: 'Событий ещё нет. Нажмите «Ещё» на строке и снова откройте эту отладку.' });
+        } else {
+          log.forEach(function(entry) {
+            var ts = entry.ts ? entry.ts.replace('T',' ').slice(0,19) : '?';
+            var line = '[' + ts + '] ' + entry.source;
+            if (entry.component && entry.component !== '—') line += ' → ' + entry.component;
+            if (entry.title && entry.title !== '—') line += ' "' + entry.title + '"';
+            if (entry.extra) line += ' | ' + entry.extra;
+            lines.push({ title: line });
+          });
+        }
+        var fullText = lines.map(function(l) { return l.title; }).join('\n');
+        lines.push({ title: '[ Очистить лог ]', action: 'clear' });
+        lines.push({ title: '[ Скопировать ]',  action: 'copy', _text: fullText });
+        Lampa.Select.show({
+          title: 'Отладка: навигация Ещё',
+          items: lines,
+          onSelect: function(item) {
+            if (!item) return;
+            if (item.action === 'clear') {
+              _navDebugLog.length = 0;
+              try { Lampa.Storage.set('trakt_debug_nav', []); } catch(e) {}
+              Lampa.Noty.show('Лог очищен');
+              return;
+            }
+            if (item.action === 'copy') { _copyToClipboard(item._text); }
+          },
+          onBack: function() { Lampa.Controller.toggle('settings_component'); }
+        });
+    }
 
     // ── Сброс всех настроек ───────────────────────────────────────────────────
     Lampa.SettingsApi.addParam({
@@ -12418,8 +12436,28 @@
       })['catch'](function () {});
     });
   }
+  var _navDebugLog = [];
+  function _navLogEvent(source, data) {
+    var entry = { ts: new Date().toISOString(), source: source };
+    if (data) {
+      try {
+        entry.component = data.component || data.trakt_more_component || '—';
+        entry.title     = data.title || data.trakt_more_title || '—';
+        entry.page      = data.page;
+        var skipKeys = ['title','component','page','results','trakt_more_component','trakt_more_title','trakt_line','trakt_row'];
+        entry.extra = Object.keys(data)
+          .filter(function(k) { return skipKeys.indexOf(k) < 0; })
+          .map(function(k) { return k + '=' + String(data[k]).slice(0, 20); }).join(' | ');
+      } catch(e) {}
+    }
+    _navDebugLog.unshift(entry);
+    if (_navDebugLog.length > 30) _navDebugLog.length = 30;
+    try { Lampa.Storage.set('trakt_debug_nav', _navDebugLog); } catch(e) {}
+  }
+
   function createOnMoreHandler(config) {
     return function () {
+      _navLogEvent('onMore_callback', { component: config.component, title: config.displayTitle, page: 1 });
       Lampa.Activity.push({
         title: config.displayTitle,
         component: config.component,
@@ -12499,7 +12537,9 @@
     // Lampa 3.0 в некоторых версиях вместо вызова onMore() генерирует событие line{type:'more'},
     // которое затем Lampa обрабатывает по source:'tmdb' — и открывает пустой каталог TMDB.
     Lampa.Listener.follow('line', function (e) {
-      if (!e || e.type !== 'more' || !e.data || !e.data.trakt_more_component) return;
+      if (!e || e.type !== 'more') return;
+      _navLogEvent('line_more_event', e.data || {});
+      if (!e.data || !e.data.trakt_more_component) return;
       try {
         Lampa.Activity.push({
           title: e.data.trakt_more_title || e.data.title || '',
@@ -14268,6 +14308,7 @@
 
     // Добавляем компоненты
     Lampa.Component.add('trakt_watchlist', function (object) {
+      _navLogEvent('factory_trakt_watchlist', object || {});
       return new Catalog.watchlist(object);
     });
 
@@ -14285,6 +14326,7 @@
       logError('Source provider registration failed', error);
     }
     Lampa.Component.add('trakt_upnext', function (object) {
+      _navLogEvent('factory_trakt_upnext', object || {});
       return new Catalog.upnext(object);
     });
     Lampa.Component.add('trakt_history', function (object) {
@@ -14298,7 +14340,10 @@
     });
 
     Lampa.Component.add('trakt_timetable_all', TraktTimetableAll);
-    Lampa.Component.add('trakttv_recommendations', Catalog.recommendations);
+    Lampa.Component.add('trakttv_recommendations', function (object) {
+      _navLogEvent('factory_trakttv_recommendations', object || {});
+      return Catalog.recommendations(object);
+    });
     Lampa.Component.add('trakt_list_detail', Catalog.list_detail);
     Lampa.Component.add('trakt_my_list_detail', Catalog.my_list_detail);
     Lampa.Component.add('trakt_lists', Catalog.lists);
