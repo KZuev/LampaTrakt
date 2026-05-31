@@ -388,7 +388,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.5.27';
+  var PLUGIN_VERSION = '2.5.28';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -3679,6 +3679,19 @@
               if (type === 'upnext' && element._trakt_upnext_first_unstarted) {
                 var node2 = typeof this.render === 'function' ? this.render(true) : null;
                 if (node2) node2.classList.add('trakt-upnext-first-unstarted');
+              }
+              if (Lampa.Storage.get('trakt_token')) {
+                var _card = this;
+                var _bd = _card.data || element;
+                if (_bd && _bd.id) {
+                  var _bt = _bd.method || _bd.card_type || _bd.type || (_bd.first_air_date ? 'tv' : 'movie');
+                  if (_bt === 'movie') {
+                    if (_renderedCardInstances.indexOf(_card) < 0) _renderedCardInstances.push(_card);
+                    renderDigitalReleaseBadge(_card);
+                    renderWatchedBadge(_card);
+                    renderWatchlistBadge(_card);
+                  }
+                }
               }
             }
           });
