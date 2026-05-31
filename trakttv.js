@@ -388,7 +388,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.6.0';
+  var PLUGIN_VERSION = '2.6.1';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -885,19 +885,25 @@
     var mode = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
     // --- watch mark log ---
     try {
+      var _ctx = _lastWatchContext; _lastWatchContext = null;
       var _logBase = { type: data.method || '?', extra: mode || null };
+      if (_ctx) {
+        _logBase.percent = _ctx.percent;
+        _logBase.minProg = _ctx.minProg;
+        _logBase.extra   = (_logBase.extra || '') + (_ctx.trigger ? ' [' + _ctx.trigger + ']' : '');
+      }
       if (data.method === 'movie') {
         _logBase.title   = data.title || data.name || data.id || '?';
       } else if (data.method === 'show' || data.method === 'tv') {
         _logBase.show    = data.title || data.name || data.id || '?';
         _logBase.season  = data.season_number || data.season || null;
         _logBase.episode = (data.episodes && data.episodes.length === 1) ? data.episodes[0].number : (data.episode_number || data.episode || null);
-        _logBase.extra   = mode || (data.episodes ? 'episodes:' + data.episodes.length : null);
+        if (!mode) _logBase.extra = (data.episodes ? 'episodes:' + data.episodes.length : null) + (_ctx && _ctx.trigger ? ' [' + _ctx.trigger + ']' : '');
       } else if (data.episodes) {
         _logBase.type    = 'episodes-bulk';
         _logBase.show    = data.title || data.name || data.id || '?';
         _logBase.season  = data.season_number || null;
-        _logBase.extra   = 'episodes:' + data.episodes.length;
+        _logBase.extra   = 'episodes:' + data.episodes.length + (_ctx && _ctx.trigger ? ' [' + _ctx.trigger + ']' : '');
       }
       _watchLogAdd('addToHistory', _logBase);
     } catch(e) {}
@@ -11020,19 +11026,9 @@
           key: key,
           percent: percent
         });
-        // --- watch mark log ---
+        // Save context so addToHistory$1 can log percent in one entry
         try {
-          var _ct = getContentType$1(media);
-          _watchLogAdd('timeline-threshold', {
-            type:    _ct,
-            title:   media.title || media.name || media.original_title || media.original_name || media.id || '?',
-            show:    (_ct === 'show' || _ct === 'tv') ? (media.title || media.name || media.id || '?') : null,
-            season:  media.season_number || media.season || null,
-            episode: media.episode_number || media.episode || null,
-            percent: percent,
-            minProg: minProgress,
-            extra:   'hash:' + (hash ? String(hash).slice(0,8) : '?')
-          });
+          _lastWatchContext = { percent: percent, minProg: minProgress, hash: hash ? String(hash).slice(0,8) : '?', trigger: 'timeline' };
         } catch(e) {}
         // Mark intent quickly so event-driven finishes coalesce
         markFinishIntent(key);
@@ -12690,6 +12686,7 @@
   }
   var _navDebugLog = [];
   var _watchMarkLog = [];
+  var _lastWatchContext = null; // { percent, minProg, hash, trigger } — set before finish(), read in addToHistory$1
   var _traktRowsByTitle = {};
 
   function _watchLogAdd(trigger, data) {
