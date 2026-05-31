@@ -388,7 +388,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.5.28';
+  var PLUGIN_VERSION = '2.6.0';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -883,6 +883,24 @@
   }
   function addToHistory$1(data) {
     var mode = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
+    // --- watch mark log ---
+    try {
+      var _logBase = { type: data.method || '?', extra: mode || null };
+      if (data.method === 'movie') {
+        _logBase.title   = data.title || data.name || data.id || '?';
+      } else if (data.method === 'show' || data.method === 'tv') {
+        _logBase.show    = data.title || data.name || data.id || '?';
+        _logBase.season  = data.season_number || data.season || null;
+        _logBase.episode = (data.episodes && data.episodes.length === 1) ? data.episodes[0].number : (data.episode_number || data.episode || null);
+        _logBase.extra   = mode || (data.episodes ? 'episodes:' + data.episodes.length : null);
+      } else if (data.episodes) {
+        _logBase.type    = 'episodes-bulk';
+        _logBase.show    = data.title || data.name || data.id || '?';
+        _logBase.season  = data.season_number || null;
+        _logBase.extra   = 'episodes:' + data.episodes.length;
+      }
+      _watchLogAdd('addToHistory', _logBase);
+    } catch(e) {}
     var body = {
       movies: [],
       shows: []
@@ -8917,6 +8935,7 @@
             { title: 'Отладка: прогресс торрента',                   action: 'torrent'       },
             { title: 'Отладка: навигация Ещё',                       action: 'nav'           },
             { title: 'Диагностика сетки постеров',                   action: 'grid'          },
+            { title: 'История отметок просмотренного (' + _watchMarkLog.length + ')', action: 'watchlog' },
             { title: _badgesHidden ? 'Бейджи: ВКЛ (показать)' : 'Бейджи: ВЫКЛ (скрыть)', action: 'toggle_badges' }
           ],
           onSelect: function(item) {
@@ -8925,6 +8944,7 @@
             if (item.action === 'torrent')       { _showDebugTorrent();       }
             if (item.action === 'nav')           { _showDebugNav();           }
             if (item.action === 'grid')          { _showDebugGrid();          }
+            if (item.action === 'watchlog')      { _showDebugWatchLog();      }
             if (item.action === 'toggle_badges') { _toggleBadgeVisibility();  }
           },
           onBack: function() { Lampa.Controller.toggle('settings_component'); }
@@ -9011,6 +9031,39 @@
         items: items,
         onSelect: function(item) {
           if (item && item.action === 'copy') _copyToClipboard(item._text);
+        },
+        onBack: function() { Lampa.Controller.toggle('settings_component'); }
+      });
+    }
+
+    function _showDebugWatchLog() {
+      var log = _watchMarkLog.slice();
+      if (!log.length) {
+        Lampa.Select.show({ title: 'История отметок', items: [{ title: 'Пока пусто — воспроизведи эпизод' }],
+          onSelect: function() {}, onBack: function() { Lampa.Controller.toggle('settings_component'); } });
+        return;
+      }
+      var items = log.map(function(e) {
+        var time = e.ts ? e.ts.replace('T', ' ').replace(/\.\d+Z$/, '') : '?';
+        var who  = e.type === 'movie' ? (e.title || '?') : ((e.show || '?') + (e.season != null ? ' S' + e.season : '') + (e.episode != null ? 'E' + e.episode : ''));
+        var why  = e.trigger + (e.percent != null ? ' ' + Math.round(e.percent) + '%' : '') + (e.extra ? ' [' + e.extra + ']' : '');
+        return { title: time + ' | ' + who, description: why };
+      });
+      var fullText = log.map(function(e) {
+        return [e.ts, e.trigger, e.type, e.show || e.title || '?',
+                e.season != null ? 'S'+e.season : '', e.episode != null ? 'E'+e.episode : '',
+                e.percent != null ? Math.round(e.percent)+'%' : '',
+                e.minProg != null ? 'min:'+e.minProg : '',
+                e.extra || ''].join('\t');
+      }).join('\n');
+      items.push({ title: '[ Скопировать лог ]', _copy: fullText });
+      items.push({ title: '[ Очистить лог ]',    _clear: true });
+      Lampa.Select.show({
+        title: 'История отметок (' + log.length + ')',
+        items: items,
+        onSelect: function(item) {
+          if (item._copy)  _copyToClipboard(item._copy);
+          if (item._clear) { _watchMarkLog.length = 0; Lampa.Noty.show('Лог очищен'); }
         },
         onBack: function() { Lampa.Controller.toggle('settings_component'); }
       });
@@ -10967,6 +11020,20 @@
           key: key,
           percent: percent
         });
+        // --- watch mark log ---
+        try {
+          var _ct = getContentType$1(media);
+          _watchLogAdd('timeline-threshold', {
+            type:    _ct,
+            title:   media.title || media.name || media.original_title || media.original_name || media.id || '?',
+            show:    (_ct === 'show' || _ct === 'tv') ? (media.title || media.name || media.id || '?') : null,
+            season:  media.season_number || media.season || null,
+            episode: media.episode_number || media.episode || null,
+            percent: percent,
+            minProg: minProgress,
+            extra:   'hash:' + (hash ? String(hash).slice(0,8) : '?')
+          });
+        } catch(e) {}
         // Mark intent quickly so event-driven finishes coalesce
         markFinishIntent(key);
         // Fire idempotent finish
@@ -12622,7 +12689,25 @@
     });
   }
   var _navDebugLog = [];
+  var _watchMarkLog = [];
   var _traktRowsByTitle = {};
+
+  function _watchLogAdd(trigger, data) {
+    var entry = {
+      ts: new Date().toISOString(),
+      trigger: trigger,
+      type:    data.type    || '?',
+      title:   data.title   || data.name || data.original_title || data.original_name || (data.ids && (data.ids.trakt || data.ids.tmdb)) || data.id || '?',
+      show:    data.show    || null,
+      season:  data.season_number || data.season || null,
+      episode: data.episode_number || data.episode || null,
+      percent: data.percent !== undefined ? data.percent : null,
+      minProg: data.minProg !== undefined ? data.minProg : null,
+      extra:   data.extra   || null
+    };
+    _watchMarkLog.unshift(entry);
+    if (_watchMarkLog.length > 50) _watchMarkLog.length = 50;
+  }
 
   function _navLogEvent(source, data) {
     var entry = { ts: new Date().toISOString(), source: source };
