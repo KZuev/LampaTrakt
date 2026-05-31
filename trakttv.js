@@ -388,7 +388,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.5.3';
+  var PLUGIN_VERSION = '2.5.4';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -12454,6 +12454,20 @@
     if (_navDebugLog.length > 30) _navDebugLog.length = 30;
     try { Lampa.Storage.set('trakt_debug_nav', _navDebugLog); } catch(e) {}
   }
+  function patchActivityPush() {
+    if (!Lampa || !Lampa.Activity || typeof Lampa.Activity.push !== 'function') return;
+    if (Lampa.Activity._traktNavPatched) return;
+    var _orig = Lampa.Activity.push;
+    Lampa.Activity.push = function(data) {
+      try {
+        var comp = data && (data.component || '');
+        var isTrakt = comp && (String(comp).indexOf('trakt') >= 0 || String(comp).indexOf('trakttv') >= 0);
+        _navLogEvent(isTrakt ? 'activity_push_trakt' : 'activity_push', data || {});
+      } catch(e) {}
+      return _orig.apply(this, arguments);
+    };
+    Lampa.Activity._traktNavPatched = true;
+  }
 
   function createOnMoreHandler(config) {
     return function () {
@@ -12472,8 +12486,9 @@
     return payload;
   }
   function createRowPayload(config, data, normalizedResults) {
-    return {
+    var payload = {
       title: config.displayTitle,
+      component: config.component || undefined,
       trakt_line: true,
       trakt_line_title: config.displayTitle,
       trakt_more_component: config.component,
@@ -12484,6 +12499,7 @@
       total_pages: data && data.total_pages ? data.total_pages : 1,
       results: normalizedResults
     };
+    return payload;
   }
 
   /**
@@ -12494,6 +12510,7 @@
     if (initialized) return;
     if (!Lampa || !Lampa.ContentRows || typeof Lampa.ContentRows.add !== 'function') return;
     initialized = true;
+    patchActivityPush();
 
     // Cleanup deprecated cache keys
     Lampa.Storage.set('trakttv_cached_upnext', null);
@@ -12756,22 +12773,24 @@
     // Lampa renders same-index rows in reverse registration order (LIFO),
     // so register in reverse display order: Recommendations → Calendar → Watchlist → UpNext
     // 4. Recommendations (registered first → shown last)
+    var _recMainConfig = {
+      name: 'TraktRecommendationsRow',
+      displayTitle: Lampa.Lang.translate('trakttv_recommendations'),
+      apiMethod: 'recommendations',
+      component: 'trakttv_recommendations',
+      limit: 36,
+      displayLimit: 20,
+      topshelf: 'recommendations',
+      checkPermission: checkRecommendationsPermissions,
+      visibleOn: function visibleOn() { return true; }
+    };
     Lampa.ContentRows.add({
       name: 'TraktRecommendationsRow',
       title: Lampa.Lang.translate('trakttv_row_recommendations_main'),
       index: 1,
       screen: ['main'],
-      call: createRowCall({
-        name: 'TraktRecommendationsRow',
-        displayTitle: Lampa.Lang.translate('trakttv_recommendations'),
-        apiMethod: 'recommendations',
-        component: 'trakttv_recommendations',
-        limit: 36,
-        displayLimit: 20,
-        topshelf: 'recommendations',
-        checkPermission: checkRecommendationsPermissions,
-        visibleOn: function visibleOn() { return true; }
-      })
+      onMore: createOnMoreHandler(_recMainConfig),
+      call: createRowCall(_recMainConfig)
     });
     // 3. Calendar
     if (Api && typeof Api.get === 'function') {
@@ -12790,6 +12809,7 @@
         title: row.title,
         index: row.index,
         screen: row.screen,
+        onMore: createOnMoreHandler(row),
         call: createRowCall(row)
       });
     });
@@ -12800,6 +12820,7 @@
         title: row.title,
         index: row.index,
         screen: row.screen,
+        onMore: createOnMoreHandler(row),
         call: createRowCall(row)
       });
     });
