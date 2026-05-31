@@ -388,7 +388,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.5.1';
+  var PLUGIN_VERSION = '2.5.2';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -3605,13 +3605,45 @@
     var waitload = false;
     var upcomingDividerShown = false;
 
-    // Use modular system for Lampa 3.0+, fallback to old system for compatibility
-    if (isLampa3 && Lampa.Maker) {
-      comp = Lampa.Maker.make('Category', object);
-      var _dataLoadStarted = false;
-      var _loadData = function (_self) {
-        if (_dataLoadStarted) return;
-        _dataLoadStarted = true;
+    comp = new Lampa.InteractionCategory(object);
+    comp.create = function () {
+      var _this3 = this;
+      var params = _objectSpread2({}, object);
+      if ((type === 'list' || type === 'myListItems') && object.id) {
+        params.id = object.id;
+      } else if ((type === 'list' || type === 'myListItems') && object.list_id) {
+        params.id = object.list_id;
+      }
+      params.limit = type === 'watchlist' ? 500 : 36;
+      params.page = params.page || 1;
+      if (!Api$2) {
+        logApiMissing$1();
+        return;
+      }
+      Api$2[type](params).then(function (data) {
+        if (data && data.total_pages) {
+          total_pages = data.total_pages;
+        }
+        if (type === 'watchlist') { data = applyWatchlistClientFilters(data, object); data = rearrangeWatchlistUpcoming(data); }
+        if (type === 'upnext') data = rearrangeUpnextNotStarted(data);
+        _this3.build(data && _typeof(data) === 'object' && Array.isArray(data.results) ? data : {
+          results: []
+        });
+        if (_this3.activity && _this3.activity.scroll) {
+          _this3.activity.scroll.onEnd = _this3.next.bind(_this3);
+        }
+        if (type === 'watchlist') setTimeout(function () { try { insertUpcomingDivider(_this3); } catch(e) {} }, 0);
+        if (type === 'upnext') setTimeout(function () { try { insertUpnextNotStartedDivider(_this3); } catch(e) {} }, 0);
+      })["catch"](function () {
+        _this3.empty();
+      });
+    };
+    comp.next = function () {
+      var _this4 = this;
+      if (waitload) return;
+      if (object.page < total_pages) {
+        waitload = true;
+        object.page++;
         var params = _objectSpread2({}, object);
         if ((type === 'list' || type === 'myListItems') && object.id) {
           params.id = object.id;
@@ -3619,228 +3651,65 @@
           params.id = object.list_id;
         }
         params.limit = type === 'watchlist' ? 500 : 36;
-        params.page = params.page || 1;
         if (!Api$2) {
           logApiMissing$1();
-          _self.empty();
           return;
         }
         Api$2[type](params).then(function (data) {
           if (data && data.total_pages) {
             total_pages = data.total_pages;
           }
-          if (type === 'watchlist') { data = applyWatchlistClientFilters(data, object); data = rearrangeWatchlistUpcoming(data); }
+          if (type === 'watchlist') { data = applyWatchlistClientFilters(data, object); }
           if (type === 'upnext') data = rearrangeUpnextNotStarted(data);
-          _self.build(data && _typeof(data) === 'object' && Array.isArray(data.results) ? data : {
+          _this4.append(data && _typeof(data) === 'object' && Array.isArray(data.results) ? data : {
             results: []
           });
-          if (type === 'watchlist') setTimeout(function () { try { insertUpcomingDivider(_self); } catch(e) {} }, 0);
-          if (type === 'upnext') setTimeout(function () { try { insertUpnextNotStartedDivider(_self); } catch(e) {} }, 0);
+          waitload = false;
         })["catch"](function () {
-          _self.empty();
+          waitload = false;
         });
+      }
+    };
+    comp.cardRender = function (_, element, card) {
+      renderTvTypeBadge(card, element);
+      if (type === 'upnext') {
+        renderUpnextCardWatched(card, element);
+        renderUpnextRemainingBadge(card, element);
+      }
+      if (type === 'history') {
+        renderHistoryDateBadge(card, element);
+      }
+      if (type === 'watchlist' && element._trakt_upcoming_first) {
+        var node = typeof card.render === 'function' ? card.render(true) : null;
+        if (node) node.classList.add('trakt-upcoming-first');
+      }
+      if (type === 'upnext' && element._trakt_upnext_first_unstarted) {
+        var node2 = typeof card.render === 'function' ? card.render(true) : null;
+        if (node2) node2.classList.add('trakt-upnext-first-unstarted');
+      }
+      if (Lampa.Storage.get('trakt_token')) {
+        var _bd = (card && card.data) || element;
+        if (_bd && _bd.id) {
+          var _bt = _bd.method || _bd.card_type || _bd.type || (_bd.first_air_date ? 'tv' : 'movie');
+          if (_bt === 'movie') {
+            if (_renderedCardInstances.indexOf(card) < 0) _renderedCardInstances.push(card);
+            renderDigitalReleaseBadge(card);
+            renderWatchedBadge(card);
+            renderWatchlistBadge(card);
+          }
+        }
+      }
+      if (type === 'myListItems' && object && object.can_manage && object.id) {
+        card.onMenu = function () { return openMyListItemActions(object, element); };
+      } else if (type === 'history') {
+        card.onMenu = function () { return openHistoryItemActions(object, element); };
+      } else {
+        card.onMenu = false;
+      }
+      card.onEnter = function () {
+        Lampa.Activity.push(card.data);
       };
-      comp.use({
-        onCreate: function onCreate() {
-          _loadData(this);
-        },
-        onNext: function onNext(resolve, reject) {
-          var _this2 = this;
-          if (waitload) {
-            reject.call(this);
-            return;
-          }
-          if (object.page <= total_pages) {
-            waitload = true;
-            var params = _objectSpread2({}, object);
-            if ((type === 'list' || type === 'myListItems') && object.id) {
-              params.id = object.id;
-            } else if ((type === 'list' || type === 'myListItems') && object.list_id) {
-              params.id = object.list_id;
-            }
-            params.limit = type === 'watchlist' ? 500 : 36;
-            if (!Api$2) {
-              waitload = false;
-              reject.call(this);
-              return;
-            }
-            Api$2[type](params).then(function (data) {
-              if (data && data.total_pages) {
-                total_pages = data.total_pages;
-                _this2.total_pages = data.total_pages;
-              }
-              if (type === 'watchlist') { data = applyWatchlistClientFilters(data, object); }
-              if (type === 'upnext') data = rearrangeUpnextNotStarted(data);
-              resolve.call(_this2, data && _typeof(data) === 'object' && Array.isArray(data.results) ? data : {
-                results: []
-              });
-              if (type === 'watchlist') setTimeout(function () { try { insertUpcomingDivider(_this2); } catch(e) {} }, 0);
-              if (type === 'upnext') setTimeout(function () { try { insertUpnextNotStartedDivider(_this2); } catch(e) {} }, 0);
-              waitload = false;
-            })["catch"](function () {
-              waitload = false;
-              reject.call(_this2);
-            });
-          } else {
-            reject.call(this);
-          }
-        },
-        onController: function onController(controller) {
-          if (type === 'watchlist' && object && typeof object.onHead === 'function') {
-            controller.up = function () {
-              if (Navigator.canmove('up')) Navigator.move('up');else object.onHead();
-            };
-          }
-        },
-        onEmpty: function onEmpty() {
-          if (type !== 'watchlist' || !object || typeof object.onHead !== 'function') return;
-          if (!this.empty_class || typeof this.empty_class.use !== 'function') return;
-          this.empty_class.use({
-            onController: function onController(controller) {
-              controller.up = function () {
-                if (Navigator.canmove('up')) Navigator.move('up');else object.onHead();
-              };
-            }
-          });
-        },
-        onInstance: function onInstance(card, element) {
-          card.use({
-            onCreate: function onCreate() {
-              renderTvTypeBadge(this, element);
-              if (type === 'upnext') {
-                renderUpnextCardWatched(this, element);
-                renderUpnextRemainingBadge(this, element);
-              }
-              if (type === 'history') {
-                renderHistoryDateBadge(this, element);
-              }
-              if (type === 'watchlist' && element._trakt_upcoming_first) {
-                var node = typeof this.render === 'function' ? this.render(true) : null;
-                if (node) node.classList.add('trakt-upcoming-first');
-              }
-              if (type === 'upnext' && element._trakt_upnext_first_unstarted) {
-                var node2 = typeof this.render === 'function' ? this.render(true) : null;
-                if (node2) node2.classList.add('trakt-upnext-first-unstarted');
-              }
-              // Бейджи цифрового релиза и вотчлиста на всех страницах
-              if (Lampa.Storage.get('trakt_token')) {
-                var _bi = this;
-                var _bd = (_bi && _bi.data) || element;
-                if (_bd && _bd.id) {
-                  var _bt = _bd.method || _bd.card_type || _bd.type || (_bd.first_air_date ? 'tv' : 'movie');
-                  if (_bt === 'movie') {
-                    if (_renderedCardInstances.indexOf(_bi) < 0) _renderedCardInstances.push(_bi);
-                    renderDigitalReleaseBadge(_bi);
-                    renderWatchedBadge(_bi);
-                    renderWatchlistBadge(_bi);
-                  }
-                }
-              }
-            }
-          });
-          card.use({
-            onlyMenu: false,
-            onlyEnter: function onlyEnter() {
-              Lampa.Activity.push(this.data);
-            },
-            onLong: function onLong() {
-              if (type === 'myListItems' && object && object.can_manage && object.id) {
-                openMyListItemActions(object, element);
-              } else if (type === 'history') {
-                openHistoryItemActions(object, element);
-              }
-            }
-          });
-        }
-      });
-      // Гарантируем загрузку данных при ручном вызове create() (суб-компонент в watchlistHub/etc.)
-      var _makerCreate = typeof comp.create === 'function' ? comp.create.bind(comp) : null;
-      comp.create = function () {
-        var result = _makerCreate ? _makerCreate.apply(this, arguments) : undefined;
-        _loadData(comp);
-        return result;
-      };
-    } else {
-      // Backward compatibility for Lampa < 3.0
-      comp = new Lampa.InteractionCategory(object);
-      comp.create = function () {
-        var _this3 = this;
-        var params = _objectSpread2({}, object);
-        if ((type === 'list' || type === 'myListItems') && object.id) {
-          params.id = object.id;
-        } else if ((type === 'list' || type === 'myListItems') && object.list_id) {
-          params.id = object.list_id;
-        }
-        params.limit = 36;
-        params.page = params.page || 1;
-        if (!Api$2) {
-          logApiMissing$1();
-          return;
-        }
-        Api$2[type](params).then(function (data) {
-          if (data && data.total_pages) {
-            total_pages = data.total_pages;
-          }
-          _this3.build(data && _typeof(data) === 'object' && Array.isArray(data.results) ? data : {
-            results: []
-          });
-          if (_this3.activity.scroll) {
-            _this3.activity.scroll.onEnd = _this3.next.bind(_this3);
-          }
-        })["catch"](function () {
-          _this3.empty();
-        });
-      };
-      comp.next = function () {
-        var _this4 = this;
-        if (waitload) return;
-        if (object.page < total_pages) {
-          waitload = true;
-          object.page++;
-          var params = _objectSpread2({}, object);
-          if ((type === 'list' || type === 'myListItems') && object.id) {
-            params.id = object.id;
-          } else if ((type === 'list' || type === 'myListItems') && object.list_id) {
-            params.id = object.list_id;
-          }
-          params.limit = 36;
-          if (!Api$2) {
-            logApiMissing$1();
-            return;
-          }
-          Api$2[type](params).then(function (data) {
-            if (data && data.total_pages) {
-              total_pages = data.total_pages;
-            }
-            _this4.append(data && _typeof(data) === 'object' && Array.isArray(data.results) ? data : {
-              results: []
-            });
-            waitload = false;
-          })["catch"](function () {
-            waitload = false;
-          });
-        }
-      };
-      comp.cardRender = function (_, element, card) {
-        renderTvTypeBadge(card, element);
-        if (type === 'upnext') {
-          renderUpnextCardWatched(card, element);
-        }
-        if (type === 'history') {
-          renderHistoryDateBadge(card, element);
-        }
-        if (type === 'myListItems' && object && object.can_manage && object.id) {
-          card.onMenu = function () { return openMyListItemActions(object, element); };
-        } else if (type === 'history') {
-          card.onMenu = function () { return openHistoryItemActions(object, element); };
-        } else {
-          card.onMenu = false;
-        }
-        card.onEnter = function () {
-          Lampa.Activity.push(card.data);
-        };
-      };
-    }
+    };
     return comp;
   }
   function baseRecommendations(object) {
@@ -3849,176 +3718,69 @@
     var waitload = false;
     var upcomingDividerShown = false;
 
-    // Use modular system for Lampa 3.0+, fallback to old system for compatibility
-    if (isLampa3 && Lampa.Maker) {
-      comp = Lampa.Maker.make('Category', object);
-      var _recLoadStarted = false;
-      var _loadRecData = function (_self) {
-        if (_recLoadStarted) return;
-        _recLoadStarted = true;
-        var params = _objectSpread2({}, object);
-        params.limit = 36;
-        params.page = params.page || 1;
-        if (!Api$2) {
-          logApiMissing$1();
-          _self.empty();
-          return;
-        }
-        Api$2.recommendations(params).then(function (recommendations) {
-          _self.build(recommendations && _typeof(recommendations) === 'object' && Array.isArray(recommendations.results) ? recommendations : {
-            results: []
-          });
-          if (recommendations && recommendations.total_pages) {
-            total_pages = recommendations.total_pages;
-          }
-        })["catch"](function () {
-          _self.empty();
+    comp = new Lampa.InteractionCategory(object);
+    comp.create = function () {
+      var _this7 = this;
+      var params = _objectSpread2({}, object);
+      params.limit = 36;
+      params.page = params.page || 1;
+      if (!Api$2) {
+        logApiMissing$1();
+        return;
+      }
+      Api$2.recommendations(params).then(function (recommendations) {
+        _this7.build(recommendations && _typeof(recommendations) === 'object' && Array.isArray(recommendations.results) ? recommendations : {
+          results: []
         });
-      };
-      comp.use({
-        onCreate: function onCreate() {
-          _loadRecData(this);
-        },
-        onNext: function onNext(resolve, reject) {
-          var _this6 = this;
-          if (waitload) {
-            reject.call(this);
-            return;
-          }
-          if (object.page <= total_pages) {
-            waitload = true;
-            var params = _objectSpread2({}, object);
-            params.limit = 36;
-            if (!Api$2) {
-              waitload = false;
-              reject.call(this);
-              return;
-            }
-            Api$2.recommendations(params).then(function (data) {
-              if (data && data.total_pages) {
-                total_pages = data.total_pages;
-                _this6.total_pages = data.total_pages;
-              }
-              resolve.call(_this6, data && _typeof(data) === 'object' && Array.isArray(data.results) ? data : {
-                results: []
-              });
-              waitload = false;
-            })["catch"](function () {
-              waitload = false;
-              reject.call(_this6);
-            });
-          } else {
-            reject.call(this);
-          }
-        },
-        onInstance: function onInstance(card, element) {
-          renderTvTypeBadge(card, element);
-          card.use({
-            onlyMenu: false,
-            onlyEnter: function onlyEnter() {
-              Lampa.Activity.push({
-                url: '',
-                component: 'full',
-                id: element.id,
-                method: element.method,
-                card: this.data,
-                source: 'tmdb'
-              });
-            }
-          });
-        },
-        onController: function onController(controller) {
-          if (object && typeof object.onHead === 'function') {
-            controller.up = function () {
-              if (Navigator.canmove('up')) Navigator.move('up'); else object.onHead();
-            };
-          }
-        },
-        onEmpty: function onEmpty() {
-          var _self = this;
-          if (!object || typeof object.onHead !== 'function') return;
-          if (!_self.empty_class || typeof _self.empty_class.use !== 'function') return;
-          _self.empty_class.use({
-            onController: function onController(c) {
-              c.up = function () {
-                if (Navigator.canmove('up')) Navigator.move('up'); else object.onHead();
-              };
-            }
-          });
+        if (recommendations && recommendations.total_pages) {
+          total_pages = recommendations.total_pages;
         }
+        if (_this7.activity && _this7.activity.scroll) {
+          _this7.activity.scroll.onEnd = _this7.next.bind(_this7);
+        }
+      })["catch"](function () {
+        _this7.empty();
       });
-      var _makerRecCreate = typeof comp.create === 'function' ? comp.create.bind(comp) : null;
-      comp.create = function () {
-        var result = _makerRecCreate ? _makerRecCreate.apply(this, arguments) : undefined;
-        _loadRecData(comp);
-        return result;
-      };
-    } else {
-      // Backward compatibility for Lampa < 3.0
-      comp = new Lampa.InteractionCategory(object);
-      comp.create = function () {
-        var _this7 = this;
+    };
+    comp.next = function () {
+      var _this8 = this;
+      if (waitload) return;
+      if (object.page < total_pages) {
+        waitload = true;
+        object.page++;
         var params = _objectSpread2({}, object);
         params.limit = 36;
-        params.page = params.page || 1;
         if (!Api$2) {
           logApiMissing$1();
           return;
         }
-        Api$2.recommendations(params).then(function (recommendations) {
-          _this7.build(recommendations && _typeof(recommendations) === 'object' && Array.isArray(recommendations.results) ? recommendations : {
+        Api$2.recommendations(params).then(function (data) {
+          if (data && data.total_pages) {
+            total_pages = data.total_pages;
+          }
+          _this8.append(data && _typeof(data) === 'object' && Array.isArray(data.results) ? data : {
             results: []
           });
-          if (recommendations && recommendations.total_pages) {
-            total_pages = recommendations.total_pages;
-          }
-          if (_this7.activity.scroll) {
-            _this7.activity.scroll.onEnd = _this7.next.bind(_this7);
-          }
+          waitload = false;
         })["catch"](function () {
-          _this7.empty();
+          waitload = false;
+        });
+      }
+    };
+    comp.cardRender = function (object, element, card) {
+      renderTvTypeBadge(card, element);
+      card.onMenu = false;
+      card.onEnter = function () {
+        Lampa.Activity.push({
+          url: '',
+          component: 'full',
+          id: element.id,
+          method: element.method,
+          card: card,
+          source: 'tmdb'
         });
       };
-      comp.next = function () {
-        var _this8 = this;
-        if (waitload) return;
-        if (object.page < total_pages) {
-          waitload = true;
-          object.page++;
-          var params = _objectSpread2({}, object);
-          params.limit = 36;
-          if (!Api$2) {
-            logApiMissing$1();
-            return;
-          }
-          Api$2.recommendations(params).then(function (data) {
-            if (data && data.total_pages) {
-              total_pages = data.total_pages;
-            }
-            _this8.append(data && _typeof(data) === 'object' && Array.isArray(data.results) ? data : {
-              results: []
-            });
-            waitload = false;
-          })["catch"](function () {
-            waitload = false;
-          });
-        }
-      };
-      comp.cardRender = function (object, element, card) {
-        renderTvTypeBadge(card, element);
-        card.onMenu = false;
-        card.onEnter = function () {
-          Lampa.Activity.push({
-            url: '',
-            component: 'full',
-            id: element.id,
-            method: element.method,
-            card: card,
-            source: 'tmdb'
-          });
-        };
-      };
-    }
+    };
     return comp;
   }
   function t$3(key) {
