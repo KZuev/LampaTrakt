@@ -388,7 +388,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.5.15';
+  var PLUGIN_VERSION = '2.5.16';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -3605,7 +3605,7 @@
     var waitload = false;
     var upcomingDividerShown = false;
 
-    comp = (isLampa3 && Lampa.Maker) ? Lampa.Maker.make('Category', object) : new Lampa.InteractionCategory(object);
+    comp = new Lampa.InteractionCategory(object);
     comp.create = function () {
       var _this3 = this;
       var params = _objectSpread2({}, object);
@@ -3718,7 +3718,7 @@
     var waitload = false;
     var upcomingDividerShown = false;
 
-    comp = (isLampa3 && Lampa.Maker) ? Lampa.Maker.make('Category', object) : new Lampa.InteractionCategory(object);
+    comp = new Lampa.InteractionCategory(object);
     comp.create = function () {
       var _this7 = this;
       var params = _objectSpread2({}, object);
