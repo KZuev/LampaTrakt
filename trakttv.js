@@ -388,7 +388,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.5.9';
+  var PLUGIN_VERSION = '2.5.10';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -8808,27 +8808,80 @@
       param: { name: 'trakt_debug_menu', type: 'button' },
       field: {
         name: 'Отладка',
-        description: 'Бейджи, прогресс торрента, навигация Ещё'
+        description: 'Бейджи, прогресс торрента, навигация Ещё, диагностика сетки'
       },
       onRender: function(item) { item.show(); },
       onChange: function() {
         Lampa.Select.show({
           title: 'Отладка',
           items: [
-            { title: 'Отладка: показ бейджей',    action: 'badges'  },
-            { title: 'Отладка: прогресс торрента', action: 'torrent' },
-            { title: 'Отладка: навигация Ещё',     action: 'nav'     }
+            { title: 'Отладка: показ бейджей',                       action: 'badges'        },
+            { title: 'Отладка: прогресс торрента',                   action: 'torrent'       },
+            { title: 'Отладка: навигация Ещё',                       action: 'nav'           },
+            { title: 'Диагностика сетки постеров',                   action: 'grid'          },
+            { title: _badgesHidden ? 'Бейджи: ВКЛ (показать)' : 'Бейджи: ВЫКЛ (скрыть)', action: 'toggle_badges' }
           ],
           onSelect: function(item) {
             if (!item) return;
-            if (item.action === 'badges')  { _showDebugBadges();  }
-            if (item.action === 'torrent') { _showDebugTorrent(); }
-            if (item.action === 'nav')     { _showDebugNav();     }
+            if (item.action === 'badges')        { _showDebugBadges();        }
+            if (item.action === 'torrent')       { _showDebugTorrent();       }
+            if (item.action === 'nav')           { _showDebugNav();           }
+            if (item.action === 'grid')          { _showDebugGrid();          }
+            if (item.action === 'toggle_badges') { _toggleBadgeVisibility();  }
           },
           onBack: function() { Lampa.Controller.toggle('settings_component'); }
         });
       }
     });
+
+    function _toggleBadgeVisibility() {
+      _badgesHidden = !_badgesHidden;
+      var styleId = 'trakt-hide-badges-debug';
+      if (_badgesHidden) {
+        if (!document.getElementById(styleId)) {
+          var s = document.createElement('style');
+          s.id = styleId;
+          s.textContent = '.trakt-digital-release,.trakt-watched-badge,.trakt-watchlist-badge,.trakt-history-date-badge,.trakt-upnext-badge{display:none!important}';
+          document.head.appendChild(s);
+        }
+        Lampa.Noty.show('Бейджи скрыты — проверьте сетку постеров');
+      } else {
+        var el = document.getElementById(styleId);
+        if (el) el.parentNode.removeChild(el);
+        Lampa.Noty.show('Бейджи снова видны');
+      }
+    }
+
+    function _showDebugGrid() {
+      var cards = document.querySelectorAll('.category-full .card');
+      var withCategory = 0, withBadge = 0;
+      var rect0 = null;
+      for (var i = 0; i < cards.length; i++) {
+        if (cards[i].classList.contains('card--category')) withCategory++;
+        if (cards[i].querySelector('.trakt-digital-release')) withBadge++;
+        if (i === 0) rect0 = cards[i].getBoundingClientRect();
+      }
+      var total = cards.length;
+      var lines = [];
+      lines.push('Карточек в .category-full: ' + total);
+      lines.push('С классом .card--category: ' + withCategory + (total ? ' (' + Math.round(withCategory / total * 100) + '%)' : ''));
+      lines.push('С бейджем цифр. релиза: ' + withBadge);
+      if (rect0) lines.push('Размер 1-й карточки: ' + Math.round(rect0.width) + '×' + Math.round(rect0.height) + 'px');
+      lines.push('Бейджи сейчас: ' + (_badgesHidden ? 'СКРЫТЫ' : 'видны'));
+
+      var fullText = lines.join('\n');
+      var items = lines.map(function(l) { return { title: l }; });
+      items.push({ title: '[ Скопировать ]', action: 'copy', _text: fullText });
+
+      Lampa.Select.show({
+        title: 'Диагностика сетки постеров',
+        items: items,
+        onSelect: function(item) {
+          if (item && item.action === 'copy') _copyToClipboard(item._text);
+        },
+        onBack: function() { Lampa.Controller.toggle('settings_component'); }
+      });
+    }
 
     function _showDebugTorrent() {
         var dbg = Lampa.Storage.get('trakt_debug_torrent') || {};
@@ -11270,6 +11323,7 @@
   var _renderedCardInstances = [];
   var _digitalDatesAvailable = false;
   var _patchStatus = 'not called';
+  var _badgesHidden = false;
   var _lastCatalogEvent = null;
 
   function ensureWatchlistBadgeCache() {
