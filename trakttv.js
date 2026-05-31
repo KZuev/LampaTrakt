@@ -388,7 +388,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.4.8';
+  var PLUGIN_VERSION = '2.4.9';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -13113,23 +13113,29 @@
                   name: episode ? episode.title : '',
                   still_path: ''
                 };
-                var out = {
-                  card: card, episode: epData, time: airTime,
-                  title: show.title, id: show.ids.tmdb, ids: show.ids, params: {}
-                };
-                Lampa.Arrays && Lampa.Arrays.extend
-                  ? Lampa.Arrays.extend(out, epData)
-                  : Object.keys(epData).forEach(function (k) { out[k] = epData[k]; });
+                var out;
                 if (EpisodeClass) {
+                  out = {
+                    card: card, episode: epData, time: airTime,
+                    title: show.title, id: show.ids.tmdb, ids: show.ids, params: {}
+                  };
+                  Lampa.Arrays && Lampa.Arrays.extend
+                    ? Lampa.Arrays.extend(out, epData)
+                    : Object.keys(epData).forEach(function (k) { out[k] = epData[k]; });
                   out.params.createInstance = function (data) {
                     var merged = _typeof(data) === 'object' && data !== null
                       ? Object.assign({}, data, data.episode || {}, { card: data.card || data })
                       : {};
                     var instance = new EpisodeClass(merged);
-                    // Pre-build so this.html is set before Lampa calls visible()
                     if (typeof instance.build === 'function') { try { instance.build(); } catch(e) {} }
                     return instance;
                   };
+                } else {
+                  out = Object.assign({}, card, {
+                    card: card, time: airTime,
+                    title: show.title, id: show.ids.tmdb, ids: show.ids,
+                    episode: epData, params: {}
+                  });
                 }
                 if (moduleMask) out.params.module = moduleMask;
                 out.params.emit = {
@@ -13169,26 +13175,31 @@
                   name: title,
                   still_path: stillPath
                 };
-                var out = {
-                  card: card, episode: epData, time: airTime, title: title,
-                  id: tmdbId, ids: movie.ids, params: {},
-                  air_date: digitalDate, still_path: stillPath, isMovie: true
-                };
+                var out;
                 if (EpisodeClass) {
+                  out = {
+                    card: card, episode: epData, time: airTime, title: title,
+                    id: tmdbId, ids: movie.ids, params: {},
+                    air_date: digitalDate, still_path: stillPath, isMovie: true
+                  };
                   out.params.createInstance = function (data) {
                     var merged = _typeof(data) === 'object' && data !== null
                       ? Object.assign({}, data, data.episode || {}, { card: data.card || data })
                       : {};
-                    // Strip episode numbers from rendered instance so badge is hidden
                     delete merged.season_number;
                     delete merged.episode_number;
                     delete merged.season;
                     delete merged.number;
                     var instance = new EpisodeClass(merged);
-                    // Pre-build so this.html is set before Lampa calls visible()
                     if (typeof instance.build === 'function') { try { instance.build(); } catch(e) {} }
                     return instance;
                   };
+                } else {
+                  out = Object.assign({}, card, {
+                    card: card, time: airTime, title: title,
+                    id: tmdbId, ids: movie.ids, params: {},
+                    isMovie: true
+                  });
                 }
                 if (moduleMask) out.params.module = moduleMask;
                 out.params.emit = {
