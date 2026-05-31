@@ -388,7 +388,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.4.9';
+  var PLUGIN_VERSION = '2.5.0';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -12708,6 +12708,21 @@
         logError('Line title decorate failed', error, {
           debugOnly: true
         });
+      }
+    });
+    // Перехватываем событие 'more' для строк Трэкт, чтобы открывался правильный компонент.
+    // Lampa 3.0 в некоторых версиях вместо вызова onMore() генерирует событие line{type:'more'},
+    // которое затем Lampa обрабатывает по source:'tmdb' — и открывает пустой каталог TMDB.
+    Lampa.Listener.follow('line', function (e) {
+      if (!e || e.type !== 'more' || !e.data || !e.data.trakt_more_component) return;
+      try {
+        Lampa.Activity.push({
+          title: e.data.trakt_more_title || e.data.title || '',
+          component: e.data.trakt_more_component,
+          page: 1
+        });
+      } catch (err) {
+        logError('Trakt line more navigation failed', err, { debugOnly: true });
       }
     });
   }
