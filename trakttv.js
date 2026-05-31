@@ -388,7 +388,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.5.5';
+  var PLUGIN_VERSION = '2.5.6';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -3629,7 +3629,7 @@
         _this3.build(data && _typeof(data) === 'object' && Array.isArray(data.results) ? data : {
           results: []
         });
-        if (_this3.activity && _this3.activity.scroll) {
+        if (total_pages > 1 && _this3.activity && _this3.activity.scroll) {
           _this3.activity.scroll.onEnd = _this3.next.bind(_this3);
         }
         if (type === 'watchlist') setTimeout(function () { try { insertUpcomingDivider(_this3); } catch(e) {} }, 0);
@@ -3735,7 +3735,7 @@
         if (recommendations && recommendations.total_pages) {
           total_pages = recommendations.total_pages;
         }
-        if (_this7.activity && _this7.activity.scroll) {
+        if (total_pages > 1 && _this7.activity && _this7.activity.scroll) {
           _this7.activity.scroll.onEnd = _this7.next.bind(_this7);
         }
       })["catch"](function () {
@@ -4238,7 +4238,7 @@
         Api$2[apiMethod](params).then(function (data) {
           total_pages = data && data.total_pages ? data.total_pages : 0;
           _this1.build(withActions(data, params.page));
-          if (_this1.activity.scroll) _this1.activity.scroll.onEnd = _this1.next.bind(_this1);
+          if (total_pages > 1 && _this1.activity && _this1.activity.scroll) _this1.activity.scroll.onEnd = _this1.next.bind(_this1);
         })["catch"](function () {
           return _this1.empty();
         });
