@@ -388,7 +388,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.6.1';
+  var PLUGIN_VERSION = '2.6.2';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -9043,6 +9043,13 @@
     }
 
     function _showDebugWatchLog() {
+      // Restore from storage on first open after restart
+      if (!_watchMarkLog.length) {
+        try {
+          var stored = Lampa.Storage.get('trakt_watch_log');
+          if (Array.isArray(stored) && stored.length) _watchMarkLog = stored;
+        } catch(e) {}
+      }
       var log = _watchMarkLog.slice();
       if (!log.length) {
         Lampa.Select.show({ title: 'История отметок', items: [{ title: 'Пока пусто — воспроизведи эпизод' }],
@@ -9069,7 +9076,7 @@
         items: items,
         onSelect: function(item) {
           if (item._copy)  _copyToClipboard(item._copy);
-          if (item._clear) { _watchMarkLog.length = 0; Lampa.Noty.show('Лог очищен'); }
+          if (item._clear) { _watchMarkLog.length = 0; try { Lampa.Storage.set('trakt_watch_log', []); } catch(e) {} Lampa.Noty.show('Лог очищен'); }
         },
         onBack: function() { Lampa.Controller.toggle('settings_component'); }
       });
@@ -12704,6 +12711,7 @@
     };
     _watchMarkLog.unshift(entry);
     if (_watchMarkLog.length > 50) _watchMarkLog.length = 50;
+    try { Lampa.Storage.set('trakt_watch_log', _watchMarkLog); } catch(e) {}
   }
 
   function _navLogEvent(source, data) {
