@@ -345,21 +345,17 @@
 
   var PREFIX = 'TraktTV';
   var onceKeys = new Set();
-  function isDebugEnabled() {
-    try {
-      return !!(typeof Lampa !== 'undefined' && Lampa && Lampa.Storage && typeof Lampa.Storage.field === 'function' && Lampa.Storage.field('trakt_enable_logging'));
-    } catch (e) {
-      return false;
-    }
-  }
   function write(level, message, meta) {
     var targetLevel = level === 'error' || level === 'warn' || level === 'log' ? level : 'log';
     var writer = typeof console !== 'undefined' && typeof console[targetLevel] === 'function' ? console[targetLevel].bind(console) : typeof console !== 'undefined' && typeof console.log === 'function' ? console.log.bind(console) : null;
     if (!writer) return;
     if (typeof meta === 'undefined') writer(PREFIX, message);else writer(PREFIX, message, meta);
   }
+  function isDebugEnabled() {
+    return false;
+  }
   function debugEnabled() {
-    return isDebugEnabled();
+    return false;
   }
   function logWarn(message, meta) {
     var _ref2 = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {},
@@ -388,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.7.0';
+  var PLUGIN_VERSION = '2.7.1';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -1258,19 +1254,16 @@
         _ref16$reason,
         reason,
         refresh_token,
-        logging,
         _args2 = arguments;
       return _regenerator().w(function (_context2) {
         while (1) switch (_context2.n) {
           case 0:
             _ref16 = _args2.length > 0 && _args2[0] !== undefined ? _args2[0] : {}, redirect_uri = _ref16.redirect_uri, _ref16$reason = _ref16.reason, reason = _ref16$reason === void 0 ? 'manual' : _ref16$reason;
             refresh_token = Lampa.Storage.get('trakt_refresh_token');
-            logging = Lampa.Storage.field('trakt_enable_logging');
             if (refresh_token) {
               _context2.n = 1;
               break;
             }
-            if (logging) logDebug('refreshTokens skipped: no refresh token');
             setAuthBlocked('no_refresh_token');
             return _context2.a(2, Promise.reject(Object.assign(new Error('No refresh_token'), {
               status: 0,
@@ -1281,9 +1274,6 @@
               _context2.n = 2;
               break;
             }
-            if (logging) logDebug('refreshTokens skipped: device auth active', {
-              reason: reason
-            });
             return _context2.a(2, Promise.reject(Object.assign(new Error('Device auth is active'), {
               status: 423,
               code: 'device_auth_active'
@@ -1319,12 +1309,6 @@
                 setAuthBlocked("refresh_failed_".concat(error.status));
                 clearAuthStorage();
               }
-              if (logging) logWarn('refreshTokens failed', {
-                reason: reason,
-                error: error
-              }, {
-                debugOnly: true
-              });
               throw error;
             }));
         }
@@ -1583,7 +1567,6 @@
       var params,
         unauthorized,
         requestOptions,
-        logging,
         maxRetriesRaw,
         maxRetries,
         attempt,
@@ -1599,7 +1582,6 @@
             params = _args4.length > 2 && _args4[2] !== undefined ? _args4[2] : {};
             unauthorized = _args4.length > 3 && _args4[3] !== undefined ? _args4[3] : false;
             requestOptions = _args4.length > 4 && _args4[4] !== undefined ? _args4[4] : {};
-            logging = Lampa.Storage.field('trakt_enable_logging');
             maxRetriesRaw = Number(requestOptions && requestOptions.maxRetries);
             maxRetries = Number.isFinite(maxRetriesRaw) ? Math.max(0, Math.min(5, maxRetriesRaw)) : MAX_RETRY_ATTEMPTS;
             attempt = 0;
@@ -1623,15 +1605,6 @@
             if (status === 429 && !rlIsOnCooldown()) {
               retryAfterSec = parseRetryAfterMs$1(_t && _t.headers ? _t.headers : {});
               rlEnterCooldown(retryAfterSec ? Math.round(retryAfterSec / 1000) : undefined);
-              if (logging) {
-                logWarn('Trakt rate limit: global cooldown entered', {
-                  endpoint: normalizeRequestUrl(url).full,
-                  method: String(method || 'GET').toUpperCase(),
-                  cooldownMs: rlGetCooldownRemainingMs()
-                }, {
-                  debugOnly: true
-                });
-              }
             }
             if (!(!isRetryableStatus(status) || attempt >= maxRetries)) {
               _context4.n = 5;
@@ -1650,19 +1623,6 @@
           case 5:
             attempt += 1;
             delay = resolveRetryDelayMs(status, attempt, _t && _t.headers ? _t.headers : {});
-            if (logging) {
-              logWarn('Trakt request retry scheduled', {
-                endpoint: normalizeRequestUrl(url).full,
-                method: String(method || 'GET').toUpperCase(),
-                status: status,
-                retryReason: status === 429 ? 'rate_limit' : 'server_error',
-                retryDelayMs: delay,
-                attempt: attempt,
-                maxRetries: maxRetries
-              }, {
-                debugOnly: true
-              });
-            }
             _context4.n = 6;
             return sleep$1(delay);
           case 6:
@@ -1749,7 +1709,6 @@
       var params,
         unauthorized,
         requestOptions,
-        logging,
         normalizedMethod,
         normalizedEndpoint,
         didRefreshAfter401,
@@ -1766,7 +1725,6 @@
             params = _args6.length > 2 && _args6[2] !== undefined ? _args6[2] : {};
             unauthorized = _args6.length > 3 && _args6[3] !== undefined ? _args6[3] : false;
             requestOptions = _args6.length > 5 && _args6[5] !== undefined ? _args6[5] : {};
-            logging = Lampa.Storage.field('trakt_enable_logging');
             normalizedMethod = String(method || 'GET').toUpperCase();
             normalizedEndpoint = normalizeRequestUrl(url).full;
             didRefreshAfter401 = false;
@@ -1784,30 +1742,12 @@
             _context6.n = 2;
             break;
           case 1:
-            if (logging) {
-              logWarn('Auth blocked: user-scoped request rejected without network', {
-                endpoint: normalizedEndpoint,
-                method: normalizedMethod,
-                reason: authBlockedReason || 'reauth_required'
-              }, {
-                debugOnly: true
-              });
-            }
             notifyAuthBlockedOnce();
             throw buildAuthBlockedError(authBlockedReason || 'reauth_required');
           case 2:
             if (!(!unauthorized && getAuthRateLimitRemainingMs() > 0)) {
               _context6.n = 3;
               break;
-            }
-            if (logging) {
-              logWarn('Auth cooldown: user-scoped request rejected without network', {
-                endpoint: normalizedEndpoint,
-                method: normalizedMethod,
-                retryAfterMs: getAuthRateLimitRemainingMs()
-              }, {
-                debugOnly: true
-              });
             }
             throw buildAuthRateLimitError();
           case 3:
@@ -1832,16 +1772,6 @@
               break;
             }
             cooldownMs = setAuthRateLimitCooldown(_t2);
-            if (logging) {
-              logWarn('Preflight token refresh rate limited, auth cooldown entered', {
-                endpoint: normalizedEndpoint,
-                method: normalizedMethod,
-                status: status,
-                cooldownMs: cooldownMs
-              }, {
-                debugOnly: true
-              });
-            }
             throw buildAuthRateLimitError(_t2);
           case 7:
             if (!(_t2 && (_t2.status === 400 || _t2.status === 401))) {
@@ -1852,15 +1782,6 @@
             notifyAuthBlockedOnce();
             throw _t2;
           case 8:
-            if (logging) {
-              logWarn('Preflight token refresh failed, using current token', {
-                endpoint: normalizedEndpoint,
-                method: normalizedMethod,
-                status: _t2 && _t2.status
-              }, {
-                debugOnly: true
-              });
-            }
           case 9:
             _context6.p = 10;
             _context6.n = 11;
@@ -1875,12 +1796,6 @@
               break;
             }
             didRefreshAfter401 = true;
-            if (logging) {
-              logDebug('401 received, run single refresh flow', {
-                endpoint: normalizedEndpoint,
-                method: normalizedMethod
-              });
-            }
             _context6.p = 13;
             _context6.n = 14;
             return runRefreshFlow({
@@ -5688,12 +5603,6 @@
       },
       trakttv_min_progress_threshold_descr: {
         ru: "Минимальный процент просмотра для отметки эпизода на Trakt.TV",
-      },
-      trakttv_enable_logging: {
-        ru: "Включить логирование",
-      },
-      trakttv_enable_logging_descr: {
-        ru: "Логирование для тестирования механизма отслеживания просмотра",
       },
       trakttv_card_type_tv: {
         ru: "TV",
@@ -9817,9 +9726,6 @@
     var num = parseInt(v !== undefined ? v : def);
     return isNaN(num) ? def : num;
   }
-  function logEnabled() {
-    return Lampa.Storage.field('trakt_enable_logging');
-  }
   function shouldEmitDebugLog() {
     var args = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : [];
     var first = typeof args[0] === 'string' ? args[0] : '';
@@ -10059,15 +9965,6 @@
     var rec = completionCache.get(key);
     var now = nowSec();
 
-    if (Lampa.Storage.field('trakt_enable_logging')) {
-      slog('DEBUG - canFinishOnce check:', {
-        key: key,
-        record: rec,
-        ttl: ttl,
-        now: now,
-        recordAge: rec ? now - rec.ts : null
-      });
-    }
     if (!rec) return {
       allow: true,
       reason: 'no_record'
@@ -10278,14 +10175,6 @@
     var ttl = getTTL();
     var now = nowSec();
 
-    if (Lampa.Storage.field('trakt_enable_logging')) {
-      slog('DEBUG - markFinishIntent called:', {
-        key: key,
-        tokenAvailable: !!token,
-        existingRecord: completionCache.get(key),
-        timestamp: new Date().toISOString()
-      });
-    }
     var rec = completionCache.get(key);
     var isFresh = rec && now - rec.ts <= ttl;
 
@@ -10347,15 +10236,6 @@
         while (1) switch (_context5.n) {
           case 0:
             token = Lampa.Storage.get('trakt_token');
-            if (Lampa.Storage.field('trakt_enable_logging')) {
-              slog('DEBUG - finish function called:', {
-                mediaId: media.id,
-                mediaHash: media.hash,
-                mediaType: getContentType$1(media),
-                tokenAvailable: !!token,
-                timestamp: new Date().toISOString()
-              });
-            }
             if (token) {
               _context5.n = 1;
               break;
@@ -10379,14 +10259,6 @@
             requestInProgress[key] = true;
             // END -- RACE CONDITION FIX
             _context5.p = 3;
-            if (Lampa.Storage.field('trakt_enable_logging')) {
-              slog('DEBUG - finish function key:', {
-                key: key,
-                mediaIds: media.ids,
-                mediaId: media.id,
-                mediaHash: media.hash
-              });
-            }
             doFinish = /*#__PURE__*/function () {
               var _ref9 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4() {
                 var type, tmdbId, search, e, traktId, res, _tmdbId, _search, _e, traktShowId, season, episode, seasons, _e2, last, titleCandidates, found, _iterator3, _step3, s, _iterator4, _step4, ep, _iterator5, _step5, title, epHash, _e3, _res, _t2, _t3, _t4;
@@ -10647,13 +10519,6 @@
    */
   var watching = {
     /**
-     * Проверяет, включено ли логирование
-     * @returns {boolean} true если логирование включено
-     */
-    isLoggingEnabled: function isLoggingEnabled() {
-      return Lampa.Storage.field('trakt_enable_logging');
-    },
-    /**
      * Инициализирует обработчики событий отслеживания просмотра
      */
     init: function init() {
@@ -10791,26 +10656,14 @@
      * @param {Object} data - Данные события
      */
     onPlayerStart: function onPlayerStart(data) {
-      if (this.isLoggingEnabled()) {
-        slog('Player start event received', data);
-      }
       var activityCard = Lampa.Activity && Lampa.Activity.active && Lampa.Activity.active() &&
         (Lampa.Activity.active().card_data || Lampa.Activity.active().card || Lampa.Activity.active().movie);
       var card = data.card || activityCard;
-      if (this.isLoggingEnabled()) {
-        slog('Card determined in onPlayerStart', card);
-      }
       if (!card) {
-        if (this.isLoggingEnabled()) {
-          slog('No card found in onPlayerStart');
-        }
         return;
       }
 
       Lampa.Storage.set('trakt_last_card', card);
-      if (this.isLoggingEnabled()) {
-        slog('Card saved to storage', card);
-      }
 
       var timeline = data && data.timeline;
       var hash = timeline && timeline.hash;
@@ -10828,13 +10681,6 @@
           episode: se.episode,
           ids: card && card.ids
         });
-        if (this.isLoggingEnabled()) {
-          slog('Hash meta cached from player start', {
-            hash: hash,
-            season: se.season,
-            episode: se.episode
-          });
-        }
       }
     },
     /**
@@ -10843,22 +10689,13 @@
      */
     processTimelineUpdate: function processTimelineUpdate(data) {
       slog('processTimelineUpdate called with data:', data);
-      if (this.isLoggingEnabled()) {
-        slog('Timeline update received', data);
-      }
 
       var enableWatching = Lampa.Storage.field('trakt_enable_watching');
       slog('trakt_enable_watching setting:', enableWatching);
       if (!enableWatching) {
-        if (this.isLoggingEnabled()) {
-          slog('Watching is disabled by settings');
-        }
         return;
       }
       if (!data || !data.data || !data.data.hash || !data.data.road) {
-        if (this.isLoggingEnabled()) {
-          slog('Invalid data received', data);
-        }
         slog('Invalid data - data:', data);
         slog('Invalid data - data.data:', data && data.data);
         slog('Invalid data - data.data.hash:', data && data.data && data.data.hash);
@@ -10884,18 +10721,7 @@
         token: !!token,
         minProgress: minProgress
       });
-      if (this.isLoggingEnabled()) {
-        slog('Processing timeline update', {
-          hash: hash,
-          percent: percent,
-          token: !!token,
-          minProgress: minProgress
-        });
-      }
       if (!token) {
-        if (this.isLoggingEnabled()) {
-          slog('No token found, skipping update');
-        }
         slog('No token found');
         return;
       }
@@ -10903,9 +10729,6 @@
       var meta = getHashMeta(hash);
       if (!card && meta && meta.card) {
         card = meta.card;
-        if (this.isLoggingEnabled()) {
-          slog('Card restored from hash meta cache', card);
-        }
       }
       if (card && hash) {
         var se = extractSeasonEpisode(card);
@@ -10919,19 +10742,9 @@
           episode: episodeValue,
           ids: idsValue
         });
-        if (this.isLoggingEnabled() && (!se.season || !se.episode) && cachedMeta && (cachedMeta.season || cachedMeta.episode)) {
-          slog('Hash meta preserved season/episode from cache', {
-            hash: hash,
-            season: seasonValue,
-            episode: episodeValue
-          });
-        }
       }
       slog('Card from getCurrentCard:', card);
       if (!card) {
-        if (this.isLoggingEnabled()) {
-          slog('No card found, skipping update');
-        }
         slog('No card found, skipping update');
         return;
       }
@@ -10952,27 +10765,8 @@
           if (!media.ids && meta.ids) media.ids = meta.ids;
         }
 
-        if (this.isLoggingEnabled()) {
-          slog('DEBUG - Timeline route media:', {
-            cardId: card.id,
-            cardType: getContentType$1(card),
-            percent: percent,
-            minProgress: minProgress,
-            currentHash: hash,
-            mediaHash: media.hash
-          });
-        }
         var key = getCompletionKey(media);
 
-        if (this.isLoggingEnabled()) {
-          slog('DEBUG - Timeline route key generation:', {
-            key: key,
-            mediaIds: media.ids,
-            mediaId: media.id,
-            mediaHash: media.hash,
-            contentType: getContentType$1(media)
-          });
-        }
         slog('Timeline threshold reached, finish intent and attempt', {
           key: key,
           percent: percent
@@ -11005,9 +10799,6 @@
       slog('getCurrentCard - movie:', Lampa.Activity && Lampa.Activity.active && Lampa.Activity.active() && Lampa.Activity.active().movie);
       slog('getCurrentCard - trakt_last_card from storage:', Lampa.Storage.get('trakt_last_card', null));
       slog('getCurrentCard - final card:', card);
-      if (this.isLoggingEnabled()) {
-        slog('Current card determined', card);
-      }
       return card;
     },
     /**
@@ -11028,15 +10819,6 @@
         originalName: originalName,
         firstEpisodeHash: firstEpisodeHash
       });
-      if (this.isLoggingEnabled()) {
-        slog('Checking if show should be added to watching', {
-          card: card,
-          hash: hash,
-          percent: percent,
-          firstEpisodeHash: firstEpisodeHash,
-          shouldAdd: hash === firstEpisodeHash
-        });
-      }
       var shouldAdd = hash === firstEpisodeHash;
       slog('Should add show to watching:', shouldAdd);
       if (shouldAdd) {
@@ -11058,9 +10840,6 @@
         return;
       }
       isAddingShowToWatching = true;
-      if (this.isLoggingEnabled()) {
-        slog('Adding show to watching', card);
-      }
 
       slog('addShowToWatching called with card:', card);
       var tmdbId = card.id || card.ids && card.ids.tmdb;
@@ -11098,9 +10877,6 @@
             }];
           }
           slog('Body for adding content to watching:', body);
-          if (_this.isLoggingEnabled()) {
-            slog('Sending request to add content to watching', body);
-          }
           return api$1.get('/sync/watchlist', body);
         } else {
           slog('No show found or no traktId in response');
