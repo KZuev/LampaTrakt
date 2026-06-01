@@ -5240,7 +5240,6 @@
       trakt_account_logout_slot: { ru: "Выйти из аккаунта", en: "Logout this account" },
       trakt_account_link_profile: { ru: "Привязать к профилю Lampa", en: "Link to Lampa profile" },
       trakt_account_profile_bound: { ru: "Профиль:", en: "Profile:" },
-      trakt_multiwatch_section: { ru: "Совместный просмотр", en: "Shared Watch" },
       trakt_multiwatch_title: { ru: "Совместный просмотр Trakt.TV", en: "Shared Watch Trakt.TV" },
       trakt_multiwatch_enabled: { ru: "Совместный просмотр", en: "Shared Watch" },
       trakt_multiwatch_enabled_descr: { ru: "Отмечать просмотренное сразу во всех выбранных аккаунтах", en: "Mark watched in all selected accounts simultaneously" },
