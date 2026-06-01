@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.7.5';
+  var PLUGIN_VERSION = '2.7.6';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -3555,7 +3555,7 @@
       comp.use({
         onCreate: function onCreate() {
           var _this = this;
-          _this.empty(); // initialize this.html synchronously before async load
+          _this.build({ results: [] }); // initialize this.html synchronously before async load
           var params = _objectSpread2({}, object);
           if ((type === 'list' || type === 'myListItems') && object.id) {
             params.id = object.id;
@@ -3577,8 +3577,9 @@
         onNext: function onNext(resolve, reject) {
           var _this2 = this;
           if (waitload) { reject.call(this); return; }
-          if (object.page <= total_pages) {
+          if (object.page < total_pages) {
             waitload = true;
+            object.page++;
             var params = _objectSpread2({}, object);
             if ((type === 'list' || type === 'myListItems') && object.id) {
               params.id = object.id;
@@ -3740,7 +3741,7 @@
       comp.use({
         onCreate: function onCreate() {
           var _this5 = this;
-          _this5.empty(); // initialize this.html synchronously before async load
+          _this5.build({ results: [] }); // initialize this.html synchronously before async load
           var params = _objectSpread2({}, object);
           params.limit = 36;
           params.page = params.page || 1;
@@ -3753,8 +3754,9 @@
         onNext: function onNext(resolve, reject) {
           var _this6 = this;
           if (waitload) { reject.call(this); return; }
-          if (object.page <= total_pages) {
+          if (object.page < total_pages) {
             waitload = true;
+            object.page++;
             var params = _objectSpread2({}, object);
             params.limit = 36;
             if (!Api$2) { waitload = false; reject.call(this); return; }
@@ -4211,7 +4213,7 @@
       comp.use({
         onCreate: function onCreate() {
           var _this9 = this;
-          _this9.empty(); // initialize this.html synchronously before async load
+          _this9.build({ results: [] }); // initialize this.html synchronously before async load
           var params = _objectSpread2({}, object);
           params.limit = 36;
           params.page = params.page || 1;
@@ -4231,8 +4233,9 @@
             reject.call(this);
             return;
           }
-          if (object.page <= total_pages) {
+          if (object.page < total_pages) {
             waitload = true;
+            object.page++;
             var params = _objectSpread2({}, object);
             params.limit = 36;
             if (!Api$2 || !Api$2[apiMethod]) {
