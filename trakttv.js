@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.7.2';
+  var PLUGIN_VERSION = '2.7.3';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -5354,6 +5354,9 @@
       trakttv_show_tv_progress: {
         ru: "Показывать прогресс просмотра сериалов",
       },
+      trakttv_show_tv_progress_descr: {
+        ru: "Отображает статус просмотра (сезон, эпизод, завершён/смотрю/не начато) на странице карточки под названием сериала. Нажатие открывает историю просмотра на Trakt.",
+      },
       trakttv_related_lists: {
         ru: "Связанные списки",
       },
@@ -5580,7 +5583,7 @@
         ru: "Включить отслеживание просмотра",
       },
       trakttv_enable_watching_descr: {
-        ru: "Автоматически отмечать просмотренные эпизоды и добавлять сериалы в \"Смотрю\"",
+        ru: "Автоматически отмечает просмотренные эпизоды и добавляет сериалы в «Смотрю». При выключении отслеживание полностью останавливается — включая TorrServer.",
       },
       trakttv_min_progress_threshold: {
         ru: "Порог просмотра",
@@ -8524,7 +8527,8 @@
         "default": true
       },
       field: {
-        name: Lampa.Lang.translate('trakttv_show_tv_progress')
+        name: Lampa.Lang.translate('trakttv_show_tv_progress'),
+        description: Lampa.Lang.translate('trakttv_show_tv_progress_descr')
       }
     });
     if (Lampa.Platform.is('apple_tv') === true) {
@@ -8733,7 +8737,7 @@
       field: { name: '' },
       onRender: function(item) {
         item.empty();
-        item.append('<div class="settings-param__name" style="opacity:.55;font-weight:700">Отладка</div>');
+        item.append('<div class="settings-param__name" style="opacity:.55;font-weight:700">Отладка и сброс</div>');
       }
     });
     Lampa.SettingsApi.addParam({
@@ -8741,7 +8745,7 @@
       param: { name: 'trakt_debug_menu', type: 'button' },
       field: {
         name: 'Отладка',
-        description: 'Бейджи, прогресс торрента, навигация Ещё, диагностика сетки'
+        description: 'Диагностика работы плагина'
       },
       onRender: function(item) { item.show(); },
       onChange: function() {
@@ -8987,16 +8991,6 @@
         });
     }
 
-    // ── Сброс ─────────────────────────────────────────────────────────────────
-    Lampa.SettingsApi.addParam({
-      component: 'trakt',
-      param: { name: 'trakt_reset_section', type: 'static' },
-      field: { name: '' },
-      onRender: function(item) {
-        item.empty();
-        item.append('<div class="settings-param__name" style="opacity:.55;font-weight:700">Сброс</div>');
-      }
-    });
     Lampa.SettingsApi.addParam({
       component: 'trakt',
       param: { name: 'trakt_full_clear', type: 'button' },
