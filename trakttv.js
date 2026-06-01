@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.7.3';
+  var PLUGIN_VERSION = '2.7.4';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -5352,10 +5352,10 @@
         ru: "Настройки прогресса",
       },
       trakttv_show_tv_progress: {
-        ru: "Показывать прогресс просмотра сериалов",
+        ru: "Кнопка Trakt в карточке",
       },
       trakttv_show_tv_progress_descr: {
-        ru: "Отображает статус просмотра (сезон, эпизод, завершён/смотрю/не начато) на странице карточки под названием сериала. Нажатие открывает историю просмотра на Trakt.",
+        ru: "Добавляет кнопку Trakt на страницу фильма или сериала. Показывает статус просмотра (просмотрено / смотрю S·E / не начато). При нажатии открывает меню: отметить просмотренным, добавить в вишлист и списки.",
       },
       trakttv_related_lists: {
         ru: "Связанные списки",
