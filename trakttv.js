@@ -388,7 +388,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.6.3';
+  var PLUGIN_VERSION = '2.7.0';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -7255,7 +7255,8 @@
     });
   }
 
-  function openMultiwatchSelector(initialSelected) {
+  function openMultiwatchSelector(initialSelected, opts) {
+    var backTarget = (opts && opts.backTarget) || 'head';
     var allAccounts = multiAccountGetAll().filter(function (d) { return d && d.token; });
     var active = multiAccountGetActiveSlot();
 
@@ -7312,7 +7313,8 @@
           try { invalidateWatchedCache(); } catch (e) {}
           try { invalidateWatchlistBadgeCache(); } catch (e) {}
           updateTraktAccountSwitchBadge();
-          try { Lampa.Controller.toggle('head'); } catch (e) {}
+          try { Lampa.Controller.toggle(backTarget); } catch (e) {}
+          if (backTarget === 'settings_component') { try { Lampa.Settings.update(); } catch(e) {} }
           if (secs.length > 0) {
             setTimeout(function() { ensureMultiwatchIdsCache().catch(function() {}); }, 300);
           }
@@ -7321,9 +7323,9 @@
         }
         var idx = selected.indexOf(item.slot);
         if (idx >= 0) selected.splice(idx, 1); else selected.push(item.slot);
-        setTimeout(function () { openMultiwatchSelector(selected); }, 0);
+        setTimeout(function () { openMultiwatchSelector(selected, opts); }, 0);
       },
-      onBack: function () { try { Lampa.Controller.toggle('head'); } catch (e) {} }
+      onBack: function () { try { Lampa.Controller.toggle(backTarget); } catch (e) {} }
     });
   }
 
@@ -8450,68 +8452,34 @@
       })(_slotIdx);
     }
 
-    // ── Секция: Семейный просмотр ────────────────────────────────────────────
+    // ── Секция: Совместный просмотр ──────────────────────────────────────────
     Lampa.SettingsApi.addParam({
       component: 'trakt',
       param: { name: 'trakt_multiwatch_section', type: 'static' },
       field: { name: '' },
       onRender: function (item) {
         item.empty();
-        item.append('<div class="settings-param__name" style="opacity:.55;font-weight:700">' + t$1('trakt_multiwatch_section', 'Семейный просмотр') + '</div>');
+        item.append('<div class="settings-param__name" style="opacity:.55;font-weight:700">' + t$1('trakt_multiwatch_section', 'Совместный просмотр') + '</div>');
       }
     });
     Lampa.SettingsApi.addParam({
       component: 'trakt',
-      param: { name: 'trakt_multiwatch_enabled', type: 'trigger', default: false },
-      field: {
-        name: t$1('trakt_multiwatch_enabled', 'Мультипросмотр'),
-        description: t$1('trakt_multiwatch_enabled_descr', 'Отмечать просмотренное сразу во всех выбранных аккаунтах')
-      }
-    });
-    Lampa.SettingsApi.addParam({
-      component: 'trakt',
-      param: { name: 'trakt_multiwatch_accounts', type: 'button' },
-      field: { name: t$1('trakt_multiwatch_accounts', 'Аккаунты мультипросмотра') },
+      param: { name: 'trakt_multiwatch_open', type: 'button' },
+      field: { name: t$1('trakt_multiwatch_enabled', 'Совместный просмотр') },
       onRender: function (item) {
         var enabled = readBooleanStorage$2('trakt_multiwatch_enabled', false);
-        enabled ? item.show() : item.hide();
-        var selected;
-        var _raw8575 = Lampa.Storage.get('trakt_multiwatch_slots');
-        try { selected = Array.isArray(_raw8575) ? _raw8575 : JSON.parse(_raw8575 || '[]'); } catch (e) { selected = []; }
-        if (!Array.isArray(selected)) selected = [];
-        var labels = selected.map(function (s) {
-          var d = multiAccountGetSlot(s);
-          return (d && d.label) || ('Account ' + (s + 1));
-        }).join(', ');
-        item.find('.settings-param__value').text(labels || '—');
+        if (enabled) {
+          var active = multiAccountGetActiveSlot();
+          var mwTokens = multiAccountGetMultiwatchTokens();
+          var allSlots = [active].concat(mwTokens.map(function(t) { return t.slot; }));
+          var names = allSlots.map(function(s) { return getSlotDisplayName(s); });
+          item.find('.settings-param__value').text(names.join(', '));
+        } else {
+          item.find('.settings-param__value').text(t$1('trakt_multiwatch_no', 'Нет'));
+        }
       },
       onChange: function () {
-        var allAccounts = multiAccountGetAll().filter(function (d) { return d && d.token; });
-        if (allAccounts.length < 2) {
-          Lampa.Noty.show('Добавьте хотя бы 2 аккаунта для мультипросмотра');
-          return;
-        }
-        var selected;
-        var _raw8591 = Lampa.Storage.get('trakt_multiwatch_slots');
-        try { selected = Array.isArray(_raw8591) ? _raw8591 : JSON.parse(_raw8591 || '[]'); } catch (e) { selected = []; }
-        if (!Array.isArray(selected)) selected = [];
-        var menuItems = allAccounts.map(function (d) {
-          var isSelected = selected.indexOf(d.slot) >= 0;
-          return { title: (isSelected ? '✓ ' : '  ') + (d.label || ('Account ' + (d.slot + 1))), slot: d.slot, selected: isSelected };
-        });
-        menuItems.push({ title: Lampa.Lang.translate('cancel') || 'Отмена', cancel: true });
-        Lampa.Select.show({
-          title: t$1('trakt_multiwatch_accounts', 'Аккаунты мультипросмотра'),
-          items: menuItems,
-          onSelect: function (a) {
-            if (a.cancel) { Lampa.Controller.toggle('settings_component'); return; }
-            var idx = selected.indexOf(a.slot);
-            if (idx >= 0) selected.splice(idx, 1); else selected.push(a.slot);
-            Lampa.Storage.set('trakt_multiwatch_slots', JSON.stringify(selected));
-            Lampa.Settings.update();
-          },
-          onBack: function () { Lampa.Controller.toggle('settings_component'); }
-        });
+        openMultiwatchSelector(null, { backTarget: 'settings_component' });
       }
     });
     // ────────────────────────────────────────────────────────────────────────
@@ -8590,29 +8558,14 @@
         startBookmarksExportFlow();
       }
     });
-    Lampa.SettingsApi.addParam({
-      component: 'trakt',
-      param: {
-        name: 'trakt_progress_section',
-        type: 'static'
-      },
-      field: {
-        name: ''
-      },
-      onRender: function onRender(item) {
-        item.empty();
-        item.append("<div class=\"settings-param__name\" style=\"opacity:.55;font-weight:700\">".concat(t$1('trakt_progress_section', 'Progress configuration'), "</div>"));
-      }
-    });
+    // ── Секция: Фильтры источника ─────────────────────────────────────────────
     Lampa.SettingsApi.addParam({
       component: 'trakt',
       param: {
         name: 'trakt_source_section',
         type: 'static'
       },
-      field: {
-        name: ''
-      },
+      field: { name: '' },
       onRender: function onRender(item) {
         item.empty();
         item.append("<div class=\"settings-param__name\" style=\"opacity:.55;font-weight:700\">".concat(t$1('trakttv_source_section', 'Trakt.TV source filters'), "</div>"));
@@ -8657,18 +8610,6 @@
     Lampa.SettingsApi.addParam({
       component: 'trakt',
       param: {
-        name: 'trakt_lampa_section',
-        type: 'static'
-      },
-      field: { name: '' },
-      onRender: function onRender(item) {
-        item.empty();
-        item.append("<div class=\"settings-param__name\" style=\"opacity:.55;font-weight:700\">".concat(t$1('trakttv_lampa_section', 'Lampa home page'), "</div>"));
-      }
-    });
-    Lampa.SettingsApi.addParam({
-      component: 'trakt',
-      param: {
         name: 'trakt_hide_lampa_continue',
         type: 'trigger',
         "default": false
@@ -8688,6 +8629,20 @@
       field: {
         name: t$1('trakttv_hide_lampa_recomend', 'Hide Lampa «Recommended to watch»'),
         description: t$1('trakttv_hide_lampa_recomend_descr', 'Remove from home page — duplicated by Trakt Recommendations row')
+      }
+    });
+
+    // ── Секция: Настройки прогресса ───────────────────────────────────────────
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: {
+        name: 'trakt_progress_section',
+        type: 'static'
+      },
+      field: { name: '' },
+      onRender: function onRender(item) {
+        item.empty();
+        item.append("<div class=\"settings-param__name\" style=\"opacity:.55;font-weight:700\">".concat(t$1('trakt_progress_section', 'Progress configuration'), "</div>"));
       }
     });
     Lampa.SettingsApi.addParam({
@@ -8749,19 +8704,6 @@
       field: {
         name: Lampa.Lang.translate('trakttv_min_progress_threshold'),
         description: Lampa.Lang.translate('trakttv_min_progress_threshold_descr')
-      }
-    });
-
-    Lampa.SettingsApi.addParam({
-      component: 'trakt',
-      param: {
-        name: 'trakt_enable_logging',
-        type: 'trigger',
-        "default": false
-      },
-      field: {
-        name: Lampa.Lang.translate('trakttv_enable_logging'),
-        description: Lampa.Lang.translate('trakttv_enable_logging_descr')
       }
     });
 
