@@ -388,7 +388,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.6.2';
+  var PLUGIN_VERSION = '2.6.3';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -3634,6 +3634,7 @@
       comp.use({
         onCreate: function onCreate() {
           var _this = this;
+          _this.empty(); // initialize this.html synchronously before async load
           var params = _objectSpread2({}, object);
           if ((type === 'list' || type === 'myListItems') && object.id) {
             params.id = object.id;
@@ -3642,7 +3643,7 @@
           }
           params.limit = type === 'watchlist' ? 500 : 36;
           params.page = params.page || 1;
-          if (!Api$2) { logApiMissing$1(); this.empty(); return; }
+          if (!Api$2) { logApiMissing$1(); return; }
           Api$2[type](params).then(function (data) {
             if (data && data.total_pages) total_pages = data.total_pages;
             if (type === 'watchlist') { data = applyWatchlistClientFilters(data, object); data = rearrangeWatchlistUpcoming(data); }
@@ -3818,10 +3819,11 @@
       comp.use({
         onCreate: function onCreate() {
           var _this5 = this;
+          _this5.empty(); // initialize this.html synchronously before async load
           var params = _objectSpread2({}, object);
           params.limit = 36;
           params.page = params.page || 1;
-          if (!Api$2) { logApiMissing$1(); this.empty(); return; }
+          if (!Api$2) { logApiMissing$1(); return; }
           Api$2.recommendations(params).then(function (recommendations) {
             _this5.build(recommendations && _typeof(recommendations) === 'object' && Array.isArray(recommendations.results) ? recommendations : { results: [] });
             if (recommendations && recommendations.total_pages) total_pages = recommendations.total_pages;
@@ -4288,11 +4290,11 @@
       comp.use({
         onCreate: function onCreate() {
           var _this9 = this;
+          _this9.empty(); // initialize this.html synchronously before async load
           var params = _objectSpread2({}, object);
           params.limit = 36;
           params.page = params.page || 1;
           if (!Api$2 || !Api$2[apiMethod]) {
-            this.empty();
             return;
           }
           Api$2[apiMethod](params).then(function (data) {
