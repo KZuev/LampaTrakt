@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.7.15';
+  var PLUGIN_VERSION = '2.7.16';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -8851,79 +8851,46 @@
     }
 
     function _showDebugHeightCompare() {
+      var LAMPA_REF = 113; // known native Lampa first-card top (px)
       var lines = [], fullText = [];
 
-      // Discover what selectors actually exist in DOM
-      var probes = [
-        '.category-full', '.category', '.items-line',
-        '.scroll__body', '.activity__body', '.layer__content',
-        '.trakt-watchlist-hub', '.trakt-watchlist-hub__body'
-      ];
-      var found = [];
-      probes.forEach(function(sel) {
-        var els = document.querySelectorAll(sel);
-        if (els.length) found.push(sel + ':' + els.length);
-      });
-      var probeStr = found.length ? found.join(' | ') : 'НИЧЕГОнет';
-      lines.push({ title: 'DOM-сканер: ' + probeStr });
-      fullText.push('DOM: ' + probeStr);
-
-      // Gather card rows regardless of wrapper class
-      // Look for any element that contains .card children
-      var cardHosts = document.querySelectorAll('.items-line');
-      if (!cardHosts.length) {
-        // fallback: find first .card and walk up
-        var anyCard = document.querySelector('.card');
-        if (anyCard) {
-          var p2 = anyCard.parentElement;
-          while (p2 && !p2.classList.contains('items-line') && p2 !== document.body) p2 = p2.parentElement;
-          if (p2 && p2 !== document.body) cardHosts = [p2];
-        }
-      }
-
-      if (cardHosts.length) {
-        var rows = Array.prototype.slice.call(cardHosts);
-        rows.forEach(function(row, i) {
-          if (i > 2) return; // first 3 rows enough
-          var isTrakt = false;
-          var p = row.parentElement;
-          while (p) { if (p.classList && p.classList.contains('trakt-watchlist-hub')) { isTrakt = true; break; } p = p.parentElement; }
-          var label = isTrakt ? '[TRAKT]' : '[LAMPA]';
-          var rowRect = row.getBoundingClientRect();
-          var rowStyle = getComputedStyle(row);
-          var firstCard = row.querySelector('.card');
-          var cardTop = firstCard ? Math.round(firstCard.getBoundingClientRect().top) : null;
-          // also measure parent wrapper
-          var wrapper = row.parentElement;
-          var wrapRect = wrapper ? wrapper.getBoundingClientRect() : null;
-          var wrapStyle = wrapper ? getComputedStyle(wrapper) : null;
-          var r = [
-            label + ' row#' + i + '  row.top=' + Math.round(rowRect.top) + 'px  row.margin-top=' + rowStyle.marginTop,
-            '  firstCard.top=' + (cardTop !== null ? cardTop + 'px' : 'нет'),
-            wrapRect ? ('  parent.top=' + Math.round(wrapRect.top) + 'px  parent.pad-top=' + (wrapStyle ? wrapStyle.paddingTop : '?') + '  parent.class=' + (wrapper.className || '').slice(0,40)) : '  нет родителя'
-          ];
-          r.forEach(function(l) { lines.push({ title: l }); fullText.push(l); });
-        });
-      } else {
-        lines.push({ title: 'Нет .items-line — откройте список, потом сюда' });
-        fullText.push('Нет .items-line в DOM');
-      }
-
-      // Stored captures (populated by baseComponent after build)
+      // Stored captures (populated by baseComponent/baseRecommendations/listCatalog after build)
       if (_heightCaptures.length) {
-        lines.push({ title: '--- Сохранённые измерения ---' });
+        lines.push({ title: '--- Замеры (откр. список → сюда) ---' });
         fullText.push('--- Captures ---');
         _heightCaptures.forEach(function(c) {
-          lines.push({ title: c }); fullText.push(c);
+          // Extract card.top value and show delta
+          var m = c.match(/card\.top=(\d+)px/);
+          var delta = m ? (parseInt(m[1], 10) - LAMPA_REF) : null;
+          var deltaStr = delta !== null ? ('  Δ=' + (delta >= 0 ? '+' : '') + delta + 'px vs LAMPA') : '';
+          lines.push({ title: c + deltaStr });
+          fullText.push(c + deltaStr);
         });
+        lines.push({ title: '[ Очистить замеры ]', _clearCaptures: true });
+      } else {
+        lines.push({ title: 'Нет замеров — откройте список Trakt, потом сюда' });
+        lines.push({ title: 'LAMPA эталон: card.top=' + LAMPA_REF + 'px' });
+        fullText.push('Нет замеров. LAMPA ref=' + LAMPA_REF + 'px');
+      }
+
+      // Live DOM scan
+      var probes = ['.items-line', '.scroll__body', '.trakt-watchlist-hub', '.trakt-maker-content'];
+      var found = [];
+      probes.forEach(function(sel) { var els = document.querySelectorAll(sel); if (els.length) found.push(sel + ':' + els.length); });
+      if (found.length) {
+        var domStr = 'DOM: ' + found.join(' | ');
+        lines.push({ title: domStr }); fullText.push(domStr);
       }
 
       var text = fullText.join('\n');
       lines.push({ title: '[ Скопировать ]', _copy: text });
       Lampa.Select.show({
-        title: 'Высота списков',
+        title: 'Высота списков (LAMPA=' + LAMPA_REF + 'px)',
         items: lines,
-        onSelect: function(item) { if (item._copy) _copyToClipboard(item._copy); },
+        onSelect: function(item) {
+          if (item._copy) _copyToClipboard(item._copy);
+          if (item._clearCaptures) { _heightCaptures.length = 0; Lampa.Noty.show('Замеры очищены'); }
+        },
         onBack: function() { Lampa.Controller.toggle('settings_component'); }
       });
     }
