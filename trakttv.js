@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.7.9';
+  var PLUGIN_VERSION = '2.7.10';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -3557,6 +3557,7 @@
         onCreate: function onCreate() {
           var _this = this;
           _this.empty(); // MUST be first — initializes this.html before onVisible fires
+          try { var _ec0 = _this.empty_class; if (_ec0 && typeof _ec0.render === 'function') { var _eel = _ec0.render(true); if (_eel) _eel.style.display = 'none'; } } catch(e) {}
           try { _listLogAdd('bC.onCreate type=' + type + ' pg=' + object.page); } catch(e) {}
           var params = _objectSpread2({}, object);
           if ((type === 'list' || type === 'myListItems') && object.id) {
@@ -3754,6 +3755,7 @@
         onCreate: function onCreate() {
           var _this5 = this;
           _this5.empty(); // MUST be first
+          try { var _ec0 = _this5.empty_class; if (_ec0 && typeof _ec0.render === 'function') { var _eel = _ec0.render(true); if (_eel) _eel.style.display = 'none'; } } catch(e) {}
           try { _listLogAdd('bR.onCreate pg=' + object.page); } catch(e) {}
           var params = _objectSpread2({}, object);
           params.limit = 36;
@@ -4237,6 +4239,7 @@
         onCreate: function onCreate() {
           var _this9 = this;
           _this9.empty(); // MUST be first
+          try { var _ec0 = _this9.empty_class; if (_ec0 && typeof _ec0.render === 'function') { var _eel = _ec0.render(true); if (_eel) _eel.style.display = 'none'; } } catch(e) {}
           try { _listLogAdd('lC.onCreate pg=' + object.page); } catch(e) {}
           var params = _objectSpread2({}, object);
           params.limit = 36;
