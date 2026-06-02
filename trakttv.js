@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.8.1';
+  var PLUGIN_VERSION = '2.8.2';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -13114,12 +13114,33 @@
                   name: title,
                   still_path: stillPath
                 };
-                var out = Object.assign({}, card, {
-                  card: card, time: airTime, title: title,
-                  id: tmdbId, ids: movie.ids,
-                  params: { style: { name: 'wide' } },
-                  isMovie: true
-                });
+                var out;
+                if (EpisodeClass) {
+                  out = {
+                    card: card, episode: epData, time: airTime, title: title,
+                    id: tmdbId, ids: movie.ids, params: {},
+                    air_date: digitalDate, still_path: stillPath, isMovie: true
+                  };
+                  out.params.createInstance = function (data) {
+                    var merged = _typeof(data) === 'object' && data !== null
+                      ? Object.assign({}, data, data.episode || {}, { card: data.card || data })
+                      : {};
+                    delete merged.season_number;
+                    delete merged.episode_number;
+                    delete merged.season;
+                    delete merged.number;
+                    var instance = new EpisodeClass(merged);
+                    if (typeof instance.build === 'function') { try { instance.build(); } catch(e) {} }
+                    return instance;
+                  };
+                } else {
+                  out = Object.assign({}, card, {
+                    card: card, time: airTime, title: title,
+                    id: tmdbId, ids: movie.ids,
+                    params: { style: { name: 'wide' } },
+                    isMovie: true
+                  });
+                }
                 if (moduleMask) out.params.module = moduleMask;
                 out.params.emit = {
                   onlyEnter: function onlyEnter() {
