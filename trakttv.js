@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.7.10';
+  var PLUGIN_VERSION = '2.7.11';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -8807,6 +8807,7 @@
             { title: 'Диагностика сетки постеров',                   action: 'grid'          },
             { title: 'История отметок просмотренного (' + _watchMarkLog.length + ')', action: 'watchlog' },
             { title: 'Диагностика списков (' + _listLog.length + ')',                 action: 'listlog'  },
+            { title: 'Сравнение высоты списков',                                     action: 'height'   },
             { title: _badgesHidden ? 'Бейджи: ВКЛ (показать)' : 'Бейджи: ВЫКЛ (скрыть)', action: 'toggle_badges' }
           ],
           onSelect: function(item) {
@@ -8817,6 +8818,7 @@
             if (item.action === 'grid')          { _showDebugGrid();          }
             if (item.action === 'watchlog')      { _showDebugWatchLog();      }
             if (item.action === 'listlog')       { _showDebugListLog();       }
+            if (item.action === 'height')        { _showDebugHeightCompare(); }
             if (item.action === 'toggle_badges') { _toggleBadgeVisibility();  }
           },
           onBack: function() { Lampa.Controller.toggle('settings_component'); }
@@ -8840,6 +8842,44 @@
         if (el) el.parentNode.removeChild(el);
         Lampa.Noty.show('Бейджи снова видны');
       }
+    }
+
+    function _showDebugHeightCompare() {
+      var all = document.querySelectorAll('.category-full');
+      if (!all.length) {
+        Lampa.Select.show({ title: 'Высота списков',
+          items: [{ title: 'Нет .category-full в DOM — открой список' }],
+          onSelect: function(){}, onBack: function(){ Lampa.Controller.toggle('settings_component'); }});
+        return;
+      }
+      var lines = [], fullText = [];
+      all.forEach(function(cf, i) {
+        var isTrakt = false;
+        var p = cf.parentElement;
+        while (p) { if (p.classList && p.classList.contains('trakt-watchlist-hub')) { isTrakt = true; break; } p = p.parentElement; }
+        var label = isTrakt ? '[TRAKT]' : '[LAMPA]';
+        var cfRect  = cf.getBoundingClientRect();
+        var cfStyle = getComputedStyle(cf);
+        var firstCard = cf.querySelector('.card');
+        var cardTop   = firstCard ? Math.round(firstCard.getBoundingClientRect().top) : null;
+        var firstLine = cf.querySelector('.items-line');
+        var lineStyle = firstLine ? getComputedStyle(firstLine) : null;
+        var r = [
+          label + ' #' + i + '  cf.top=' + Math.round(cfRect.top) + 'px',
+          '  cf  margin-top=' + cfStyle.marginTop + '  padding-top=' + cfStyle.paddingTop,
+          '  firstCard.top=' + (cardTop !== null ? cardTop + 'px' : 'нет'),
+          lineStyle ? ('  line margin-top=' + lineStyle.marginTop + '  padding-top=' + lineStyle.paddingTop) : '  нет .items-line'
+        ];
+        r.forEach(function(l) { lines.push({ title: l }); fullText.push(l); });
+      });
+      var text = fullText.join('\n');
+      lines.push({ title: '[ Скопировать ]', _copy: text });
+      Lampa.Select.show({
+        title: 'Высота списков (' + all.length + ')',
+        items: lines,
+        onSelect: function(item) { if (item._copy) _copyToClipboard(item._copy); },
+        onBack: function() { Lampa.Controller.toggle('settings_component'); }
+      });
     }
 
     function _showDebugGrid() {
