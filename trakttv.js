@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.7.11';
+  var PLUGIN_VERSION = '2.7.12';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -3578,6 +3578,7 @@
             if (buildData.results.length > 0 && _emptyInstance) {
               try { var _el = typeof _emptyInstance.render === 'function' ? _emptyInstance.render(true) : null; if (_el) _el.style.display = 'none'; } catch(e) {}
             }
+            setTimeout(function() { _captureHeightSnapshot('TRAKT-' + type); }, 500);
             if (type === 'watchlist') setTimeout(function () { try { insertUpcomingDivider(_this); } catch(e) {} }, 0);
             if (type === 'upnext') setTimeout(function () { try { insertUpnextNotStartedDivider(_this); } catch(e) {} }, 0);
           })["catch"](function () { _this.empty(); });
@@ -3768,6 +3769,7 @@
             if (buildData.results.length > 0 && _emptyInstance) {
               try { var _el = typeof _emptyInstance.render === 'function' ? _emptyInstance.render(true) : null; if (_el) _el.style.display = 'none'; } catch(e) {}
             }
+            setTimeout(function() { _captureHeightSnapshot('TRAKT-recs'); }, 500);
             if (recommendations && recommendations.total_pages) total_pages = recommendations.total_pages;
           })["catch"](function () { _this5.empty(); });
         },
@@ -4255,6 +4257,7 @@
             if (buildData && buildData.results && buildData.results.length > 0 && _emptyInstance) {
               try { var _el = typeof _emptyInstance.render === 'function' ? _emptyInstance.render(true) : null; if (_el) _el.style.display = 'none'; } catch(e) {}
             }
+            setTimeout(function() { _captureHeightSnapshot('TRAKT-lists'); }, 500);
           })["catch"](function () {
             return _this9.empty();
           });
@@ -8845,37 +8848,77 @@
     }
 
     function _showDebugHeightCompare() {
-      var all = document.querySelectorAll('.category-full');
-      if (!all.length) {
-        Lampa.Select.show({ title: 'Высота списков',
-          items: [{ title: 'Нет .category-full в DOM — открой список' }],
-          onSelect: function(){}, onBack: function(){ Lampa.Controller.toggle('settings_component'); }});
-        return;
-      }
       var lines = [], fullText = [];
-      all.forEach(function(cf, i) {
-        var isTrakt = false;
-        var p = cf.parentElement;
-        while (p) { if (p.classList && p.classList.contains('trakt-watchlist-hub')) { isTrakt = true; break; } p = p.parentElement; }
-        var label = isTrakt ? '[TRAKT]' : '[LAMPA]';
-        var cfRect  = cf.getBoundingClientRect();
-        var cfStyle = getComputedStyle(cf);
-        var firstCard = cf.querySelector('.card');
-        var cardTop   = firstCard ? Math.round(firstCard.getBoundingClientRect().top) : null;
-        var firstLine = cf.querySelector('.items-line');
-        var lineStyle = firstLine ? getComputedStyle(firstLine) : null;
-        var r = [
-          label + ' #' + i + '  cf.top=' + Math.round(cfRect.top) + 'px',
-          '  cf  margin-top=' + cfStyle.marginTop + '  padding-top=' + cfStyle.paddingTop,
-          '  firstCard.top=' + (cardTop !== null ? cardTop + 'px' : 'нет'),
-          lineStyle ? ('  line margin-top=' + lineStyle.marginTop + '  padding-top=' + lineStyle.paddingTop) : '  нет .items-line'
-        ];
-        r.forEach(function(l) { lines.push({ title: l }); fullText.push(l); });
+
+      // Discover what selectors actually exist in DOM
+      var probes = [
+        '.category-full', '.category', '.items-line',
+        '.scroll__body', '.activity__body', '.layer__content',
+        '.trakt-watchlist-hub', '.trakt-watchlist-hub__body'
+      ];
+      var found = [];
+      probes.forEach(function(sel) {
+        var els = document.querySelectorAll(sel);
+        if (els.length) found.push(sel + ':' + els.length);
       });
+      var probeStr = found.length ? found.join(' | ') : 'НИЧЕГОнет';
+      lines.push({ title: 'DOM-сканер: ' + probeStr });
+      fullText.push('DOM: ' + probeStr);
+
+      // Gather card rows regardless of wrapper class
+      // Look for any element that contains .card children
+      var cardHosts = document.querySelectorAll('.items-line');
+      if (!cardHosts.length) {
+        // fallback: find first .card and walk up
+        var anyCard = document.querySelector('.card');
+        if (anyCard) {
+          var p2 = anyCard.parentElement;
+          while (p2 && !p2.classList.contains('items-line') && p2 !== document.body) p2 = p2.parentElement;
+          if (p2 && p2 !== document.body) cardHosts = [p2];
+        }
+      }
+
+      if (cardHosts.length) {
+        var rows = Array.prototype.slice.call(cardHosts);
+        rows.forEach(function(row, i) {
+          if (i > 2) return; // first 3 rows enough
+          var isTrakt = false;
+          var p = row.parentElement;
+          while (p) { if (p.classList && p.classList.contains('trakt-watchlist-hub')) { isTrakt = true; break; } p = p.parentElement; }
+          var label = isTrakt ? '[TRAKT]' : '[LAMPA]';
+          var rowRect = row.getBoundingClientRect();
+          var rowStyle = getComputedStyle(row);
+          var firstCard = row.querySelector('.card');
+          var cardTop = firstCard ? Math.round(firstCard.getBoundingClientRect().top) : null;
+          // also measure parent wrapper
+          var wrapper = row.parentElement;
+          var wrapRect = wrapper ? wrapper.getBoundingClientRect() : null;
+          var wrapStyle = wrapper ? getComputedStyle(wrapper) : null;
+          var r = [
+            label + ' row#' + i + '  row.top=' + Math.round(rowRect.top) + 'px  row.margin-top=' + rowStyle.marginTop,
+            '  firstCard.top=' + (cardTop !== null ? cardTop + 'px' : 'нет'),
+            wrapRect ? ('  parent.top=' + Math.round(wrapRect.top) + 'px  parent.pad-top=' + (wrapStyle ? wrapStyle.paddingTop : '?') + '  parent.class=' + (wrapper.className || '').slice(0,40)) : '  нет родителя'
+          ];
+          r.forEach(function(l) { lines.push({ title: l }); fullText.push(l); });
+        });
+      } else {
+        lines.push({ title: 'Нет .items-line — откройте список, потом сюда' });
+        fullText.push('Нет .items-line в DOM');
+      }
+
+      // Stored captures (populated by baseComponent after build)
+      if (_heightCaptures.length) {
+        lines.push({ title: '--- Сохранённые измерения ---' });
+        fullText.push('--- Captures ---');
+        _heightCaptures.forEach(function(c) {
+          lines.push({ title: c }); fullText.push(c);
+        });
+      }
+
       var text = fullText.join('\n');
       lines.push({ title: '[ Скопировать ]', _copy: text });
       Lampa.Select.show({
-        title: 'Высота списков (' + all.length + ')',
+        title: 'Высота списков',
         items: lines,
         onSelect: function(item) { if (item._copy) _copyToClipboard(item._copy); },
         onBack: function() { Lampa.Controller.toggle('settings_component'); }
@@ -11678,6 +11721,17 @@
       });
       Lampa.Listener.follow('line', function (e) {
         if (!e || !e.type) return;
+        if (e.type === 'append' && Array.isArray(e.items) && e.items.length > 0) {
+          try {
+            var lineEl2 = e.line && typeof e.line.render === 'function' ? e.line.render(true) : null;
+            if (lineEl2) {
+              var p3 = lineEl2.parentElement;
+              var isTraktLine = false;
+              while (p3) { if (p3.classList && p3.classList.contains('trakt-watchlist-hub')) { isTraktLine = true; break; } p3 = p3.parentElement; }
+              if (!isTraktLine) setTimeout(function() { _captureHeightSnapshot('LAMPA'); }, 500);
+            }
+          } catch(ex) {}
+        }
         if (e.type === 'append' || e.type === 'visible' || e.type === 'toggle') {
           decorateUpnextLine(e);
           if (Lampa.Storage.get('trakt_token') && Array.isArray(e.items)) {
@@ -12462,6 +12516,7 @@
   var _navDebugLog = [];
   var _watchMarkLog = [];
   var _listLog = [];
+  var _heightCaptures = [];
   var _lastWatchContext = null; // { percent, minProg, hash, trigger } — set before finish(), read in addToHistory$1
   var _traktRowsByTitle = {};
 
@@ -12469,6 +12524,32 @@
     var ts = new Date().toISOString().slice(11, 19);
     _listLog.unshift('[' + ts + '] ' + msg);
     if (_listLog.length > 100) _listLog.length = 100;
+  }
+
+  function _captureHeightSnapshot(label) {
+    try {
+      var ts = new Date().toISOString().slice(11, 19);
+      var firstCard = document.querySelector('.card');
+      if (!firstCard) { _heightCaptures.unshift('[' + ts + '] [' + label + '] нет .card в DOM'); return; }
+      var cardRect = firstCard.getBoundingClientRect();
+      var p = firstCard;
+      while (p && !(p.classList && p.classList.contains('items-line'))) p = p.parentElement;
+      var lineEl = (p && p !== document.body) ? p : null;
+      var lineTop = lineEl ? Math.round(lineEl.getBoundingClientRect().top) : null;
+      var lineStyle = lineEl ? getComputedStyle(lineEl) : null;
+      var p2 = firstCard;
+      var catEl = null;
+      while (p2 && p2 !== document.body) {
+        var cn = (p2.className || '');
+        if (cn.indexOf('category') >= 0 || cn.indexOf('scroll__body') >= 0) { catEl = p2; break; }
+        p2 = p2.parentElement;
+      }
+      var msg = '[' + ts + '] [' + label + '] card.top=' + Math.round(cardRect.top) + 'px';
+      if (lineTop !== null) msg += '  line.top=' + lineTop + 'px  mt=' + (lineStyle ? lineStyle.marginTop : '?') + '  pt=' + (lineStyle ? lineStyle.paddingTop : '?');
+      if (catEl) msg += '  | ' + (catEl.className || '').split(' ').slice(0, 3).join('.').slice(0, 40) + ' top=' + Math.round(catEl.getBoundingClientRect().top) + 'px';
+      _heightCaptures.unshift(msg);
+      if (_heightCaptures.length > 20) _heightCaptures.length = 20;
+    } catch(e) {}
   }
 
   function _watchLogAdd(trigger, data) {
