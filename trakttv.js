@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.7.20';
+  var PLUGIN_VERSION = '2.8.0';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -5937,8 +5937,8 @@
     var html = $('<div></div>');
     var body = $('<div class="timetable"></div>');
     var last;
-    var INITIAL_DAYS = 14;
-    var CHUNK_DAYS = 14;
+    var INITIAL_DAYS = 30;
+    var CHUNK_DAYS = 30;
     var nextStartDate = null;
     var loadingMore = false;
     var movieDateCache = null;
@@ -6330,12 +6330,29 @@
           Lampa.Controller.collectionFocus(last || false, scroll.render());
         },
         up: function up() {
-          if (typeof Navigator !== 'undefined' && Navigator.canmove('up')) Navigator.move('up');
-          else Lampa.Controller.toggle('head');
+          var all = body.find('.timetable__item.selector');
+          var cur = last ? all.index(last) : 0;
+          if (cur > 0) {
+            last = all.get(cur - 1);
+            Lampa.Controller.collectionSet(scroll.render());
+            Lampa.Controller.collectionFocus(last, scroll.render());
+            scroll.update($(last));
+          } else {
+            Lampa.Controller.toggle('head');
+          }
         },
         down: function down() {
-          Lampa.Controller.collectionSet(scroll.render());
-          if (typeof Navigator !== 'undefined' && Navigator.canmove('down')) Navigator.move('down');
+          var all = body.find('.timetable__item.selector');
+          var cur = last ? all.index(last) : -1;
+          if (cur < all.length - 1) {
+            last = all.get(cur + 1);
+            Lampa.Controller.collectionSet(scroll.render());
+            Lampa.Controller.collectionFocus(last, scroll.render());
+            scroll.update($(last));
+            if (!loadingMore && nextStartDate && cur + 1 >= all.length - 10) loadMoreDays();
+          } else if (!loadingMore && nextStartDate) {
+            loadMoreDays();
+          }
         },
         left: function left() {
           if (typeof Navigator !== 'undefined' && Navigator.canmove('left')) Navigator.move('left');
