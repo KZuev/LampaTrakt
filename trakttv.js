@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.7.7';
+  var PLUGIN_VERSION = '2.7.8';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -3555,9 +3555,8 @@
       comp.use({
         onCreate: function onCreate() {
           var _this = this;
-          _listLogAdd('bC.onCreate type=' + type + ' pg=' + object.page);
-          _this.empty();
-          _listLogAdd('bC.empty() called type=' + type);
+          _this.empty(); // MUST be first — initializes this.html before onVisible fires
+          try { _listLogAdd('bC.onCreate type=' + type + ' pg=' + object.page); } catch(e) {}
           var params = _objectSpread2({}, object);
           if ((type === 'list' || type === 'myListItems') && object.id) {
             params.id = object.id;
@@ -3572,7 +3571,7 @@
             if (type === 'watchlist') { data = applyWatchlistClientFilters(data, object); data = rearrangeWatchlistUpcoming(data); }
             if (type === 'upnext') data = rearrangeUpnextNotStarted(data);
             var buildData = data && _typeof(data) === 'object' && Array.isArray(data.results) ? data : { results: [] };
-            _listLogAdd('bC.build type=' + type + ' n=' + buildData.results.length + ' pages=' + total_pages);
+            try { _listLogAdd('bC.build type=' + type + ' n=' + buildData.results.length + ' pages=' + total_pages); } catch(e) {}
             _this.build(buildData);
             if (type === 'watchlist') setTimeout(function () { try { insertUpcomingDivider(_this); } catch(e) {} }, 0);
             if (type === 'upnext') setTimeout(function () { try { insertUpnextNotStartedDivider(_this); } catch(e) {} }, 0);
@@ -3580,8 +3579,8 @@
         },
         onNext: function onNext(resolve, reject) {
           var _this2 = this;
-          if (waitload) { _listLogAdd('bC.onNext type=' + type + ' busy→reject'); reject.call(this); return; }
-          _listLogAdd('bC.onNext type=' + type + ' pg=' + object.page + '/' + total_pages);
+          if (waitload) { try { _listLogAdd('bC.onNext type=' + type + ' busy→reject'); } catch(e) {} reject.call(this); return; }
+          try { _listLogAdd('bC.onNext type=' + type + ' pg=' + object.page + '/' + total_pages); } catch(e) {}
           if (object.page <= total_pages) {
             waitload = true;
             var params = _objectSpread2({}, object);
@@ -3597,13 +3596,13 @@
               if (type === 'watchlist') { data = applyWatchlistClientFilters(data, object); }
               if (type === 'upnext') data = rearrangeUpnextNotStarted(data);
               var nd = data && _typeof(data) === 'object' && Array.isArray(data.results) ? data : { results: [] };
-              _listLogAdd('bC.onNext resolve type=' + type + ' n=' + nd.results.length);
+              try { _listLogAdd('bC.onNext resolve type=' + type + ' n=' + nd.results.length); } catch(e) {}
               resolve.call(_this2, nd);
               if (type === 'watchlist') setTimeout(function () { try { insertUpcomingDivider(_this2); } catch(e) {} }, 0);
               if (type === 'upnext') setTimeout(function () { try { insertUpnextNotStartedDivider(_this2); } catch(e) {} }, 0);
               waitload = false;
-            })["catch"](function () { waitload = false; _listLogAdd('bC.onNext catch→reject type=' + type); reject.call(_this2); });
-          } else { _listLogAdd('bC.onNext end→reject type=' + type + ' pg=' + object.page + '/' + total_pages); reject.call(this); }
+            })["catch"](function () { waitload = false; try { _listLogAdd('bC.onNext catch→reject type=' + type); } catch(e) {} reject.call(_this2); });
+          } else { try { _listLogAdd('bC.onNext end→reject type=' + type + ' pg=' + object.page + '/' + total_pages); } catch(e) {} reject.call(this); }
         },
         onController: function onController(controller) {
           if (type === 'watchlist' && object && typeof object.onHead === 'function') {
@@ -3613,7 +3612,7 @@
           }
         },
         onEmpty: function onEmpty() {
-          _listLogAdd('bC.onEmpty type=' + type);
+          try { _listLogAdd('bC.onEmpty type=' + type); } catch(e) {}
           if (type !== 'watchlist' || !object || typeof object.onHead !== 'function') return;
           if (!this.empty_class || typeof this.empty_class.use !== 'function') return;
           this.empty_class.use({ onController: function (controller) {
@@ -3748,24 +3747,23 @@
       comp.use({
         onCreate: function onCreate() {
           var _this5 = this;
-          _listLogAdd('bR.onCreate pg=' + object.page);
-          _this5.empty();
-          _listLogAdd('bR.empty() called');
+          _this5.empty(); // MUST be first
+          try { _listLogAdd('bR.onCreate pg=' + object.page); } catch(e) {}
           var params = _objectSpread2({}, object);
           params.limit = 36;
           params.page = params.page || 1;
           if (!Api$2) { logApiMissing$1(); return; }
           Api$2.recommendations(params).then(function (recommendations) {
             var buildData = recommendations && _typeof(recommendations) === 'object' && Array.isArray(recommendations.results) ? recommendations : { results: [] };
-            _listLogAdd('bR.build n=' + buildData.results.length + ' pages=' + (recommendations && recommendations.total_pages));
+            try { _listLogAdd('bR.build n=' + buildData.results.length + ' pages=' + (recommendations && recommendations.total_pages)); } catch(e) {}
             _this5.build(buildData);
             if (recommendations && recommendations.total_pages) total_pages = recommendations.total_pages;
           })["catch"](function () { _this5.empty(); });
         },
         onNext: function onNext(resolve, reject) {
           var _this6 = this;
-          if (waitload) { _listLogAdd('bR.onNext busy→reject'); reject.call(this); return; }
-          _listLogAdd('bR.onNext pg=' + object.page + '/' + total_pages);
+          if (waitload) { try { _listLogAdd('bR.onNext busy→reject'); } catch(e) {} reject.call(this); return; }
+          try { _listLogAdd('bR.onNext pg=' + object.page + '/' + total_pages); } catch(e) {}
           if (object.page <= total_pages) {
             waitload = true;
             var params = _objectSpread2({}, object);
@@ -3774,11 +3772,11 @@
             Api$2.recommendations(params).then(function (data) {
               if (data && data.total_pages) { total_pages = data.total_pages; _this6.total_pages = data.total_pages; }
               var nd = data && _typeof(data) === 'object' && Array.isArray(data.results) ? data : { results: [] };
-              _listLogAdd('bR.onNext resolve n=' + nd.results.length);
+              try { _listLogAdd('bR.onNext resolve n=' + nd.results.length); } catch(e) {}
               resolve.call(_this6, nd);
               waitload = false;
-            })["catch"](function () { waitload = false; _listLogAdd('bR.onNext catch→reject'); reject.call(_this6); });
-          } else { _listLogAdd('bR.onNext end→reject pg=' + object.page + '/' + total_pages); reject.call(this); }
+            })["catch"](function () { waitload = false; try { _listLogAdd('bR.onNext catch→reject'); } catch(e) {} reject.call(_this6); });
+          } else { try { _listLogAdd('bR.onNext end→reject pg=' + object.page + '/' + total_pages); } catch(e) {} reject.call(this); }
         },
         onInstance: function onInstance(card, element) {
           renderTvTypeBadge(card, element);
@@ -3795,7 +3793,7 @@
           }
         },
         onEmpty: function onEmpty() {
-          _listLogAdd('bR.onEmpty');
+          try { _listLogAdd('bR.onEmpty'); } catch(e) {}
           var _self = this;
           if (!object || typeof object.onHead !== 'function') return;
           if (!_self.empty_class || typeof _self.empty_class.use !== 'function') return;
@@ -4227,9 +4225,8 @@
       comp.use({
         onCreate: function onCreate() {
           var _this9 = this;
-          _listLogAdd('lC.onCreate pg=' + object.page);
-          _this9.empty();
-          _listLogAdd('lC.empty() called');
+          _this9.empty(); // MUST be first
+          try { _listLogAdd('lC.onCreate pg=' + object.page); } catch(e) {}
           var params = _objectSpread2({}, object);
           params.limit = 36;
           params.page = params.page || 1;
@@ -4239,7 +4236,7 @@
           Api$2[apiMethod](params).then(function (data) {
             total_pages = data && data.total_pages ? data.total_pages : 0;
             var buildData = withActions(data, params.page);
-            _listLogAdd('lC.build n=' + (buildData && buildData.results ? buildData.results.length : '?') + ' pages=' + total_pages);
+            try { _listLogAdd('lC.build n=' + (buildData && buildData.results ? buildData.results.length : '?') + ' pages=' + total_pages); } catch(e) {}
             _this9.build(buildData);
           })["catch"](function () {
             return _this9.empty();
@@ -4248,11 +4245,11 @@
         onNext: function onNext(resolve, reject) {
           var _this0 = this;
           if (waitload) {
-            _listLogAdd('lC.onNext busy→reject');
+            try { _listLogAdd('lC.onNext busy→reject'); } catch(e) {}
             reject.call(this);
             return;
           }
-          _listLogAdd('lC.onNext pg=' + object.page + '/' + total_pages);
+          try { _listLogAdd('lC.onNext pg=' + object.page + '/' + total_pages); } catch(e) {}
           if (object.page <= total_pages) {
             waitload = true;
             var params = _objectSpread2({}, object);
@@ -4268,16 +4265,16 @@
                 _this0.total_pages = data.total_pages;
               }
               var nd = withActions(data, params.page);
-              _listLogAdd('lC.onNext resolve n=' + (nd && nd.results ? nd.results.length : '?'));
+              try { _listLogAdd('lC.onNext resolve n=' + (nd && nd.results ? nd.results.length : '?')); } catch(e) {}
               resolve.call(_this0, nd);
               waitload = false;
             })["catch"](function () {
               waitload = false;
-              _listLogAdd('lC.onNext catch→reject');
+              try { _listLogAdd('lC.onNext catch→reject'); } catch(e) {}
               reject.call(_this0);
             });
           } else {
-            _listLogAdd('lC.onNext end→reject pg=' + object.page + '/' + total_pages);
+            try { _listLogAdd('lC.onNext end→reject pg=' + object.page + '/' + total_pages); } catch(e) {}
             reject.call(this);
           }
         },
