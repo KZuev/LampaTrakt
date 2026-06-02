@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.7.8';
+  var PLUGIN_VERSION = '2.7.9';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -3549,6 +3549,7 @@
     var total_pages = 0;
     var waitload = false;
     var upcomingDividerShown = false;
+    var _emptyInstance = null;
 
     if (isLampa3 && Lampa.Maker) {
       comp = Lampa.Maker.make('Category', object);
@@ -3573,6 +3574,9 @@
             var buildData = data && _typeof(data) === 'object' && Array.isArray(data.results) ? data : { results: [] };
             try { _listLogAdd('bC.build type=' + type + ' n=' + buildData.results.length + ' pages=' + total_pages); } catch(e) {}
             _this.build(buildData);
+            if (buildData.results.length > 0 && _emptyInstance) {
+              try { var _el = typeof _emptyInstance.render === 'function' ? _emptyInstance.render(true) : null; if (_el) _el.style.display = 'none'; } catch(e) {}
+            }
             if (type === 'watchlist') setTimeout(function () { try { insertUpcomingDivider(_this); } catch(e) {} }, 0);
             if (type === 'upnext') setTimeout(function () { try { insertUpnextNotStartedDivider(_this); } catch(e) {} }, 0);
           })["catch"](function () { _this.empty(); });
@@ -3613,6 +3617,7 @@
         },
         onEmpty: function onEmpty() {
           try { _listLogAdd('bC.onEmpty type=' + type); } catch(e) {}
+          _emptyInstance = this.empty_class || null;
           if (type !== 'watchlist' || !object || typeof object.onHead !== 'function') return;
           if (!this.empty_class || typeof this.empty_class.use !== 'function') return;
           this.empty_class.use({ onController: function (controller) {
@@ -3741,6 +3746,7 @@
     var total_pages = 0;
     var waitload = false;
     var upcomingDividerShown = false;
+    var _emptyInstance = null;
 
     if (isLampa3 && Lampa.Maker) {
       comp = Lampa.Maker.make('Category', object);
@@ -3757,6 +3763,9 @@
             var buildData = recommendations && _typeof(recommendations) === 'object' && Array.isArray(recommendations.results) ? recommendations : { results: [] };
             try { _listLogAdd('bR.build n=' + buildData.results.length + ' pages=' + (recommendations && recommendations.total_pages)); } catch(e) {}
             _this5.build(buildData);
+            if (buildData.results.length > 0 && _emptyInstance) {
+              try { var _el = typeof _emptyInstance.render === 'function' ? _emptyInstance.render(true) : null; if (_el) _el.style.display = 'none'; } catch(e) {}
+            }
             if (recommendations && recommendations.total_pages) total_pages = recommendations.total_pages;
           })["catch"](function () { _this5.empty(); });
         },
@@ -3794,6 +3803,7 @@
         },
         onEmpty: function onEmpty() {
           try { _listLogAdd('bR.onEmpty'); } catch(e) {}
+          _emptyInstance = this.empty_class || null;
           var _self = this;
           if (!object || typeof object.onHead !== 'function') return;
           if (!_self.empty_class || typeof _self.empty_class.use !== 'function') return;
@@ -4217,6 +4227,7 @@
     var comp;
     var total_pages = 0;
     var waitload = false;
+    var _emptyInstance = null;
     var withActions = function withActions(data, page) {
       return config.addCreateAction ? withCreateListAction(data, page) : data;
     };
@@ -4238,6 +4249,9 @@
             var buildData = withActions(data, params.page);
             try { _listLogAdd('lC.build n=' + (buildData && buildData.results ? buildData.results.length : '?') + ' pages=' + total_pages); } catch(e) {}
             _this9.build(buildData);
+            if (buildData && buildData.results && buildData.results.length > 0 && _emptyInstance) {
+              try { var _el = typeof _emptyInstance.render === 'function' ? _emptyInstance.render(true) : null; if (_el) _el.style.display = 'none'; } catch(e) {}
+            }
           })["catch"](function () {
             return _this9.empty();
           });
@@ -4277,6 +4291,9 @@
             try { _listLogAdd('lC.onNext end→reject pg=' + object.page + '/' + total_pages); } catch(e) {}
             reject.call(this);
           }
+        },
+        onEmpty: function onEmpty() {
+          _emptyInstance = this.empty_class || null;
         },
         onInstance: function onInstance(card, element) {
           renderWideListCard(card, element);
