@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.8.3';
+  var PLUGIN_VERSION = '2.8.4';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -13049,9 +13049,7 @@
                     var merged = _typeof(data) === 'object' && data !== null
                       ? Object.assign({}, data, data.episode || {}, { card: data.card || data })
                       : {};
-                    var instance = new EpisodeClass(merged);
-                    if (typeof instance.build === 'function') { try { instance.build(); } catch(e) {} }
-                    return instance;
+                    return new EpisodeClass(merged);
                   };
                 } else {
                   out = Object.assign({}, card, {
@@ -13113,9 +13111,7 @@
                     delete merged.episode_number;
                     delete merged.season;
                     delete merged.number;
-                    var instance = new EpisodeClass(merged);
-                    if (typeof instance.build === 'function') { try { instance.build(); } catch(e) {} }
-                    return instance;
+                    return new EpisodeClass(merged);
                   };
                 } else {
                   out = Object.assign({}, card, {
