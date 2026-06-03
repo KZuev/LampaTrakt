@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.8.4';
+  var PLUGIN_VERSION = '2.8.5';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -10799,8 +10799,8 @@
       if (card && hash) {
         var se = extractSeasonEpisode(card);
         var cachedMeta = meta || getHashMeta(hash);
-        var seasonValue = se.season || cachedMeta && cachedMeta.season;
-        var episodeValue = se.episode || cachedMeta && cachedMeta.episode;
+        var seasonValue = (cachedMeta && cachedMeta.season) || se.season;
+        var episodeValue = (cachedMeta && cachedMeta.episode) || se.episode;
         var idsValue = card.ids || cachedMeta && cachedMeta.ids;
         setHashMeta(hash, {
           card: card,
@@ -10826,9 +10826,9 @@
           hash: hash
         });
         if (meta) {
-          if (!media.season_number && meta.season) media.season_number = meta.season;
-          if (!media.episode_number && meta.episode) media.episode_number = meta.episode;
-          if (!media.ids && meta.ids) media.ids = meta.ids;
+          if (meta.season) media.season_number = meta.season;
+          if (meta.episode) media.episode_number = meta.episode;
+          if (meta.ids) media.ids = meta.ids;
         }
 
         var key = getCompletionKey(media);
@@ -11747,18 +11747,20 @@
             if (!Lampa.Storage.field('trakt_enable_watching')) return;
             var token = Lampa.Storage.get('trakt_token');
             if (!token) return;
-            var card = Lampa.Activity.active && Lampa.Activity.active() && (Lampa.Activity.active().card_data || Lampa.Activity.active().card || Lampa.Activity.active().movie) || Lampa.Storage.get('trakt_last_card');
-            if (!card) return;
-            // Include last known hash if available from timeline storage
             var lastTimeline = window.last_timeline_event && window.last_timeline_event.data || {};
+            var meta = watching && typeof watching.getMetaByHash === 'function' ? watching.getMetaByHash(lastTimeline.hash) : null;
+            // Prefer hash-bound card — it was stored when this exact file started playing.
+            // Activity.active().card may have already switched to the next episode.
+            var activityCard = Lampa.Activity.active && Lampa.Activity.active() && (Lampa.Activity.active().card_data || Lampa.Activity.active().card || Lampa.Activity.active().movie) || null;
+            var card = (meta && meta.card) ? meta.card : (activityCard || Lampa.Storage.get('trakt_last_card'));
+            if (!card) return;
             var media = Object.assign({}, card, {
               hash: lastTimeline.hash
             });
-            var meta = watching && typeof watching.getMetaByHash === 'function' ? watching.getMetaByHash(lastTimeline.hash) : null;
             if (meta) {
-              if (!media.season_number && meta.season) media.season_number = meta.season;
-              if (!media.episode_number && meta.episode) media.episode_number = meta.episode;
-              if (!media.ids && meta.ids) media.ids = meta.ids;
+              if (meta.season) media.season_number = meta.season;
+              if (meta.episode) media.episode_number = meta.episode;
+              if (meta.ids) media.ids = meta.ids;
             }
             var key = watching && typeof watching.getCompletionKey === 'function' ? watching.getCompletionKey(media) : null;
             if (key && watching && typeof watching.markFinishIntent === 'function') {
