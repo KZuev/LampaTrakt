@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.8.6';
+  var PLUGIN_VERSION = '2.8.7';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -10580,6 +10580,7 @@
   }
   var isAddingShowToWatching = false;
   var isInitialized$1 = false;
+  var _isPlayerActive = false;
 
   /**
    * Модуль отслеживания просмотра в Trakt.TV
@@ -10723,6 +10724,7 @@
      * @param {Object} data - Данные события
      */
     onPlayerStart: function onPlayerStart(data) {
+      _isPlayerActive = true;
       var activityCard = Lampa.Activity && Lampa.Activity.active && Lampa.Activity.active() &&
         (Lampa.Activity.active().card_data || Lampa.Activity.active().card || Lampa.Activity.active().movie);
       var card = data.card || activityCard;
@@ -10822,7 +10824,7 @@
       slog('Checking if should finish with idempotency, percent:', percent, 'minProgress:', minProgress);
       var watchedByPercent = (typeof percent === 'number' ? percent : 0) >= minProgress;
       var watchedByTime = road && road.time && road.duration ? road.time / road.duration * 100 >= minProgress : false;
-      if (watchedByPercent || watchedByTime) {
+      if ((watchedByPercent || watchedByTime) && _isPlayerActive) {
         var media = Object.assign({}, card, {
           hash: hash
         });
@@ -11744,6 +11746,9 @@
       if (window.Lampa && Lampa.Player && Lampa.Player.listener) {
         // onEnded / onStop / onHidden -> markFinishIntent for the current media key
         var routeFinishIntent = function routeFinishIntent(evt) {
+          // Only clear when player truly stops — not when app goes to background.
+          // On resume the player continues without firing 'start' again.
+          if (!(evt && evt.type === 'hidden')) _isPlayerActive = false;
           try {
             if (!Lampa.Storage.field('trakt_enable_watching')) return;
             var token = Lampa.Storage.get('trakt_token');
