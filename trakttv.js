@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.8.8';
+  var PLUGIN_VERSION = '2.8.9';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -3613,19 +3613,17 @@
           } else { try { _listLogAdd('bC.onNext end→reject type=' + type + ' pg=' + object.page + '/' + total_pages); } catch(e) {} reject.call(this); }
         },
         onController: function onController(controller) {
-          controller.left = function () {
-            if (typeof Navigator !== 'undefined' && Navigator.canmove('left')) Navigator.move('left');
-            else Lampa.Controller.toggle('menu');
+          var origToggle = controller.toggle || function(){};
+          controller.toggle = function() {
+            if (typeof origToggle === 'function') origToggle.call(this);
+            try {
+              var scrollEl = comp.html && comp.html[0];
+              Lampa.Controller.collectionFocus(false, scrollEl || false);
+            } catch(e) {}
           };
           if (type === 'watchlist' && object && typeof object.onHead === 'function') {
             controller.up = function () {
-              if (typeof Navigator !== 'undefined' && Navigator.canmove('up')) Navigator.move('up');
-              else object.onHead();
-            };
-          } else {
-            controller.up = function () {
-              if (typeof Navigator !== 'undefined' && Navigator.canmove('up')) Navigator.move('up');
-              else Lampa.Controller.toggle('head');
+              if (Navigator.canmove('up')) Navigator.move('up'); else object.onHead();
             };
           }
         },
