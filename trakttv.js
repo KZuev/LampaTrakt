@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.9.3';
+  var PLUGIN_VERSION = '2.9.4';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -3556,7 +3556,9 @@
       comp.use({
         onCreate: function onCreate() {
           var _this = this;
+          var _savedStart = _this.start;
           _this.empty(); // MUST be first — initializes this.html before onVisible fires
+          if (typeof _savedStart === 'function') _this.start = _savedStart;
           try { if (_this.html) _this.html.addClass('trakt-maker-content'); } catch(e) {}
           try { var _ec0 = _this.empty_class; if (_ec0 && typeof _ec0.render === 'function') { var _eel = _ec0.render(true); if (_eel) _eel.style.display = 'none'; } } catch(e) {}
           try { _listLogAdd('bC.onCreate type=' + type + ' pg=' + object.page); } catch(e) {}
@@ -3583,14 +3585,6 @@
             setTimeout(function() { _captureHeightSnapshot('TRAKT-' + type); }, 500);
             if (type === 'watchlist') setTimeout(function () { try { insertUpcomingDivider(_this); } catch(e) {} }, 0);
             if (type === 'upnext') setTimeout(function () { try { insertUpnextNotStartedDivider(_this); } catch(e) {} }, 0);
-            setTimeout(function () {
-              try {
-                if (_this.activity && typeof _this.activity.toggle === 'function' &&
-                    typeof object.onHead !== 'function') {
-                  _this.activity.toggle();
-                }
-              } catch(e) {}
-            }, 0);
           })["catch"](function () { _this.empty(); });
         },
         onNext: function onNext(resolve, reject) {
@@ -3765,7 +3759,9 @@
       comp.use({
         onCreate: function onCreate() {
           var _this5 = this;
+          var _savedStart5 = _this5.start;
           _this5.empty(); // MUST be first
+          if (typeof _savedStart5 === 'function') _this5.start = _savedStart5;
           try { if (_this5.html) _this5.html.addClass('trakt-maker-content'); } catch(e) {}
           try { var _ec0 = _this5.empty_class; if (_ec0 && typeof _ec0.render === 'function') { var _eel = _ec0.render(true); if (_eel) _eel.style.display = 'none'; } } catch(e) {}
           try { _listLogAdd('bR.onCreate pg=' + object.page); } catch(e) {}
@@ -3783,14 +3779,6 @@
             }
             setTimeout(function() { _captureHeightSnapshot('TRAKT-recs'); }, 500);
             if (recommendations && recommendations.total_pages) total_pages = recommendations.total_pages;
-            setTimeout(function () {
-              try {
-                if (_this5.activity && typeof _this5.activity.toggle === 'function' &&
-                    typeof object.onHead !== 'function') {
-                  _this5.activity.toggle();
-                }
-              } catch(e) {}
-            }, 0);
           })["catch"](function () { _this5.empty(); });
         },
         onNext: function onNext(resolve, reject) {
@@ -4260,7 +4248,9 @@
       comp.use({
         onCreate: function onCreate() {
           var _this9 = this;
+          var _savedStart9 = _this9.start;                                       // v2.9.4
           _this9.empty(); // MUST be first
+          if (typeof _savedStart9 === 'function') _this9.start = _savedStart9;   // v2.9.4
           try { if (_this9.html) _this9.html.addClass('trakt-maker-content'); } catch(e) {}
           try { var _ec0 = _this9.empty_class; if (_ec0 && typeof _ec0.render === 'function') { var _eel = _ec0.render(true); if (_eel) _eel.style.display = 'none'; } } catch(e) {}
           try { _listLogAdd('lC.onCreate pg=' + object.page); } catch(e) {}
@@ -4280,14 +4270,6 @@
               try { var _el = typeof _emptyInstance.render === 'function' ? _emptyInstance.render(true) : null; if (_el) _el.style.display = 'none'; } catch(e) {}
             }
             setTimeout(function() { _captureHeightSnapshot('TRAKT-lists'); }, 500);
-            setTimeout(function () {
-              try {
-                if (_this9.activity && typeof _this9.activity.toggle === 'function' &&
-                    typeof object.onHead !== 'function') {
-                  _this9.activity.toggle();
-                }
-              } catch(e) {}
-            }, 0);
           })["catch"](function () {
             return _this9.empty();
           });
