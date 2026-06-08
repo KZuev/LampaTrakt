@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.9.4';
+  var PLUGIN_VERSION = '2.9.5';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -3579,6 +3579,7 @@
             try { _listLogAdd('bC.build type=' + type + ' n=' + buildData.results.length + ' pages=' + total_pages); } catch(e) {}
             _this.build(buildData);
             try { var _sbRoot = _this.html && _this.html[0]; if (_sbRoot) { var _sbEl = _sbRoot.querySelector('.scroll__body'); if (_sbEl) _sbEl.style.paddingTop = (type === 'watchlist') ? '0' : '29px'; } } catch(e) {}
+            try { if (_this.scroll && typeof _this.scroll.reset === 'function') _this.scroll.reset(); } catch(e) {}
             if (buildData.results.length > 0 && _emptyInstance) {
               try { var _el = typeof _emptyInstance.render === 'function' ? _emptyInstance.render(true) : null; if (_el) _el.style.display = 'none'; } catch(e) {}
             }
@@ -3774,6 +3775,7 @@
             try { _listLogAdd('bR.build n=' + buildData.results.length + ' pages=' + (recommendations && recommendations.total_pages)); } catch(e) {}
             _this5.build(buildData);
             try { var _sbRoot = _this5.html && _this5.html[0]; if (_sbRoot) { var _sbEl = _sbRoot.querySelector('.scroll__body'); if (_sbEl) _sbEl.style.paddingTop = '0'; } } catch(e) {}
+            try { if (_this5.scroll && typeof _this5.scroll.reset === 'function') _this5.scroll.reset(); } catch(e) {}
             if (buildData.results.length > 0 && _emptyInstance) {
               try { var _el = typeof _emptyInstance.render === 'function' ? _emptyInstance.render(true) : null; if (_el) _el.style.display = 'none'; } catch(e) {}
             }
@@ -4266,6 +4268,7 @@
             try { _listLogAdd('lC.build n=' + (buildData && buildData.results ? buildData.results.length : '?') + ' pages=' + total_pages); } catch(e) {}
             _this9.build(buildData);
             try { var _sbRoot = _this9.html && _this9.html[0]; if (_sbRoot) { var _sbEl = _sbRoot.querySelector('.scroll__body'); if (_sbEl) _sbEl.style.paddingTop = '29px'; } } catch(e) {}
+            try { if (_this9.scroll && typeof _this9.scroll.reset === 'function') _this9.scroll.reset(); } catch(e) {}
             if (buildData && buildData.results && buildData.results.length > 0 && _emptyInstance) {
               try { var _el = typeof _emptyInstance.render === 'function' ? _emptyInstance.render(true) : null; if (_el) _el.style.display = 'none'; } catch(e) {}
             }
