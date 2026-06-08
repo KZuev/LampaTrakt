@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.9.1';
+  var PLUGIN_VERSION = '2.9.2';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -3583,6 +3583,12 @@
             setTimeout(function() { _captureHeightSnapshot('TRAKT-' + type); }, 500);
             if (type === 'watchlist') setTimeout(function () { try { insertUpcomingDivider(_this); } catch(e) {} }, 0);
             if (type === 'upnext') setTimeout(function () { try { insertUpnextNotStartedDivider(_this); } catch(e) {} }, 0);
+            setTimeout(function () {
+              try {
+                var _cfEl = _this.html && (_this.html[0] || _this.html);
+                if (_cfEl && document.body.contains(_cfEl)) Lampa.Controller.collectionFocus(false, _cfEl);
+              } catch(e) {}
+            }, 0);
           })["catch"](function () { _this.empty(); });
         },
         onNext: function onNext(resolve, reject) {
