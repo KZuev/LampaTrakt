@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.8.9';
+  var PLUGIN_VERSION = '2.9.0';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -3617,8 +3617,24 @@
           controller.toggle = function() {
             if (typeof origToggle === 'function') origToggle.call(this);
             try {
-              var scrollEl = comp.html && comp.html[0];
-              Lampa.Controller.collectionFocus(false, scrollEl || false);
+              var scrollEl = null;
+              if (comp.activity && comp.activity.scroll && typeof comp.activity.scroll.render === 'function') {
+                scrollEl = comp.activity.scroll.render();
+              }
+              if (!scrollEl && comp.html) {
+                var h = comp.html[0] || comp.html;
+                if (h && h.classList && h.classList.contains('scroll')) {
+                  scrollEl = h;
+                } else if (h && h.querySelector) {
+                  scrollEl = h.querySelector('.scroll') || h;
+                } else {
+                  scrollEl = h;
+                }
+              }
+              if (scrollEl) {
+                Lampa.Controller.collectionSet(scrollEl);
+                Lampa.Controller.collectionFocus(false, scrollEl);
+              }
             } catch(e) {}
           };
           if (type === 'watchlist' && object && typeof object.onHead === 'function') {
