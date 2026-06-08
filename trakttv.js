@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.9.2';
+  var PLUGIN_VERSION = '2.9.3';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -3585,8 +3585,10 @@
             if (type === 'upnext') setTimeout(function () { try { insertUpnextNotStartedDivider(_this); } catch(e) {} }, 0);
             setTimeout(function () {
               try {
-                var _cfEl = _this.html && (_this.html[0] || _this.html);
-                if (_cfEl && document.body.contains(_cfEl)) Lampa.Controller.collectionFocus(false, _cfEl);
+                if (_this.activity && typeof _this.activity.toggle === 'function' &&
+                    typeof object.onHead !== 'function') {
+                  _this.activity.toggle();
+                }
               } catch(e) {}
             }, 0);
           })["catch"](function () { _this.empty(); });
@@ -3781,6 +3783,14 @@
             }
             setTimeout(function() { _captureHeightSnapshot('TRAKT-recs'); }, 500);
             if (recommendations && recommendations.total_pages) total_pages = recommendations.total_pages;
+            setTimeout(function () {
+              try {
+                if (_this5.activity && typeof _this5.activity.toggle === 'function' &&
+                    typeof object.onHead !== 'function') {
+                  _this5.activity.toggle();
+                }
+              } catch(e) {}
+            }, 0);
           })["catch"](function () { _this5.empty(); });
         },
         onNext: function onNext(resolve, reject) {
@@ -4270,6 +4280,14 @@
               try { var _el = typeof _emptyInstance.render === 'function' ? _emptyInstance.render(true) : null; if (_el) _el.style.display = 'none'; } catch(e) {}
             }
             setTimeout(function() { _captureHeightSnapshot('TRAKT-lists'); }, 500);
+            setTimeout(function () {
+              try {
+                if (_this9.activity && typeof _this9.activity.toggle === 'function' &&
+                    typeof object.onHead !== 'function') {
+                  _this9.activity.toggle();
+                }
+              } catch(e) {}
+            }, 0);
           })["catch"](function () {
             return _this9.empty();
           });
