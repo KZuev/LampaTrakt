@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.9.6';
+  var PLUGIN_VERSION = '2.9.7';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -11778,17 +11778,18 @@
               watching.markFinishIntent(key);
             }
 
-            // Primary finish route is timeline update.
-            // Fallback to direct finish only when "ended" happened without known timeline hash.
-            var shouldFallbackFinish = !!(evt && evt.type === 'ended' && !lastTimeline.hash);
-            if (shouldFallbackFinish && watching && typeof watching.finish === 'function') {
+            var lastRoad = window.last_timeline_event && window.last_timeline_event.data && window.last_timeline_event.data.road || {};
+            var lastPct = parseFloat(lastRoad.percent || 0);
+            var minProg2 = parseInt(Lampa.Storage.field('trakt_min_progress') || config.minProgress);
+            var shouldFinishOnStop = (lastPct >= minProg2) || !!(evt && evt.type === 'ended' && !lastTimeline.hash);
+            if (shouldFinishOnStop && watching && typeof watching.finish === 'function') {
               var contentType = watching && typeof watching.getContentType === 'function' ? watching.getContentType(media) : 'movie';
               var season = media.season_number || media.season || media.seasonNumber;
               var episode = media.episode_number || media.episode || media.episodeNumber;
               var canFinishSafely = contentType === 'movie' || season && episode || media.hash;
               if (canFinishSafely) {
                 watching.finish(media)["catch"](function (e) {
-                  logWarn('Fallback finish failed', {
+                  logWarn('Finish on stop failed', {
                     eventType: evt && evt.type,
                     error: e
                   }, {
@@ -11796,12 +11797,7 @@
                   });
                 });
               }
-            }
-            // Scrobble pause to Trakt if progress is below the finish threshold
-            var lastRoad = window.last_timeline_event && window.last_timeline_event.data && window.last_timeline_event.data.road || {};
-            var lastPct = parseFloat(lastRoad.percent || 0);
-            var minProg2 = parseInt(Lampa.Storage.field('trakt_min_progress') || config.minProgress);
-            if (lastPct > 0 && lastPct < minProg2 && media && watching && typeof watching.scrobblePause === 'function') {
+            } else if (lastPct > 0 && lastPct < minProg2 && media && watching && typeof watching.scrobblePause === 'function') {
               watching.scrobblePause(media, lastPct);
             }
           } catch (e) {
