@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.9.7';
+  var PLUGIN_VERSION = '2.9.8';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -3558,7 +3558,9 @@
           var _this = this;
           var _savedStart = _this.start;
           _this.empty(); // MUST be first — initializes this.html before onVisible fires
-          if (typeof _savedStart === 'function') _this.start = _savedStart;
+          // Do NOT restore _savedStart here; keep empty_class.start active during loading
+          // so that activity.start() focuses the empty widget, not the category scroll.
+          // This prevents Layer.visible from cascading into Line.onVisible with a removed head.
           if (type !== 'watchlist') { try { var _sr = _this.scroll && typeof _this.scroll.render === 'function' && _this.scroll.render(true); if (_sr && _sr.classList) _sr.classList.remove('scroll--nopadding'); } catch(e) {} }
           try { if (_this.html) _this.html.addClass('trakt-maker-content'); } catch(e) {}
           try { var _ec0 = _this.empty_class; if (_ec0 && typeof _ec0.render === 'function') { var _eel = _ec0.render(true); if (_eel) _eel.style.display = 'none'; } } catch(e) {}
@@ -3573,6 +3575,7 @@
           params.page = params.page || 1;
           if (!Api$2) { logApiMissing$1(); return; }
           Api$2[type](params).then(function (data) {
+            if (typeof _savedStart === 'function') _this.start = _savedStart;
             if (data && data.total_pages) total_pages = data.total_pages;
             if (type === 'watchlist') { data = applyWatchlistClientFilters(data, object); data = rearrangeWatchlistUpcoming(data); }
             if (type === 'upnext') data = rearrangeUpnextNotStarted(data);
@@ -3761,7 +3764,7 @@
           var _this5 = this;
           var _savedStart5 = _this5.start;
           _this5.empty(); // MUST be first
-          if (typeof _savedStart5 === 'function') _this5.start = _savedStart5;
+          // Keep empty_class.start active during loading — restore only after API returns
           try { if (_this5.html) _this5.html.addClass('trakt-maker-content'); } catch(e) {}
           try { var _ec0 = _this5.empty_class; if (_ec0 && typeof _ec0.render === 'function') { var _eel = _ec0.render(true); if (_eel) _eel.style.display = 'none'; } } catch(e) {}
           try { _listLogAdd('bR.onCreate pg=' + object.page); } catch(e) {}
@@ -3770,6 +3773,7 @@
           params.page = params.page || 1;
           if (!Api$2) { logApiMissing$1(); return; }
           Api$2.recommendations(params).then(function (recommendations) {
+            if (typeof _savedStart5 === 'function') _this5.start = _savedStart5;
             var buildData = recommendations && _typeof(recommendations) === 'object' && Array.isArray(recommendations.results) ? recommendations : { results: [] };
             try { _listLogAdd('bR.build n=' + buildData.results.length + ' pages=' + (recommendations && recommendations.total_pages)); } catch(e) {}
             _this5.build(buildData);
@@ -4249,7 +4253,7 @@
           var _this9 = this;
           var _savedStart9 = _this9.start;
           _this9.empty(); // MUST be first
-          if (typeof _savedStart9 === 'function') _this9.start = _savedStart9;
+          // Keep empty_class.start active during loading — restore only after API returns
           try { var _sr9 = _this9.scroll && typeof _this9.scroll.render === 'function' && _this9.scroll.render(true); if (_sr9 && _sr9.classList) _sr9.classList.remove('scroll--nopadding'); } catch(e) {}
           try { if (_this9.html) _this9.html.addClass('trakt-maker-content'); } catch(e) {}
           try { var _ec0 = _this9.empty_class; if (_ec0 && typeof _ec0.render === 'function') { var _eel = _ec0.render(true); if (_eel) _eel.style.display = 'none'; } } catch(e) {}
@@ -4261,6 +4265,7 @@
             return;
           }
           Api$2[apiMethod](params).then(function (data) {
+            if (typeof _savedStart9 === 'function') _this9.start = _savedStart9;
             total_pages = data && data.total_pages ? data.total_pages : 0;
             var buildData = withActions(data, params.page);
             try { _listLogAdd('lC.build n=' + (buildData && buildData.results ? buildData.results.length : '?') + ' pages=' + total_pages); } catch(e) {}
