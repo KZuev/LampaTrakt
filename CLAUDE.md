@@ -60,7 +60,7 @@
 
 **Git:**
 - PR не создавать без явной просьбы
-- Пушить только в `origin/main`: `git push origin main`
+- Пушить только в `origin/main`: `git push origin HEAD:main`
 
 ## Ветки
 
