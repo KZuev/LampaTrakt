@@ -60,7 +60,7 @@
 
 **Git:**
 - PR не создавать без явной просьбы
-- Пушить в рабочую ветку сессии и в `origin/main`: `git push origin main:BRANCH && git push origin main`
+- Пушить только в `origin/main`: `git push origin main`
 
 ## Ветки
 
