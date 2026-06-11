@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.9.8';
+  var PLUGIN_VERSION = '2.9.9';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -12426,7 +12426,7 @@
     return cached;
   }
   function saveRowToCache(cacheKey, line) {
-    if (!line || !Array.isArray(line.results) || !line.results.length) return;
+    if (!line || !line.title || !Array.isArray(line.results) || !line.results.length) return;
     if (!Lampa || !Lampa.Storage || typeof Lampa.Storage.set !== 'function') return;
     try {
       Lampa.Storage.set(cacheKey, {
@@ -12457,6 +12457,9 @@
       var line = cached && cached.line;
       if (!time || !line || !Array.isArray(line.results) || !line.results.length) return null;
       if (Date.now() - time > STALE_CACHE_TTL_MS) return null;
+      // Discard poisoned entries saved without a title (pre-2.9.9 prefetch bug):
+      // Lampa removes .items-line__head for title-less lines and crashes in more.onVisible
+      if (!line.title) { clearRowCache(cacheKey); return null; }
       return line;
     } catch (error) {
       logWarn('Rows cache load failed', error, {
@@ -12482,12 +12485,15 @@
   function prefetchMainRows() {
     if (!Api) return;
     var configs = [];
+    // displayTitle/component MUST match registerRows configs: createRowPayload puts
+    // displayTitle into line.title — a cached line without title makes Lampa remove
+    // .items-line__head, and more.onVisible crashes on null head when total_pages > 1.
     if (checkUpNextPermissions()) {
-      configs.push({ name: 'TraktUpNextRow', apiMethod: 'upnext', limit: 36, displayLimit: 20, traktRow: 'upnext' });
-      configs.push({ name: 'TraktWatchlistRow', apiMethod: 'watchlist', limit: 36, displayLimit: 20 });
+      configs.push({ name: 'TraktUpNextRow', apiMethod: 'upnext', limit: 36, displayLimit: 20, traktRow: 'upnext', displayTitle: Lampa.Lang.translate('trakttv_upnext'), component: 'trakt_upnext' });
+      configs.push({ name: 'TraktWatchlistRow', apiMethod: 'watchlist', limit: 36, displayLimit: 20, displayTitle: Lampa.Lang.translate('trakttv_watchlist'), component: 'trakt_watchlist' });
     }
     if (checkRecommendationsPermissions()) {
-      configs.push({ name: 'TraktRecommendationsRow', apiMethod: 'recommendations', limit: 36, displayLimit: 20 });
+      configs.push({ name: 'TraktRecommendationsRow', apiMethod: 'recommendations', limit: 36, displayLimit: 20, displayTitle: Lampa.Lang.translate('trakttv_recommendations'), component: 'trakttv_recommendations' });
     }
     configs.forEach(function (config) {
       if (typeof Api[config.apiMethod] !== 'function') return;
