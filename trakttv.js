@@ -3880,6 +3880,7 @@
           var _savedStart5 = _this5.start;
           _this5.empty(); // MUST be first
           // Keep empty_class.start active during loading — restore only after API returns
+          try { var _sr5 = _this5.scroll && typeof _this5.scroll.render === 'function' && _this5.scroll.render(true); if (_sr5 && _sr5.classList) _sr5.classList.remove('scroll--nopadding'); } catch(e) {}
           try { if (_this5.html) _this5.html.addClass('trakt-maker-content'); } catch(e) {}
           try { var _ec0 = _this5.empty_class; if (_ec0 && typeof _ec0.render === 'function') { var _eel = _ec0.render(true); if (_eel) _eel.style.display = 'none'; } } catch(e) {}
           try { _listLogAdd('bR.onCreate pg=' + object.page); } catch(e) {}
