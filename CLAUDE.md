@@ -60,7 +60,9 @@
 
 **Git:**
 - PR не создавать без явной просьбы
-- Пушить только в `origin/main`: `git push origin HEAD:main`
+- Пушить в `origin/main` и синхронизировать сессионную ветку (stop-хук проверяет её):
+  `git push origin HEAD:main && git push origin HEAD:SESSION_BRANCH --force`
+  где `SESSION_BRANCH` — текущая рабочая ветка (`git branch --show-current`)
 
 ## Ветки
 
