@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.9.11';
+  var PLUGIN_VERSION = '2.9.12';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -2657,7 +2657,9 @@
     watching: function(params) {
       var page = Math.max(1, parseInt(params && params.page, 10) || 1);
       var limit = 36;
+      var watchingFilter = (params && params.watchingFilter) || 'active';
       var activeStatuses = ['returning series', 'in production', 'planned', 'pilot'];
+      var endedStatuses = ['ended', 'canceled', 'cancelled'];
       var watchedPromise = requestApi('GET', '/sync/watched/shows?extended=full', {}, false, 300);
       function buildHiddenSet(list) {
         var set = {};
@@ -2670,8 +2672,7 @@
         });
         return set;
       }
-      // Hidden items live at /users/hidden/{section} (OAuth-scoped, no "me" slug).
-      // Valid sections: calendar, progress_watched, progress_collected, recommendations, comments, dropped.
+      // Hidden items: /users/hidden/{section} (OAuth-scoped, no "me" slug)
       var hiddenProgressPromise = requestApi('GET', '/users/hidden/progress_watched?type=show&limit=500', {}, false, 300)
         .then(buildHiddenSet)['catch'](function() { return {}; });
       var hiddenCalendarPromise = requestApi('GET', '/users/hidden/calendar?type=show&limit=500', {}, false, 300)
@@ -2680,15 +2681,25 @@
         .then(buildHiddenSet)['catch'](function() { return {}; });
       return Promise.all([watchedPromise, hiddenProgressPromise, hiddenCalendarPromise, hiddenDroppedPromise]).then(function(results) {
         var items = results[0];
-        var hiddenSet = Object.assign({}, results[1], results[2], results[3]);
+        var hiddenSet = Object.assign({}, results[1], results[2]);
+        var droppedSet = results[3];
         if (!Array.isArray(items)) return { results: [], total: 0, total_pages: 1, page: 1, limit: limit };
+        function isHidden(ids) { return !!(hiddenSet['trakt_' + ids.trakt] || hiddenSet['tmdb_' + ids.tmdb]); }
+        function isDropped(ids) { return !!(droppedSet['trakt_' + ids.trakt] || droppedSet['tmdb_' + ids.tmdb]); }
         var filtered = items.filter(function(item) {
           var show = item && item.show;
           if (!show || !show.ids || !show.ids.tmdb) return false;
           var ids = show.ids;
-          if (hiddenSet['trakt_' + ids.trakt] || hiddenSet['tmdb_' + ids.tmdb]) return false;
           var status = (show.status || '').toLowerCase();
-          return activeStatuses.some(function(s) { return status === s; });
+          if (watchingFilter === 'active') {
+            return !isHidden(ids) && !isDropped(ids) && activeStatuses.some(function(s) { return status === s; });
+          } else if (watchingFilter === 'completed') {
+            return !isHidden(ids) && !isDropped(ids) && endedStatuses.some(function(s) { return status === s; });
+          } else if (watchingFilter === 'dropped') {
+            return isDropped(ids);
+          } else {
+            return !isHidden(ids);
+          }
         });
         filtered.sort(function(a, b) {
           var da = a.last_watched_at || '';
@@ -2720,6 +2731,47 @@
           limit: limit
         })));
       });
+    },
+    watchingCounts: function() {
+      var activeStatuses = ['returning series', 'in production', 'planned', 'pilot'];
+      var endedStatuses = ['ended', 'canceled', 'cancelled'];
+      function buildHiddenSet(list) {
+        var set = {};
+        if (Array.isArray(list)) list.forEach(function(entry) {
+          var ids = entry && entry.show && entry.show.ids;
+          if (ids) {
+            if (ids.trakt) set['trakt_' + ids.trakt] = true;
+            if (ids.tmdb) set['tmdb_' + ids.tmdb] = true;
+          }
+        });
+        return set;
+      }
+      var watchedPromise = requestApi('GET', '/sync/watched/shows?extended=full', {}, false, 300);
+      var hiddenProgressPromise = requestApi('GET', '/users/hidden/progress_watched?type=show&limit=500', {}, false, 300)
+        .then(buildHiddenSet)['catch'](function() { return {}; });
+      var hiddenCalendarPromise = requestApi('GET', '/users/hidden/calendar?type=show&limit=500', {}, false, 300)
+        .then(buildHiddenSet)['catch'](function() { return {}; });
+      var hiddenDroppedPromise = requestApi('GET', '/users/hidden/dropped?type=show&limit=500', {}, false, 300)
+        .then(buildHiddenSet)['catch'](function() { return {}; });
+      return Promise.all([watchedPromise, hiddenProgressPromise, hiddenCalendarPromise, hiddenDroppedPromise]).then(function(results) {
+        var items = results[0];
+        var hiddenSet = Object.assign({}, results[1], results[2]);
+        var droppedSet = results[3];
+        if (!Array.isArray(items)) return { active: 0, completed: 0, dropped: 0, all: 0 };
+        var counts = { active: 0, completed: 0, dropped: 0, all: 0 };
+        items.forEach(function(item) {
+          var show = item && item.show;
+          if (!show || !show.ids || !show.ids.tmdb) return;
+          var ids = show.ids;
+          if (hiddenSet['trakt_' + ids.trakt] || hiddenSet['tmdb_' + ids.tmdb]) return;
+          counts.all++;
+          var status = (show.status || '').toLowerCase();
+          if (droppedSet['trakt_' + ids.trakt] || droppedSet['tmdb_' + ids.tmdb]) { counts.dropped++; return; }
+          if (activeStatuses.some(function(s) { return status === s; })) counts.active++;
+          else if (endedStatuses.some(function(s) { return status === s; })) counts.completed++;
+        });
+        return counts;
+      })['catch'](function() { return { active: 0, completed: 0, dropped: 0, all: 0 }; });
     },
     removeFromHistory: function(element) {
       if (!element) return Promise.reject(new Error('No element'));
@@ -3452,6 +3504,7 @@
     div.textContent = label;
     firstUnstarted.parentNode.insertBefore(div, firstUnstarted);
   }
+  var MONTHS_RU_GEN = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
   function renderHistoryDateBadge(card, element) {
     if (!element || !element.trakt_watched_at) return;
     var cardNode = typeof card.render === 'function' ? card.render(true) : null;
@@ -3459,18 +3512,12 @@
     var cardView = cardNode.querySelector('.card__view');
     if (!cardView || cardView.querySelector('.trakt-history-date-badge')) return;
     var date = new Date(element.trakt_watched_at);
-    var now = new Date();
-    var day = date.getDate();
-    var month = date.toLocaleString('ru', { month: 'short' }).replace('.', '');
-    var dateStr = day + ' ' + month + (date.getFullYear() !== now.getFullYear() ? ' ' + date.getFullYear() : '');
-    var epStr = '';
-    if (element.trakt_history_episode) {
-      var ep = element.trakt_history_episode;
-      epStr = '<span class="trakt-history-ep">S' + ep.season + '·E' + ep.number + '</span>';
-    }
+    var day = String(date.getDate()).padStart(2, '0');
+    var month = MONTHS_RU_GEN[date.getMonth()];
+    var year = date.getFullYear();
     var badge = document.createElement('div');
     badge.className = 'trakt-history-date-badge';
-    badge.innerHTML = epStr + '<span class="trakt-history-date">' + dateStr + '</span>';
+    badge.innerHTML = '<span class="trakt-history-date">Просмотрено ' + day + ' ' + month + ' ' + year + '</span>';
     cardView.appendChild(badge);
   }
 
@@ -5121,9 +5168,111 @@
     if (!object.page) object.page = 1;
     return new baseComponent(object, 'collection');
   }
+  function watchingHub(object) {
+    var WH_CTRL = 'trakt_watching_hub_ctrl';
+    var activity, html, controls, tabsRow, body;
+    var currentView = null;
+    var lastTabFocus = null;
+    var activeTabKey = 'active';
+    var tabBtns = {};
+    var tabCounts = { active: 0, completed: 0, dropped: 0, all: 0 };
+    var TABS = [
+      { key: 'active',    label: function(n) { return (Lampa.Lang && Lampa.Lang.translate ? Lampa.Lang.translate('trakt_watching_tab_active') || 'Активные' : 'Активные') + ' (' + n + ')'; } },
+      { key: 'completed', label: function(n) { return (Lampa.Lang && Lampa.Lang.translate ? Lampa.Lang.translate('trakt_watching_tab_completed') || 'Завершённые' : 'Завершённые') + ' (' + n + ')'; } },
+      { key: 'dropped',   label: function(n) { return (Lampa.Lang && Lampa.Lang.translate ? Lampa.Lang.translate('trakt_watching_tab_dropped') || 'Брошенные' : 'Брошенные') + ' (' + n + ')'; } },
+      { key: 'all',       label: function(n) { return (Lampa.Lang && Lampa.Lang.translate ? Lampa.Lang.translate('trakt_watching_tab_all') || 'Все' : 'Все') + ' (' + n + ')'; } }
+    ];
+    function makeTabBtn(tabDef) {
+      var btn = $('<div class="simple-button simple-button--filter selector trakt-watchlist__tab"><div>' + tabDef.label(0) + '</div></div>');
+      btn.on('hover:enter', function() { lastTabFocus = btn[0]; setActiveTab(tabDef.key); });
+      tabBtns[tabDef.key] = btn;
+      return btn;
+    }
+    function updateTabLabels() {
+      TABS.forEach(function(tabDef) {
+        var btn = tabBtns[tabDef.key];
+        if (btn) btn.find('div').first().text(tabDef.label(tabCounts[tabDef.key]));
+      });
+    }
+    function setActiveTab(key) {
+      activeTabKey = key;
+      TABS.forEach(function(tabDef) {
+        if (tabBtns[tabDef.key]) tabBtns[tabDef.key].toggleClass('active', tabDef.key === key);
+      });
+      rebuildView();
+    }
+    function rebuildView() {
+      if (currentView && currentView.destroy) currentView.destroy();
+      body.empty();
+      var viewObject = Object.assign({}, object, {
+        page: 1,
+        watchingFilter: activeTabKey,
+        onHead: function() { Lampa.Controller.toggle(WH_CTRL); }
+      });
+      currentView = new baseComponent(viewObject, 'watching');
+      currentView.activity = activity;
+      currentView.create();
+      body.append(currentView.render());
+      if (currentView.start) currentView.start();
+    }
+    return {
+      create: function() {
+        activity = this.activity;
+        html = $('<div class="trakt-watchlist-hub"></div>');
+        controls = $('<div class="trakt-watchlist-hub__controls"></div>');
+        tabsRow = $('<div class="trakt-watchlist-hub__tabs"></div>');
+        body = $('<div class="trakt-watchlist-hub__body"></div>');
+        TABS.forEach(function(tabDef) {
+          var btn = makeTabBtn(tabDef);
+          if (tabDef.key === activeTabKey) btn.addClass('active');
+          tabsRow.append(btn);
+        });
+        controls.append(tabsRow);
+        html.append(controls, body);
+        Lampa.Controller.add(WH_CTRL, {
+          toggle: function() {
+            Lampa.Controller.collectionSet(controls);
+            var focus = lastTabFocus && document.body && document.body.contains(lastTabFocus) ? lastTabFocus : tabsRow.find('.selector')[0];
+            Lampa.Controller.collectionFocus(focus || false, controls);
+          },
+          right: function() { if (typeof Navigator !== 'undefined') Navigator.move('right'); },
+          left: function() {
+            if (typeof Navigator !== 'undefined' && Navigator.canmove('left')) Navigator.move('left');
+            else Lampa.Controller.toggle('menu');
+          },
+          down: function() {
+            if (typeof Navigator !== 'undefined' && Navigator.canmove('down')) Navigator.move('down');
+            else Lampa.Controller.toggle('content');
+          },
+          up: function() {
+            if (typeof Navigator !== 'undefined' && Navigator.canmove('up')) Navigator.move('up');
+            else Lampa.Controller.toggle('head');
+          },
+          back: function() { Lampa.Activity.backward(); }
+        });
+        rebuildView();
+        if (Api$2 && typeof Api$2.watchingCounts === 'function') {
+          Api$2.watchingCounts().then(function(counts) {
+            tabCounts = counts;
+            updateTabLabels();
+          })['catch'](function() {});
+        }
+        return this.render();
+      },
+      render: function(js) { return js ? html[0] : html; },
+      start: function() { if (currentView && currentView.start) currentView.start(); },
+      pause: function() {},
+      stop: function() {},
+      destroy: function() {
+        if (currentView && currentView.destroy) currentView.destroy();
+        if (html) html.remove();
+        currentView = null;
+      }
+    };
+  }
   function watching(object) {
     if (!object.page) object.page = 1;
-    return new baseComponent(object, 'watching');
+    return new watchingHub(object);
   }
   var Catalog = {
     watchlist: watchlist$1,
@@ -5291,12 +5440,28 @@
         ru: "Календарь",
       },
       trakt_watching: {
-        ru: "Смотрю сериалы",
-        en: "Watching Shows",
+        ru: "Мои сериалы",
+        en: "My Shows",
       },
       trakt_watching_empty: {
         ru: "Нет незавершённых сериалов с ожидаемыми эпизодами",
         en: "No ongoing shows with upcoming episodes",
+      },
+      trakt_watching_tab_active: {
+        ru: "Активные",
+        en: "Active",
+      },
+      trakt_watching_tab_completed: {
+        ru: "Завершённые",
+        en: "Completed",
+      },
+      trakt_watching_tab_dropped: {
+        ru: "Брошенные",
+        en: "Dropped",
+      },
+      trakt_watching_tab_all: {
+        ru: "Все",
+        en: "All",
       },
       trakt_switch_account: { ru: "Переключить аккаунт Trakt.TV", en: "Switch Trakt.TV Account" },
       trakt_switched_to: { ru: "Привет,", en: "Hello," },
@@ -7134,11 +7299,11 @@
       title: upNextTitle,
       component: 'trakt_upnext'
     }, {
-      title: watchingTitle,
-      component: 'trakt_watching'
-    }, {
       title: watchlistTitle,
       component: 'trakt_watchlist'
+    }, {
+      title: watchingTitle,
+      component: 'trakt_watching'
     }, {
       title: historyTitle,
       component: 'trakt_history'
@@ -14379,7 +14544,7 @@
       }
     } catch (e) {/* noop */}
 
-    Lampa.Template.add('trakt_style', "<style>@charset 'UTF-8';.full-start-new__details.trakt{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;color:#fff}.trakt-brand-icon{width:100%;height:100%;display:block;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0;color:inherit}.trakt-brand-icon path{fill:currentColor}.trakt-head-action.focus .trakt-brand-icon,.trakt-head-action.hover .trakt-brand-icon,.menu__item.focus .trakt-brand-icon,.menu__item.hover .trakt-brand-icon,.menu__item.traverse .trakt-brand-icon,.settings-folder.focus .trakt-brand-icon{color:inherit}.full-start-new__details.trakt .trakt-icon{margin-right:.5em;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center}.full-start-new__details.trakt .full-start-new__split{margin:0 .5em}.trakt-applecation-progress{display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.4em;margin-right:.6em;margin-left:.6em}.trakt-applecation-progress .trakt-icon{width:18px;height:18px;display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center}.trakt-applecation-progress .trakt-icon svg{width:100%;height:100%}.trakt-applecation-progress__text{white-space:nowrap}.trakt-lists-container{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:1em;padding:1em}.trakt-list-card{width:150px;background:rgba(255,255,255,0.1);-webkit-border-radius:.5em;border-radius:.5em;padding:.5em;cursor:pointer;-webkit-transition:background .3s ease;-o-transition:background .3s ease;transition:background .3s ease}.trakt-list-card:hover{background:rgba(255,255,255,0.2)}.trakt-list-card__poster{width:100%;height:225px;background-size:cover;background-position:center;-webkit-border-radius:.5em;border-radius:.5em;margin-bottom:.5em}.trakt-list-card__title{font-size:.9em;text-align:center;white-space:nowrap;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis}.trakt-list-detail-header{padding:1em;background:rgba(0,0,0,0.3);margin-bottom:1em}.trakt-list-detail-title{font-size:1.5em;margin-bottom:.5em}.trakt-list-detail-description{font-size:1em;opacity:.8}.trakt-head-action{color:#c850c0}.trakt-head-action--ok{color:#37ff54}.trakt-head-action--error{color:#ff4d4d}.trakt-head-action svg{width:100%;height:100%;display:block}.trakt-head-icon{width:100%;height:100%;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center}.trakt-list-manager-button{display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.5em}.trakt-list-manager-button svg{width:1.2em;height:1.2em}.trakt-watchlist-hub{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;height:100%}.trakt-watchlist-hub__controls{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;gap:.55em;padding:.8em 1.5em .2em}.trakt-watchlist-hub__tabs{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:1.2em}.trakt-watchlist-hub__tabs .simple-button{margin-right:0;-webkit-box-flex:1;-webkit-flex:1 1 8em;-ms-flex:1 1 8em;flex:1 1 8em;min-width:0;padding:1.1em 1.4em;font-size:1.6em;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;text-align:center;-webkit-border-radius:1.1em;border-radius:1.1em}.trakt-watchlist-hub__tabs .simple-button--filter>div{width:100%;margin-left:0;padding:0;background:transparent;text-align:center;font-weight:800;font-size:1em;letter-spacing:.02em}.trakt-watchlist-hub__sorts{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:.55em}.trakt-watchlist__sort{margin:0;-webkit-box-flex:1;-webkit-flex:1 1 10em;-ms-flex:1 1 10em;flex:1 1 10em;min-width:7.6em;padding:.65em .85em;-webkit-box-pack:start;-webkit-justify-content:flex-start;-ms-flex-pack:start;justify-content:flex-start;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.55em;-webkit-border-radius:.9em;border-radius:.9em}.trakt-watchlist__sort>div{margin-left:0}.trakt-watchlist__sort .trakt-watchlist__sort-label{min-width:0;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis;white-space:nowrap;font-weight:600;text-align:left}.trakt-watchlist__sort .trakt-watchlist__sort-state{-webkit-box-flex:0;-webkit-flex:0 0 auto;-ms-flex:0 0 auto;flex:0 0 auto;min-width:1em;font-size:1.05em;line-height:1;font-weight:700;text-align:center;opacity:.88}.trakt-watchlist__sort .trakt-watchlist__sort-state:empty{display:none}.trakt-watchlist__sort--active{background:rgba(255,255,255,0.14);-webkit-box-shadow:inset 0 0 0 1px rgba(255,255,255,0.16);box-shadow:inset 0 0 0 1px rgba(255,255,255,0.16)}.trakt-watchlist__sort--more{-webkit-flex-basis:8.4em;-ms-flex-preferred-size:8.4em;flex-basis:8.4em}.trakt-watchlist__sort--desc .trakt-watchlist__sort-state,.trakt-watchlist__sort--asc .trakt-watchlist__sort-state{opacity:1}.trakt-watchlist-hub__body{-webkit-box-flex:1;-webkit-flex:1;-ms-flex:1;flex:1;min-height:0}.trakt-watchlist-hub__controls{margin-bottom:0}.trakt-watchlist__view.hide{display:none}.trakt-list-wide-card__meta{margin-top:.6em;font-size:1.1em;opacity:.8}.trakt-list-wide-card:not(.trakt-list-wide-card--create) .card__promo{display:none !important}.trakt-list-wide-card--create .card__view{background:-webkit-linear-gradient(315deg,rgba(23,129,255,0.28),rgba(53,255,145,0.22));background:-o-linear-gradient(315deg,rgba(23,129,255,0.28),rgba(53,255,145,0.22));background:linear-gradient(135deg,rgba(23,129,255,0.28),rgba(53,255,145,0.22));-webkit-border-radius:1em;border-radius:1em}.trakt-list-wide-card--create .card__view::before{content:'+';position:absolute;inset:0;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;font-size:6em;line-height:1;color:rgba(255,255,255,0.82);font-weight:500;z-index:0}.trakt-list-wide-card--create .card__img{opacity:0}.trakt-list-wide-card--create .card__promo{z-index:2}.trakt-list-wide-card--create .card__promo-title{font-weight:700}.trakt-userinfo-name{line-height:1.35;margin-bottom:.3em}.trakt-userinfo-vip{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.5em;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;line-height:1.35;margin-top:.1em}.trakt-userinfo-vip__label{opacity:.75}.trakt-vip-badge{display:inline-block;-webkit-border-radius:999px;border-radius:999px;padding:.2em .65em;font-size:.9em;line-height:1.25;border:1px solid transparent;vertical-align:middle}.trakt-vip-badge--enabled{color:#1be26f;border-color:rgba(27,226,111,0.45);background:rgba(27,226,111,0.14)}.trakt-vip-badge--disabled{color:#aeb5bc;border-color:rgba(174,181,188,0.45);background:rgba(174,181,188,0.12)}.trakt-device-auth{padding:.4em 1.2em 1.2em}.trakt-device-auth__inner{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:horizontal;-webkit-box-direction:normal;-webkit-flex-direction:row;-ms-flex-direction:row;flex-direction:row;gap:1.5em;-webkit-box-align:start;-webkit-align-items:flex-start;-ms-flex-align:start;align-items:flex-start}.trakt-device-auth__qr-col{-webkit-box-flex:0;-webkit-flex:0 0 auto;-ms-flex:0 0 auto;flex:0 0 auto;width:min(45%,14em)}.trakt-device-auth__info-col{-webkit-box-flex:1;-webkit-flex:1 1 auto;-ms-flex:1 1 auto;flex:1 1 auto;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;gap:.6em;-webkit-box-align:start;-webkit-align-items:flex-start;-ms-flex-align:start;align-items:flex-start;padding-top:.4em}.trakt-device-auth__qr-container{width:100%}.trakt-device-auth__qr-container--hidden{display:none}.trakt-device-auth__qr-link{display:block}.trakt-device-auth__qr-image{display:block;width:100%;height:auto;background:#fff;border:2px solid #e3e3e3;-webkit-border-radius:.8em;border-radius:.8em;padding:.35em;-webkit-box-sizing:border-box;box-sizing:border-box}.trakt-device-auth__qr-caption{margin-top:.6em;font-size:.95em;opacity:.72;text-align:center}.trakt-device-auth__verification{font-size:1.05em;line-height:1.5;word-break:break-word;opacity:.9}.trakt-device-auth__code{margin:0}.trakt-device-auth__code strong{letter-spacing:.08em}.trakt-check-btn{cursor:pointer;margin-top:.4em}@media screen and (max-width:480px){.trakt-device-auth{padding:0 .6em -webkit-calc(0.8em + env(safe-area-inset-bottom));padding:0 .6em calc(0.8em + env(safe-area-inset-bottom))}.trakt-device-auth__inner{-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center}.trakt-device-auth__qr-col{width:min(100%,18.5em)}.trakt-device-auth__info-col{-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;text-align:center}}.trakt-watchlist-hub__tabs .trakt-watchlist__tab{border-bottom:3px solid transparent;-webkit-transition:background .2s,border-color .2s;transition:background .2s,border-color .2s}.trakt-watchlist-hub__tabs .trakt-watchlist__tab.active{background:rgba(155,89,208,0.18);border-bottom:3px solid #9b59d0;-webkit-box-shadow:inset 0 0 0 1px rgba(155,89,208,0.3);box-shadow:inset 0 0 0 1px rgba(155,89,208,0.3)}.trakt-watchlist-hub__tabs .trakt-watchlist__tab.active>div{font-weight:800;opacity:1}.trakt-upnext-badge{position:absolute;top:.3em;right:.3em;background:rgba(0,0,0,.78);color:#fff;font-size:1.35em;font-weight:800;min-width:1.6em;height:1.6em;-webkit-border-radius:999px;border-radius:999px;z-index:2;pointer-events:none;line-height:1;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;padding:0 .3em}.trakt-upcoming-section{width:100%;flex-basis:100%;margin-top:1.8em;padding:1em 0 .5em;font-size:1.15em;font-weight:700;letter-spacing:.04em;text-transform:uppercase;opacity:.9;color:#fff;display:flex;align-items:center;gap:.9em;pointer-events:none}.trakt-upcoming-section::before{content:'';flex:0 0 3px;height:1.2em;background:linear-gradient(180deg,#e8572a,#ff9844);border-radius:3px}.trakt-upcoming-section::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(255,255,255,.25),rgba(255,255,255,0))}.trakt-watched-badge{position:absolute;bottom:.35em;left:.35em;width:1.45em;height:1.45em;border-radius:999px;display:flex;align-items:center;justify-content:center;z-index:2;pointer-events:none;background:rgba(155,89,208,.82);color:#fff}.trakt-watched-badge svg{width:.82em;height:.82em;display:block}.trakt-watchlist-badge{position:absolute;bottom:.35em;left:50%;-webkit-transform:translateX(-50%);-ms-transform:translateX(-50%);transform:translateX(-50%);width:1.45em;height:1.45em;border-radius:999px;display:flex;align-items:center;justify-content:center;z-index:2;pointer-events:none;background:rgba(52,152,219,.82);color:#fff}.trakt-watchlist-badge svg{width:.82em;height:.82em;display:block}.trakt-status-clickable{cursor:pointer;border-radius:.6em;padding:.15em .4em .15em .1em;transition:background .15s;-webkit-align-self:flex-start;-ms-flex-item-align:start;align-self:flex-start;width:-webkit-fit-content;width:fit-content}.trakt-status-clickable.hover,.trakt-status-clickable.focus{background:rgba(155,89,208,.18)}.trakt-history-date-badge{position:absolute;bottom:0;left:0;right:0;padding:.3em .45em .35em;background:linear-gradient(to top,rgba(0,0,0,.82) 0%,transparent 100%);display:flex;justify-content:space-between;align-items:flex-end;pointer-events:none;z-index:2}.trakt-history-ep{font-size:.72em;font-weight:700;color:rgba(255,255,255,.72);line-height:1.2;flex-shrink:0;margin-right:.4em}.trakt-history-date{font-size:.75em;font-weight:700;color:#fff;line-height:1.2;margin-left:auto;white-space:nowrap}@-webkit-keyframes trakt-spin{from{-webkit-transform:rotate(0deg);transform:rotate(0deg)}to{-webkit-transform:rotate(360deg);transform:rotate(360deg)}}@keyframes trakt-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}.trakt-status-clickable.trakt-loading .trakt-icon{-webkit-animation:trakt-spin .8s linear infinite;animation:trakt-spin .8s linear infinite;opacity:.5}.trakt-recs-hub__sorts{gap:.35em;-webkit-flex-wrap:nowrap;-ms-flex-wrap:nowrap;flex-wrap:nowrap}.trakt-recs-hub__sorts .trakt-watchlist__sort{-webkit-box-flex:1;-webkit-flex:1 1 0;-ms-flex:1 1 0;flex:1 1 0;min-width:0}.trakt-recs-hub__sorts .trakt-watchlist__sort--more{-webkit-box-flex:1;-webkit-flex:1 1 0;-ms-flex:1 1 0;flex:1 1 0}.trakt-account-switcher{color:#c850c0;position:relative;-webkit-transform:scale(1.2);-ms-transform:scale(1.2);transform:scale(1.2);-webkit-transform-origin:center center;-ms-transform-origin:center center;transform-origin:center center;overflow:visible!important}.trakt-head-icon{position:relative;overflow:visible!important}.trakt-account-badge{position:absolute;bottom:0;right:0;-webkit-transform:translate(50%,50%);-ms-transform:translate(50%,50%);transform:translate(50%,50%);min-width:1.55em;height:1.55em;border-radius:999px;background:#fff;color:#c850c0;font-size:.83em;font-weight:800;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;line-height:1;padding:0 .3em;pointer-events:none;border:none;-webkit-box-sizing:border-box;box-sizing:border-box;white-space:nowrap;-webkit-box-shadow:0 1px 4px rgba(0,0,0,.3);box-shadow:0 1px 4px rgba(0,0,0,.3)}.trakt-account-badge--multi{font-size:.75em;letter-spacing:-.02em}.trakt-digital-release{position:absolute;top:1.4em;left:-.8em;padding:.4em .5em;line-height:1;font-size:.8em;font-weight:700;color:#fff;background:rgba(217,34,41,.9);border-radius:.3em;z-index:3;pointer-events:none;white-space:nowrap}</style>");
+    Lampa.Template.add('trakt_style', "<style>@charset 'UTF-8';.full-start-new__details.trakt{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;color:#fff}.trakt-brand-icon{width:100%;height:100%;display:block;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0;color:inherit}.trakt-brand-icon path{fill:currentColor}.trakt-head-action.focus .trakt-brand-icon,.trakt-head-action.hover .trakt-brand-icon,.menu__item.focus .trakt-brand-icon,.menu__item.hover .trakt-brand-icon,.menu__item.traverse .trakt-brand-icon,.settings-folder.focus .trakt-brand-icon{color:inherit}.full-start-new__details.trakt .trakt-icon{margin-right:.5em;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center}.full-start-new__details.trakt .full-start-new__split{margin:0 .5em}.trakt-applecation-progress{display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.4em;margin-right:.6em;margin-left:.6em}.trakt-applecation-progress .trakt-icon{width:18px;height:18px;display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center}.trakt-applecation-progress .trakt-icon svg{width:100%;height:100%}.trakt-applecation-progress__text{white-space:nowrap}.trakt-lists-container{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:1em;padding:1em}.trakt-list-card{width:150px;background:rgba(255,255,255,0.1);-webkit-border-radius:.5em;border-radius:.5em;padding:.5em;cursor:pointer;-webkit-transition:background .3s ease;-o-transition:background .3s ease;transition:background .3s ease}.trakt-list-card:hover{background:rgba(255,255,255,0.2)}.trakt-list-card__poster{width:100%;height:225px;background-size:cover;background-position:center;-webkit-border-radius:.5em;border-radius:.5em;margin-bottom:.5em}.trakt-list-card__title{font-size:.9em;text-align:center;white-space:nowrap;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis}.trakt-list-detail-header{padding:1em;background:rgba(0,0,0,0.3);margin-bottom:1em}.trakt-list-detail-title{font-size:1.5em;margin-bottom:.5em}.trakt-list-detail-description{font-size:1em;opacity:.8}.trakt-head-action{color:#c850c0}.trakt-head-action--ok{color:#37ff54}.trakt-head-action--error{color:#ff4d4d}.trakt-head-action svg{width:100%;height:100%;display:block}.trakt-head-icon{width:100%;height:100%;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center}.trakt-list-manager-button{display:-webkit-inline-box;display:-webkit-inline-flex;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.5em}.trakt-list-manager-button svg{width:1.2em;height:1.2em}.trakt-watchlist-hub{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;height:100%}.trakt-watchlist-hub__controls{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;gap:.55em;padding:.8em 1.5em .2em}.trakt-watchlist-hub__tabs{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:1.2em}.trakt-watchlist-hub__tabs .simple-button{margin-right:0;-webkit-box-flex:1;-webkit-flex:1 1 8em;-ms-flex:1 1 8em;flex:1 1 8em;min-width:0;padding:1.1em 1.4em;font-size:1.6em;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;text-align:center;-webkit-border-radius:1.1em;border-radius:1.1em}.trakt-watchlist-hub__tabs .simple-button--filter>div{width:100%;margin-left:0;padding:0;background:transparent;text-align:center;font-weight:800;font-size:1em;letter-spacing:.02em}.trakt-watchlist-hub__sorts{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:.55em}.trakt-watchlist__sort{margin:0;-webkit-box-flex:1;-webkit-flex:1 1 10em;-ms-flex:1 1 10em;flex:1 1 10em;min-width:7.6em;padding:.65em .85em;-webkit-box-pack:start;-webkit-justify-content:flex-start;-ms-flex-pack:start;justify-content:flex-start;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.55em;-webkit-border-radius:.9em;border-radius:.9em}.trakt-watchlist__sort>div{margin-left:0}.trakt-watchlist__sort .trakt-watchlist__sort-label{min-width:0;overflow:hidden;-o-text-overflow:ellipsis;text-overflow:ellipsis;white-space:nowrap;font-weight:600;text-align:left}.trakt-watchlist__sort .trakt-watchlist__sort-state{-webkit-box-flex:0;-webkit-flex:0 0 auto;-ms-flex:0 0 auto;flex:0 0 auto;min-width:1em;font-size:1.05em;line-height:1;font-weight:700;text-align:center;opacity:.88}.trakt-watchlist__sort .trakt-watchlist__sort-state:empty{display:none}.trakt-watchlist__sort--active{background:rgba(255,255,255,0.14);-webkit-box-shadow:inset 0 0 0 1px rgba(255,255,255,0.16);box-shadow:inset 0 0 0 1px rgba(255,255,255,0.16)}.trakt-watchlist__sort--more{-webkit-flex-basis:8.4em;-ms-flex-preferred-size:8.4em;flex-basis:8.4em}.trakt-watchlist__sort--desc .trakt-watchlist__sort-state,.trakt-watchlist__sort--asc .trakt-watchlist__sort-state{opacity:1}.trakt-watchlist-hub__body{-webkit-box-flex:1;-webkit-flex:1;-ms-flex:1;flex:1;min-height:0}.trakt-watchlist-hub__controls{margin-bottom:0}.trakt-watchlist__view.hide{display:none}.trakt-list-wide-card__meta{margin-top:.6em;font-size:1.1em;opacity:.8}.trakt-list-wide-card:not(.trakt-list-wide-card--create) .card__promo{display:none !important}.trakt-list-wide-card--create .card__view{background:-webkit-linear-gradient(315deg,rgba(23,129,255,0.28),rgba(53,255,145,0.22));background:-o-linear-gradient(315deg,rgba(23,129,255,0.28),rgba(53,255,145,0.22));background:linear-gradient(135deg,rgba(23,129,255,0.28),rgba(53,255,145,0.22));-webkit-border-radius:1em;border-radius:1em}.trakt-list-wide-card--create .card__view::before{content:'+';position:absolute;inset:0;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;font-size:6em;line-height:1;color:rgba(255,255,255,0.82);font-weight:500;z-index:0}.trakt-list-wide-card--create .card__img{opacity:0}.trakt-list-wide-card--create .card__promo{z-index:2}.trakt-list-wide-card--create .card__promo-title{font-weight:700}.trakt-userinfo-name{line-height:1.35;margin-bottom:.3em}.trakt-userinfo-vip{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;gap:.5em;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;line-height:1.35;margin-top:.1em}.trakt-userinfo-vip__label{opacity:.75}.trakt-vip-badge{display:inline-block;-webkit-border-radius:999px;border-radius:999px;padding:.2em .65em;font-size:.9em;line-height:1.25;border:1px solid transparent;vertical-align:middle}.trakt-vip-badge--enabled{color:#1be26f;border-color:rgba(27,226,111,0.45);background:rgba(27,226,111,0.14)}.trakt-vip-badge--disabled{color:#aeb5bc;border-color:rgba(174,181,188,0.45);background:rgba(174,181,188,0.12)}.trakt-device-auth{padding:.4em 1.2em 1.2em}.trakt-device-auth__inner{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:horizontal;-webkit-box-direction:normal;-webkit-flex-direction:row;-ms-flex-direction:row;flex-direction:row;gap:1.5em;-webkit-box-align:start;-webkit-align-items:flex-start;-ms-flex-align:start;align-items:flex-start}.trakt-device-auth__qr-col{-webkit-box-flex:0;-webkit-flex:0 0 auto;-ms-flex:0 0 auto;flex:0 0 auto;width:min(45%,14em)}.trakt-device-auth__info-col{-webkit-box-flex:1;-webkit-flex:1 1 auto;-ms-flex:1 1 auto;flex:1 1 auto;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;gap:.6em;-webkit-box-align:start;-webkit-align-items:flex-start;-ms-flex-align:start;align-items:flex-start;padding-top:.4em}.trakt-device-auth__qr-container{width:100%}.trakt-device-auth__qr-container--hidden{display:none}.trakt-device-auth__qr-link{display:block}.trakt-device-auth__qr-image{display:block;width:100%;height:auto;background:#fff;border:2px solid #e3e3e3;-webkit-border-radius:.8em;border-radius:.8em;padding:.35em;-webkit-box-sizing:border-box;box-sizing:border-box}.trakt-device-auth__qr-caption{margin-top:.6em;font-size:.95em;opacity:.72;text-align:center}.trakt-device-auth__verification{font-size:1.05em;line-height:1.5;word-break:break-word;opacity:.9}.trakt-device-auth__code{margin:0}.trakt-device-auth__code strong{letter-spacing:.08em}.trakt-check-btn{cursor:pointer;margin-top:.4em}@media screen and (max-width:480px){.trakt-device-auth{padding:0 .6em -webkit-calc(0.8em + env(safe-area-inset-bottom));padding:0 .6em calc(0.8em + env(safe-area-inset-bottom))}.trakt-device-auth__inner{-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center}.trakt-device-auth__qr-col{width:min(100%,18.5em)}.trakt-device-auth__info-col{-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;text-align:center}}.trakt-watchlist-hub__tabs .trakt-watchlist__tab{border-bottom:3px solid transparent;-webkit-transition:background .2s,border-color .2s;transition:background .2s,border-color .2s}.trakt-watchlist-hub__tabs .trakt-watchlist__tab.active{background:rgba(155,89,208,0.18);border-bottom:3px solid #9b59d0;-webkit-box-shadow:inset 0 0 0 1px rgba(155,89,208,0.3);box-shadow:inset 0 0 0 1px rgba(155,89,208,0.3)}.trakt-watchlist-hub__tabs .trakt-watchlist__tab.active>div{font-weight:800;opacity:1}.trakt-upnext-badge{position:absolute;top:.3em;right:.3em;background:rgba(0,0,0,.78);color:#fff;font-size:1.35em;font-weight:800;min-width:1.6em;height:1.6em;-webkit-border-radius:999px;border-radius:999px;z-index:2;pointer-events:none;line-height:1;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;padding:0 .3em}.trakt-upcoming-section{width:100%;flex-basis:100%;margin-top:1.8em;padding:1em 0 .5em;font-size:1.15em;font-weight:700;letter-spacing:.04em;text-transform:uppercase;opacity:.9;color:#fff;display:flex;align-items:center;gap:.9em;pointer-events:none}.trakt-upcoming-section::before{content:'';flex:0 0 3px;height:1.2em;background:linear-gradient(180deg,#e8572a,#ff9844);border-radius:3px}.trakt-upcoming-section::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(255,255,255,.25),rgba(255,255,255,0))}.trakt-watched-badge{position:absolute;bottom:.35em;left:.35em;width:1.45em;height:1.45em;border-radius:999px;display:flex;align-items:center;justify-content:center;z-index:2;pointer-events:none;background:rgba(155,89,208,.82);color:#fff}.trakt-watched-badge svg{width:.82em;height:.82em;display:block}.trakt-watchlist-badge{position:absolute;bottom:.35em;left:50%;-webkit-transform:translateX(-50%);-ms-transform:translateX(-50%);transform:translateX(-50%);width:1.45em;height:1.45em;border-radius:999px;display:flex;align-items:center;justify-content:center;z-index:2;pointer-events:none;background:rgba(52,152,219,.82);color:#fff}.trakt-watchlist-badge svg{width:.82em;height:.82em;display:block}.trakt-status-clickable{cursor:pointer;border-radius:.6em;padding:.15em .4em .15em .1em;transition:background .15s;-webkit-align-self:flex-start;-ms-flex-item-align:start;align-self:flex-start;width:-webkit-fit-content;width:fit-content}.trakt-status-clickable.hover,.trakt-status-clickable.focus{background:rgba(155,89,208,.18)}.trakt-history-date-badge{position:absolute;top:.4em;right:.4em;padding:.28em .55em;background:rgba(155,89,208,.88);-webkit-border-radius:.5em;border-radius:.5em;pointer-events:none;z-index:2}.trakt-history-date{font-size:.7em;font-weight:700;color:#fff;line-height:1.3;white-space:nowrap}@-webkit-keyframes trakt-spin{from{-webkit-transform:rotate(0deg);transform:rotate(0deg)}to{-webkit-transform:rotate(360deg);transform:rotate(360deg)}}@keyframes trakt-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}.trakt-status-clickable.trakt-loading .trakt-icon{-webkit-animation:trakt-spin .8s linear infinite;animation:trakt-spin .8s linear infinite;opacity:.5}.trakt-recs-hub__sorts{gap:.35em;-webkit-flex-wrap:nowrap;-ms-flex-wrap:nowrap;flex-wrap:nowrap}.trakt-recs-hub__sorts .trakt-watchlist__sort{-webkit-box-flex:1;-webkit-flex:1 1 0;-ms-flex:1 1 0;flex:1 1 0;min-width:0}.trakt-recs-hub__sorts .trakt-watchlist__sort--more{-webkit-box-flex:1;-webkit-flex:1 1 0;-ms-flex:1 1 0;flex:1 1 0}.trakt-account-switcher{color:#c850c0;position:relative;-webkit-transform:scale(1.2);-ms-transform:scale(1.2);transform:scale(1.2);-webkit-transform-origin:center center;-ms-transform-origin:center center;transform-origin:center center;overflow:visible!important}.trakt-head-icon{position:relative;overflow:visible!important}.trakt-account-badge{position:absolute;bottom:0;right:0;-webkit-transform:translate(50%,50%);-ms-transform:translate(50%,50%);transform:translate(50%,50%);min-width:1.55em;height:1.55em;border-radius:999px;background:#fff;color:#c850c0;font-size:.83em;font-weight:800;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;line-height:1;padding:0 .3em;pointer-events:none;border:none;-webkit-box-sizing:border-box;box-sizing:border-box;white-space:nowrap;-webkit-box-shadow:0 1px 4px rgba(0,0,0,.3);box-shadow:0 1px 4px rgba(0,0,0,.3)}.trakt-account-badge--multi{font-size:.75em;letter-spacing:-.02em}.trakt-digital-release{position:absolute;top:1.4em;left:-.8em;padding:.4em .5em;line-height:1;font-size:.8em;font-weight:700;color:#fff;background:rgba(217,34,41,.9);border-radius:.3em;z-index:3;pointer-events:none;white-space:nowrap}</style>");
     $('body').append(Lampa.Template.get('trakt_style', {}, true));
 
     if (Lampa.Storage.get('trakt_refresh_token')) {
