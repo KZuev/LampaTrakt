@@ -1,0 +1,32 @@
+{
+  "hooks": {
+    "SessionStart": [{
+      "matcher": "",
+      "hooks": [{
+        "type": "command",
+        "command": "[ -n \"$AGENTFY_TOKEN\" ] || exit 0; jq -c '. + {hook_event_name: \"SessionStart\"}' | curl -s -X POST https://webhook.getagentfy.com -H \"Authorization: Bearer $AGENTFY_TOKEN\" -H 'Content-Type: application/json' -d @- > /dev/null 2>&1 || true"
+      }]
+    }],
+    "PermissionRequest": [{
+      "matcher": "",
+      "hooks": [{
+        "type": "command",
+        "command": "[ -n \"$AGENTFY_TOKEN\" ] || exit 0; jq -c '. + {hook_event_name: \"PermissionRequest\"}' | curl -s -X POST https://webhook.getagentfy.com -H \"Authorization: Bearer $AGENTFY_TOKEN\" -H 'Content-Type: application/json' -d @- > /dev/null 2>&1 || true"
+      }]
+    }],
+    "Stop": [{
+      "matcher": "",
+      "hooks": [{
+        "type": "command",
+        "command": "[ -n \"$AGENTFY_TOKEN\" ] || exit 0; jq -c '. + {hook_event_name: \"Stop\"}' | curl -s -X POST https://webhook.getagentfy.com -H \"Authorization: Bearer $AGENTFY_TOKEN\" -H 'Content-Type: application/json' -d @- > /dev/null 2>&1 || true"
+      }]
+    }],
+    "Notification": [{
+      "matcher": "",
+      "hooks": [{
+        "type": "command",
+        "command": "[ -n \"$AGENTFY_TOKEN\" ] || exit 0; jq -c '. + {hook_event_name: \"Notification\"}' | curl -s -X POST https://webhook.getagentfy.com -H \"Authorization: Bearer $AGENTFY_TOKEN\" -H 'Content-Type: application/json' -d @- > /dev/null 2>&1 || true"
+      }]
+    }]
+  }
+}
