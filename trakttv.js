@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.9.10';
+  var PLUGIN_VERSION = '2.9.11';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -2670,13 +2670,15 @@
         });
         return set;
       }
-      var hiddenProgressPromise = requestApi('GET', '/users/me/hidden/progress_watched?type=show&limit=500', {}, false, 300)
+      // Hidden items live at /users/hidden/{section} (OAuth-scoped, no "me" slug).
+      // Valid sections: calendar, progress_watched, progress_collected, recommendations, comments, dropped.
+      var hiddenProgressPromise = requestApi('GET', '/users/hidden/progress_watched?type=show&limit=500', {}, false, 300)
         .then(buildHiddenSet)['catch'](function() { return {}; });
-      var hiddenCalendarPromise = requestApi('GET', '/users/me/hidden/calendar?type=show&limit=500', {}, false, 300)
+      var hiddenCalendarPromise = requestApi('GET', '/users/hidden/calendar?type=show&limit=500', {}, false, 300)
         .then(buildHiddenSet)['catch'](function() { return {}; });
-      var hiddenWatchedPromise = requestApi('GET', '/users/me/hidden/watched?type=show&limit=500', {}, false, 300)
+      var hiddenDroppedPromise = requestApi('GET', '/users/hidden/dropped?type=show&limit=500', {}, false, 300)
         .then(buildHiddenSet)['catch'](function() { return {}; });
-      return Promise.all([watchedPromise, hiddenProgressPromise, hiddenCalendarPromise, hiddenWatchedPromise]).then(function(results) {
+      return Promise.all([watchedPromise, hiddenProgressPromise, hiddenCalendarPromise, hiddenDroppedPromise]).then(function(results) {
         var items = results[0];
         var hiddenSet = Object.assign({}, results[1], results[2], results[3]);
         if (!Array.isArray(items)) return { results: [], total: 0, total_pages: 1, page: 1, limit: limit };
