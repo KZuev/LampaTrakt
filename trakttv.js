@@ -3561,7 +3561,7 @@
           // Do NOT restore _savedStart here; keep empty_class.start active during loading
           // so that activity.start() focuses the empty widget, not the category scroll.
           // This prevents Layer.visible from cascading into Line.onVisible with a removed head.
-          if (type !== 'watchlist') { try { var _sr = _this.scroll && typeof _this.scroll.render === 'function' && _this.scroll.render(true); if (_sr && _sr.classList) _sr.classList.remove('scroll--nopadding'); } catch(e) {} }
+          try { var _sr = _this.scroll && typeof _this.scroll.render === 'function' && _this.scroll.render(true); if (_sr && _sr.classList) _sr.classList.remove('scroll--nopadding'); } catch(e) {}
           try { if (_this.html) _this.html.addClass('trakt-maker-content'); } catch(e) {}
           try { var _ec0 = _this.empty_class; if (_ec0 && typeof _ec0.render === 'function') { var _eel = _ec0.render(true); if (_eel) _eel.style.display = 'none'; } } catch(e) {}
           try { _listLogAdd('bC.onCreate type=' + type + ' pg=' + object.page); } catch(e) {}
