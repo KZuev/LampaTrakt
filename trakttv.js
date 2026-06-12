@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.0.1';
+  var PLUGIN_VERSION = '3.0.3';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -2890,7 +2890,8 @@
           var fy = String(params.filterYear);
           if (fy.indexOf('-') > 0) {
             var yParts = fy.split('-');
-            var yFrom = parseInt(yParts[0], 10), yTo = parseInt(yParts[1], 10);
+            var yA = parseInt(yParts[0], 10), yB = parseInt(yParts[1], 10);
+            var yFrom = Math.min(yA, yB), yTo = Math.max(yA, yB);
             mapped = mapped.filter(function(x) { var y = parseInt(x.release_date, 10); return y >= yFrom && y <= yTo; });
           } else {
             mapped = mapped.filter(function(x) { return String(x.release_date).slice(0, 4) === fy; });
@@ -3761,7 +3762,8 @@
       var fy = String(options.filterYear);
       if (fy.indexOf('-') > 0) {
         var parts = fy.split('-');
-        var yFrom = parseInt(parts[0], 10), yTo = parseInt(parts[1], 10);
+        var yA = parseInt(parts[0], 10), yB = parseInt(parts[1], 10);
+        var yFrom = Math.min(yA, yB), yTo = Math.max(yA, yB);
         results = results.filter(function(x) { var y = parseInt(x.release_date, 10); return y >= yFrom && y <= yTo; });
       } else {
         results = results.filter(function(x) { return String(x.release_date).slice(0, 4) === fy; });
@@ -4802,22 +4804,36 @@
   function buildYearFilterItems(cur, selectedYear, tr) {
     var items = [{ title: tr('trakttv_filter_all', 'Любой'), value: '', selected: !selectedYear }];
     function push(title, value) { items.push({ title: title, value: value, selected: selectedYear === value }); }
-    for (var i = 0; i < 5; i++) push(String(cur - i), String(cur - i));
-    var top = cur - 5;
-    while (top >= 2010) {
-      var bot = Math.max(top - 4, 2010);
-      push(bot + '–' + top, bot + '-' + top);
-      top = bot - 1;
+    // Individual years from cur down to 2020
+    var indYears = [];
+    for (var y = cur; y >= 2020; y--) indYears.push(y);
+    // If more than 7, compress complete 5-year blocks from the bottom (2020-2024, 2025-2029, ...)
+    var extraGroups = [];
+    while (indYears.length > 7) {
+      var oldest = indYears[indYears.length - 1];
+      var bStart = Math.floor(oldest / 5) * 5;
+      var bEnd = bStart + 4;
+      var full = true;
+      for (var k = bStart; k <= bEnd; k++) { if (indYears.indexOf(k) < 0) { full = false; break; } }
+      if (!full) break;
+      indYears = indYears.filter(function(y) { return y < bStart || y > bEnd; });
+      extraGroups.unshift(bEnd + '-' + bStart);
     }
-    push('2000–2009', '2000-2009');
-    push('1990–1999', '1990-1999');
-    push('1980–1989', '1980-1989');
-    push('1970–1979', '1970-1979');
+    indYears.forEach(function(y) { push(String(y), String(y)); });
+    extraGroups.forEach(function(v) { push(v.replace('-', '–'), v); });
+    push('2019–2015', '2019-2015');
+    push('2014–2010', '2014-2010');
+    push('2009–2005', '2009-2005');
+    push('2004–2000', '2004-2000');
+    push('1999–1990', '1999-1990');
+    push('1989–1980', '1989-1980');
+    push('1979–1970', '1979-1970');
     push('до 1970', '1920-1969');
     return items;
   }
   function yearFilterLabel(value, fallback) {
     if (!value) return fallback;
+    if (value === '1920-1969') return 'до 1970';
     return value.indexOf('-') > 0 ? value.replace('-', '–') : value;
   }
   function watchlistHub(object) {
