@@ -5834,12 +5834,16 @@
         ru: "Добавить в историю",
       },
       trakt_magic_button: {
-        ru: "Magic ▶",
-        en: "Magic ▶",
+        ru: "Magic Play",
+        en: "Magic Play",
       },
       trakt_magic_searching: {
         ru: "Ищем...",
         en: "Searching...",
+      },
+      trakt_magic_no_next: {
+        ru: "Следующий эпизод не найден",
+        en: "Next episode not found",
       },
       trakt_watchlist_button: {
         ru: "Добавить в watchlist",
@@ -7304,6 +7308,13 @@
 
   function _pad2(n) { return n < 10 ? '0' + n : String(n); }
 
+  function _magicBtnReset(btn) {
+    if (!btn) return;
+    btn.classList.remove('trakt-magic-loading');
+    var sp = btn.querySelector('span');
+    if (sp) sp.textContent = t$2('trakt_magic_button', 'Magic Play');
+  }
+
   function launchMagicShow(btn, card) {
     if (btn) {
       btn.classList.add('trakt-magic-loading');
@@ -7311,10 +7322,8 @@
       if (sp) sp.textContent = t$2('trakt_magic_searching', 'Ищем...');
     }
     var tmdbId = card && card.id;
-    if (!tmdbId) {
-      if (btn) btn.classList.remove('trakt-magic-loading');
-      return;
-    }
+    if (!tmdbId) { _magicBtnReset(btn); return; }
+
     requestApi('GET', '/search/tmdb/' + tmdbId + '?type=show').then(function(res) {
       var traktId = res && res[0] && res[0].show && res[0].show.ids && res[0].show.ids.trakt;
       if (!traktId) throw new Error('no trakt id');
@@ -7323,14 +7332,21 @@
       var next = prog && prog.next_episode;
       var season = next && next.season;
       var episode = next && next.number;
-      if (!season || !episode) throw new Error('no next episode');
-      _magicSelectPending = { type: 'show', season: season, episode: episode };
-      var searchStr = (card.title || card.original_title || '') + ' S' + _pad2(season) + 'E' + _pad2(episode);
+      if (!season || !episode) {
+        // Нет следующего эпизода — запускаем поиск без номера эпизода
+        _magicSelectPending = { type: 'show', season: null, episode: null };
+        notify(t$2('trakt_magic_no_next', 'Следующий эпизод не найден'));
+      } else {
+        _magicSelectPending = { type: 'show', season: season, episode: episode };
+      }
+      var searchStr = (card.title || card.original_title || '');
+      if (season && episode) searchStr += ' S' + _pad2(season) + 'E' + _pad2(episode);
+      _magicBtnReset(btn);
       Lampa.Activity.push({ url: '', title: Lampa.Lang.translate('title_torrents') || 'Торренты', component: 'torrents', search: searchStr, search_one: card.title, search_two: card.original_title, movie: card, page: 1 });
-      if (btn) { btn.classList.remove('trakt-magic-loading'); var sp2 = btn.querySelector('span'); if (sp2) sp2.textContent = t$2('trakt_magic_button', 'Magic ▶'); }
-    }).catch(function() {
+    }).catch(function(err) {
       _magicSelectPending = null;
-      if (btn) { btn.classList.remove('trakt-magic-loading'); var sp3 = btn.querySelector('span'); if (sp3) sp3.textContent = t$2('trakt_magic_button', 'Magic ▶'); }
+      _magicBtnReset(btn);
+      notify(t$2('trakt_magic_no_next', 'Следующий эпизод не найден'));
     });
   }
 
@@ -7343,7 +7359,7 @@
   function addMagicButton(card, method) {
     var btn = document.createElement('div');
     btn.className = 'full-start__button selector trakt-magic-button';
-    btn.innerHTML = '\n        ' + icons.TRAKT_ICON + '\n        <span>' + t$2('trakt_magic_button', 'Magic ▶') + '</span>\n    ';
+    btn.innerHTML = '<svg><use xlink:href="#sprite-torrent"></use></svg><span>' + t$2('trakt_magic_button', 'Magic Play') + '</span>';
     btn.on('hover:enter', function() {
       if (method === 'tv') launchMagicShow(btn, card);
       else launchMagicMovie(btn, card);
