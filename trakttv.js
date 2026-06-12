@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.9.14';
+  var PLUGIN_VERSION = '2.9.15';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -2840,17 +2840,64 @@
     collection: function(params) {
       var page = Math.max(1, parseInt(params && params.page, 10) || 1);
       var limit = Math.max(1, parseInt(params && params.limit, 10) || 36);
+      var mediaType = (params && (params.mediaType || params.type) || 'movies,shows').toString();
+      var sortParts = ((params && params.sort) || 'added/desc').split('/');
+      var sortField = sortParts[0] || 'added';
+      var sortOrder = sortParts[1] === 'asc' ? 'asc' : 'desc';
       var safeGet = function(url) {
         return requestApi('GET', url).then(function(r) {
           return Array.isArray(r) ? r : [];
         }).catch(function() { return []; });
       };
+      var wantMovies = mediaType.indexOf('movies') > -1;
+      var wantShows = mediaType.indexOf('shows') > -1;
+      if (!wantMovies && !wantShows) { wantMovies = true; wantShows = true; }
       return Promise.all([
-        safeGet('/users/me/favorites/movies?extended=full&limit=1000&page=1'),
-        safeGet('/users/me/favorites/shows?extended=full&limit=1000&page=1')
+        wantMovies ? safeGet('/users/me/favorites/movies?extended=full&limit=1000&page=1') : Promise.resolve([]),
+        wantShows ? safeGet('/users/me/favorites/shows?extended=full&limit=1000&page=1') : Promise.resolve([])
       ]).then(function(results) {
         var raw = results[0].concat(results[1]);
+        var listedMap = {};
+        raw.forEach(function(it) {
+          var m = it && (it.movie || it.show);
+          if (m && m.ids && m.ids.trakt) listedMap[m.ids.trakt] = it.listed_at || '';
+        });
         var mapped = formatTraktResults(raw).results;
+        mapped.forEach(function(c) { c.trakt_listed_at = (c.ids && listedMap[c.ids.trakt]) || ''; });
+        if (params && params.filterYear) {
+          var fy = String(params.filterYear);
+          if (fy.indexOf('-') > 0) {
+            var yParts = fy.split('-');
+            var yFrom = parseInt(yParts[0], 10), yTo = parseInt(yParts[1], 10);
+            mapped = mapped.filter(function(x) { var y = parseInt(x.release_date, 10); return y >= yFrom && y <= yTo; });
+          } else {
+            mapped = mapped.filter(function(x) { return String(x.release_date).slice(0, 4) === fy; });
+          }
+        }
+        if (params && params.filterGenre) {
+          var fg = String(params.filterGenre);
+          mapped = mapped.filter(function(x) { return Array.isArray(x.trakt_genres) && x.trakt_genres.indexOf(fg) >= 0; });
+        }
+        if (params && params.filterCountry) {
+          var fc = String(params.filterCountry).toLowerCase();
+          mapped = mapped.filter(function(x) { return x.trakt_country === fc; });
+        }
+        if (sortField === 'random') {
+          for (var i = mapped.length - 1; i > 0; i--) {
+            var j = Math.floor(Math.random() * (i + 1));
+            var tmp = mapped[i]; mapped[i] = mapped[j]; mapped[j] = tmp;
+          }
+        } else {
+          var dir = sortOrder === 'asc' ? 1 : -1;
+          mapped.sort(function(a, b) {
+            var av, bv;
+            if (sortField === 'title') { av = (a.title || '').toLowerCase(); bv = (b.title || '').toLowerCase(); return av < bv ? -dir : av > bv ? dir : 0; }
+            if (sortField === 'released') { av = parseInt(a.release_date, 10) || 0; bv = parseInt(b.release_date, 10) || 0; return (av - bv) * dir; }
+            if (sortField === 'rating') { av = Number(a.vote_average) || 0; bv = Number(b.vote_average) || 0; return (av - bv) * dir; }
+            av = a.trakt_listed_at || ''; bv = b.trakt_listed_at || '';
+            return av < bv ? -dir : av > bv ? dir : 0;
+          });
+        }
         var start = (page - 1) * limit;
         var pageItems = mapped.slice(start, start + limit);
         var total_pages = Math.ceil(mapped.length / limit) || 1;
@@ -3683,7 +3730,7 @@
           } else if ((type === 'list' || type === 'myListItems') && object.list_id) {
             params.id = object.list_id;
           }
-          params.limit = type === 'watchlist' ? 500 : 36;
+          params.limit = (type === 'watchlist' || type === 'collection') ? 500 : 36;
           params.page = params.page || 1;
           if (!Api$2) { logApiMissing$1(); return; }
           Api$2[type](params).then(function (data) {
@@ -3714,7 +3761,7 @@
             } else if ((type === 'list' || type === 'myListItems') && object.list_id) {
               params.id = object.list_id;
             }
-            params.limit = type === 'watchlist' ? 500 : 36;
+            params.limit = (type === 'watchlist' || type === 'collection') ? 500 : 36;
             if (!Api$2) { waitload = false; reject.call(this); return; }
             Api$2[type](params).then(function (data) {
               if (data && data.total_pages) { total_pages = data.total_pages; _this2.total_pages = data.total_pages; }
@@ -3796,7 +3843,7 @@
         } else if ((type === 'list' || type === 'myListItems') && object.list_id) {
           params.id = object.list_id;
         }
-        params.limit = type === 'watchlist' ? 500 : 36;
+        params.limit = (type === 'watchlist' || type === 'collection') ? 500 : 36;
         params.page = params.page || 1;
         if (!Api$2) { logApiMissing$1(); return; }
         Api$2[type](params).then(function (data) {
@@ -3821,7 +3868,7 @@
           } else if ((type === 'list' || type === 'myListItems') && object.list_id) {
             params.id = object.list_id;
           }
-          params.limit = type === 'watchlist' ? 500 : 36;
+          params.limit = (type === 'watchlist' || type === 'collection') ? 500 : 36;
           if (!Api$2) { logApiMissing$1(); return; }
           Api$2[type](params).then(function (data) {
             if (data && data.total_pages) total_pages = data.total_pages;
@@ -5238,9 +5285,229 @@
     if (!object.page) object.page = 1;
     return new baseComponent(object, 'history');
   }
+  function collectionHub(object) {
+    var COL_FILTER_CTRL = 'trakt_collection_filter_ctrl';
+    var activity, html, controls, filtersRow, body;
+    var currentView = null;
+    var lastFilterFocus = null;
+    var activeFilters = {
+      type: object.filterType || 'all',
+      year: object.filterYear || '',
+      genre: object.filterGenre || '',
+      country: object.filterCountry || ''
+    };
+    var typeBtn, yearBtn, genreBtn, countryBtn, sortBtn;
+    var activeSort = { field: object.sortField || 'added', order: object.sortOrder || 'desc' };
+
+    function tr(key, fallback) {
+      try { return Lampa.Lang.translate(key) || fallback || key; } catch(e) { return fallback || key; }
+    }
+    function getTypeLabel() {
+      if (activeFilters.type === 'movie') return tr('trakttv_watchlist_tab_movies', 'Фильмы');
+      if (activeFilters.type === 'tv') return tr('trakttv_watchlist_tab_shows', 'Сериалы');
+      return tr('trakttv_filter_all', 'Все');
+    }
+    function getYearLabel() { return activeFilters.year || tr('trakttv_filter_any_year', 'Год'); }
+    function getGenreLabel() {
+      if (!activeFilters.genre) return tr('trakttv_filter_any_genre', 'Жанр');
+      return TRAKT_GENRE_NAMES_RU[activeFilters.genre] || activeFilters.genre;
+    }
+    function getCountryLabel() {
+      if (!activeFilters.country) return tr('trakttv_filter_any_country', 'Страна');
+      var c = TRAKT_RECS_COUNTRIES.find(function(x) { return x.slug === activeFilters.country; });
+      return c ? c.ru : activeFilters.country;
+    }
+    function updateBtn(btn, label, active) {
+      btn.find('.trakt-watchlist__sort-label').text(label);
+      btn.toggleClass('trakt-watchlist__sort--active active', !!active);
+      btn.css({ 'background': active ? 'rgba(155,89,208,.18)' : '', 'box-shadow': active ? 'inset 0 0 0 1px rgba(155,89,208,.3)' : '', 'border-bottom': active ? '3px solid #9b59d0' : '' });
+    }
+    function getSortLabel() {
+      var f = activeSort.field;
+      if (!f || f === 'random') return '…';
+      return formatWatchlistSortLabel(f) + ' ' + formatWatchlistSortArrow(activeSort.order);
+    }
+    function rebuildView() {
+      if (currentView && currentView.destroy) currentView.destroy();
+      body.empty();
+      var viewObject = Object.assign({}, object, {
+        page: 1,
+        filterType: activeFilters.type,
+        filterYear: activeFilters.year,
+        filterGenre: activeFilters.genre,
+        filterCountry: activeFilters.country,
+        sortField: activeSort.field,
+        sortOrder: activeSort.order,
+        sort: activeSort.field + '/' + activeSort.order,
+        onHead: function() { Lampa.Controller.toggle(COL_FILTER_CTRL); }
+      });
+      currentView = new baseComponent(viewObject, 'collection');
+      currentView.activity = activity;
+      currentView.create();
+      body.append(currentView.render());
+      if (currentView.start) currentView.start();
+    }
+    function restoreFilters() { Lampa.Controller.toggle(COL_FILTER_CTRL); }
+    function makeBtn(label, extraClass) {
+      var cls = 'simple-button simple-button--filter selector trakt-watchlist__sort' + (extraClass ? ' ' + extraClass : '');
+      var btn = $('<div class="' + cls + '"><div class="trakt-watchlist__sort-label">' + label + '</div></div>');
+      btn.css({ 'justify-content': 'center', 'align-items': 'center', 'height': 'auto', 'border-radius': '1.1em', 'padding': '.7em .9em', 'flex': '1 1 auto', 'box-sizing': 'border-box' });
+      btn.find('.trakt-watchlist__sort-label').css({ 'width': '100%', 'text-align': 'center', 'white-space': 'normal', 'word-break': 'break-word', 'line-height': '1.3', 'margin-left': '0', 'overflow': 'visible' });
+      return btn;
+    }
+    function openTypeFilter() {
+      Lampa.Select.show({
+        title: tr('trakttv_filter_type_title', 'Тип контента'),
+        items: [
+          { title: tr('trakttv_filter_all', 'Все'), value: 'all', selected: activeFilters.type === 'all' },
+          { title: tr('trakttv_watchlist_tab_movies', 'Фильмы'), value: 'movie', selected: activeFilters.type === 'movie' },
+          { title: tr('trakttv_watchlist_tab_shows', 'Сериалы'), value: 'tv', selected: activeFilters.type === 'tv' }
+        ],
+        onSelect: function(item) {
+          activeFilters.type = item.value || 'all';
+          updateBtn(typeBtn, getTypeLabel(), true);
+          rebuildView(); restoreFilters();
+        },
+        onBack: restoreFilters
+      });
+    }
+    function openYearFilter() {
+      var cur = new Date().getFullYear();
+      var items = [{ title: tr('trakttv_filter_all', 'Любой'), value: '', selected: !activeFilters.year }];
+      for (var y = cur; y >= 1990; y--) items.push({ title: String(y), value: String(y), selected: activeFilters.year === String(y) });
+      items.push({ title: '1980-е', value: '1980-1989', selected: activeFilters.year === '1980-1989' });
+      items.push({ title: '1970-е', value: '1970-1979', selected: activeFilters.year === '1970-1979' });
+      items.push({ title: 'до 1970', value: '1920-1969', selected: activeFilters.year === '1920-1969' });
+      Lampa.Select.show({
+        title: tr('trakttv_filter_year_title', 'Год выпуска'),
+        items: items,
+        onSelect: function(item) {
+          activeFilters.year = item.value;
+          updateBtn(yearBtn, getYearLabel(), !!activeFilters.year);
+          rebuildView(); restoreFilters();
+        },
+        onBack: restoreFilters
+      });
+    }
+    function openGenreFilter() {
+      var genres = typeof TRAKT_TRENDING_GENRES !== 'undefined' ? TRAKT_TRENDING_GENRES : [];
+      var items = [{ title: tr('trakttv_filter_all', 'Любой'), value: '', selected: !activeFilters.genre }];
+      genres.forEach(function(g) {
+        items.push({ title: TRAKT_GENRE_NAMES_RU[g.slug] || g.name, value: g.slug, selected: activeFilters.genre === g.slug });
+      });
+      Lampa.Select.show({
+        title: tr('trakttv_filter_genre_title', 'Жанр'),
+        items: items,
+        onSelect: function(item) {
+          activeFilters.genre = item.value;
+          updateBtn(genreBtn, getGenreLabel(), !!activeFilters.genre);
+          rebuildView(); restoreFilters();
+        },
+        onBack: restoreFilters
+      });
+    }
+    function openCountryFilter() {
+      var items = [{ title: tr('trakttv_filter_all', 'Любая'), value: '', selected: !activeFilters.country }];
+      TRAKT_RECS_COUNTRIES.forEach(function(c) {
+        items.push({ title: c.ru, value: c.slug, selected: activeFilters.country === c.slug });
+      });
+      Lampa.Select.show({
+        title: tr('trakttv_filter_country_title', 'Страна'),
+        items: items,
+        onSelect: function(item) {
+          activeFilters.country = item.value;
+          updateBtn(countryBtn, getCountryLabel(), !!activeFilters.country);
+          rebuildView(); restoreFilters();
+        },
+        onBack: restoreFilters
+      });
+    }
+    function openSortMenu() {
+      var SORT_OPTIONS = [
+        { field: 'added',    label: tr('trakttv_watchlist_sort_added', 'По добавлению') },
+        { field: 'title',    label: tr('trakttv_watchlist_sort_title', 'По названию') },
+        { field: 'released', label: tr('trakttv_watchlist_sort_released', 'По году') },
+        { field: 'rating',   label: tr('trakttv_watchlist_sort_rating', 'По рейтингу') },
+        { field: 'random',   label: tr('trakttv_watchlist_sort_random', 'Случайно') }
+      ];
+      var items = SORT_OPTIONS.map(function(opt) {
+        var isCurrent = activeSort.field === opt.field;
+        var arrow = isCurrent ? (' ' + formatWatchlistSortArrow(activeSort.order)) : '';
+        return { title: opt.label + arrow, value: opt.field, selected: isCurrent };
+      });
+      Lampa.Select.show({
+        title: tr('trakttv_recs_sort_menu_title', 'Сортировка'),
+        items: items,
+        onSelect: function(item) {
+          var nextOrder = item.value === activeSort.field ? (activeSort.order === 'desc' ? 'asc' : 'desc') : 'desc';
+          activeSort.field = item.value;
+          activeSort.order = nextOrder;
+          updateBtn(sortBtn, getSortLabel(), true);
+          rebuildView(); restoreFilters();
+        },
+        onBack: restoreFilters
+      });
+    }
+    function buildFilters() {
+      filtersRow = $('<div class="trakt-watchlist-hub__sorts trakt-recs-hub__sorts"></div>');
+      typeBtn = makeBtn(getTypeLabel());
+      typeBtn.on('hover:focus', function() { lastFilterFocus = typeBtn[0]; });
+      typeBtn.on('hover:enter', function() { lastFilterFocus = typeBtn[0]; openTypeFilter(); });
+      yearBtn = makeBtn(getYearLabel());
+      yearBtn.on('hover:focus', function() { lastFilterFocus = yearBtn[0]; });
+      yearBtn.on('hover:enter', function() { lastFilterFocus = yearBtn[0]; openYearFilter(); });
+      genreBtn = makeBtn(getGenreLabel());
+      genreBtn.on('hover:focus', function() { lastFilterFocus = genreBtn[0]; });
+      genreBtn.on('hover:enter', function() { lastFilterFocus = genreBtn[0]; openGenreFilter(); });
+      countryBtn = makeBtn(getCountryLabel());
+      countryBtn.on('hover:focus', function() { lastFilterFocus = countryBtn[0]; });
+      countryBtn.on('hover:enter', function() { lastFilterFocus = countryBtn[0]; openCountryFilter(); });
+      sortBtn = makeBtn(getSortLabel(), 'trakt-watchlist__sort--more');
+      sortBtn.on('hover:focus', function() { lastFilterFocus = sortBtn[0]; });
+      sortBtn.on('hover:enter', function() { lastFilterFocus = sortBtn[0]; openSortMenu(); });
+      filtersRow.append(typeBtn, yearBtn, genreBtn, countryBtn, sortBtn);
+      updateBtn(typeBtn, getTypeLabel(), true);
+      updateBtn(yearBtn, getYearLabel(), !!activeFilters.year);
+      updateBtn(genreBtn, getGenreLabel(), !!activeFilters.genre);
+      updateBtn(countryBtn, getCountryLabel(), !!activeFilters.country);
+      updateBtn(sortBtn, getSortLabel(), true);
+    }
+    Lampa.Controller.add(COL_FILTER_CTRL, {
+      toggle: function() {
+        var focus = lastFilterFocus && document.body && document.body.contains(lastFilterFocus)
+          ? lastFilterFocus : (controls ? controls.find('.selector')[0] : false) || false;
+        Lampa.Controller.collectionSet(controls);
+        Lampa.Controller.collectionFocus(focus, controls);
+      },
+      right: function() { if (typeof Navigator !== 'undefined') Navigator.move('right'); },
+      left: function() { if (typeof Navigator !== 'undefined' && Navigator.canmove('left')) Navigator.move('left'); else Lampa.Controller.toggle('menu'); },
+      down: function() { if (typeof Navigator !== 'undefined' && Navigator.canmove('down')) Navigator.move('down'); else Lampa.Controller.toggle('content'); },
+      up: function() { if (typeof Navigator !== 'undefined' && Navigator.canmove('up')) Navigator.move('up'); else Lampa.Controller.toggle('head'); },
+      back: function() { Lampa.Activity.backward(); }
+    });
+    return {
+      create: function() {
+        activity = this.activity;
+        html = $('<div class="trakt-watchlist-hub"></div>');
+        controls = $('<div class="trakt-watchlist-hub__controls"></div>');
+        body = $('<div class="trakt-watchlist-hub__body"></div>');
+        buildFilters();
+        controls.append(filtersRow);
+        html.append(controls, body);
+        rebuildView();
+        return this.render();
+      },
+      render: function(js) { return js ? html[0] : html; },
+      start: function() { if (currentView && currentView.start) currentView.start(); },
+      pause: function() { if (currentView && currentView.pause) currentView.pause(); },
+      stop: function() { if (currentView && currentView.stop) currentView.stop(); },
+      destroy: function() { if (currentView && currentView.destroy) currentView.destroy(); }
+    };
+  }
+
   function collection(object) {
     if (!object.page) object.page = 1;
-    return new baseComponent(object, 'collection');
+    return new collectionHub(object);
   }
   function watchingHub(object) {
     var WH_CTRL = 'trakt_watching_hub_ctrl';
