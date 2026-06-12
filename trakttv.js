@@ -7290,25 +7290,44 @@
     return /дублирован|дубляж|  apple| dub | d[,| ]|[,\s]дб[,\s]/i.test(title || '');
   }
 
+  function _magicHasRusAudio(e) {
+    var el = e.element || {};
+    if (Array.isArray(el.languages) && el.languages.some(function(l) {
+      return String(l).toLowerCase().slice(0, 2) === 'ru';
+    })) return true;
+    return /rus|рус|дубл|многогол|двухгол|двуго|mvo|dvo|лицен/i.test(el.Title || '');
+  }
+
   function pickBestTorrentFromCollected(collected, ctx) {
     if (!collected || !collected.length) return null;
     var pool = collected;
-    if (ctx && ctx.type === 'movie') {
-      var dubbed = collected.filter(function(e) { return _magicIsDubbed(e.element.Title); });
-      if (dubbed.length) pool = dubbed;
-    }
+    // Сериал: только торренты с нужным сезоном
     if (ctx && ctx.type === 'show' && ctx.season) {
-      var seasonMatched = collected.filter(function(e) {
+      var seasonMatched = pool.filter(function(e) {
         return _magicTitleMatchesSeason(e.element.Title, ctx.season);
       });
       if (seasonMatched.length) pool = seasonMatched;
     }
+    // Фильм: дубляж в приоритете, иначе хотя бы RUS-дорожки
+    if (ctx && ctx.type === 'movie') {
+      var dubbed = pool.filter(function(e) { return _magicIsDubbed(e.element.Title); });
+      if (dubbed.length) pool = dubbed;
+      else {
+        var rusM = pool.filter(_magicHasRusAudio);
+        if (rusM.length) pool = rusM;
+      }
+    } else {
+      // Сериал: RUS-дорожки в приоритете
+      var rusS = pool.filter(_magicHasRusAudio);
+      if (rusS.length) pool = rusS;
+    }
+    // Максимальное качество в приоритете, внутри него — самый популярный
     var sorted = pool.slice().sort(function(a, b) {
-      // Популярность = раздают + качают; качество — tiebreaker
+      var qa = qualityScore(a.element.Title || ''), qb = qualityScore(b.element.Title || '');
+      if (qb !== qa) return qb - qa;
       var pa = (a.element.Seeders || 0) + (a.element.Peers || 0);
       var pb = (b.element.Seeders || 0) + (b.element.Peers || 0);
-      if (pb !== pa) return pb - pa;
-      return qualityScore(b.element.Title || '') - qualityScore(a.element.Title || '');
+      return pb - pa;
     });
     return sorted[0] || null;
   }
