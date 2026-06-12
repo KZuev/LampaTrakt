@@ -3117,6 +3117,7 @@
         return { traktId: found.show && found.show.ids && found.show.ids.trakt };
       }).catch(function() { return false; });
     },
+    inHistory: function inHistory(params) {
       var type = normalizeMediaType(params) === 'movie' ? 'movies' : 'shows';
       var ids = resolveTraktIds(params);
       return requestApi('GET', "/sync/history/".concat(type, "?extended=full")).then(function (response) {
