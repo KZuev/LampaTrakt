@@ -3066,11 +3066,15 @@
     inFavorites: function inFavorites(params) {
       var type = normalizeMediaType(params) === 'movie' ? 'movies' : 'shows';
       var ids = resolveTraktIds(params);
-      return requestApi('GET', '/users/me/favorites/' + type + '?extended=full').then(function(r) {
-        return (Array.isArray(r) ? r : []).find(function(item) {
+      return requestApi('GET', '/users/me/favorites/' + type + '?extended=full&limit=1000&page=1').then(function(r) {
+        var found = (Array.isArray(r) ? r : []).find(function(item) {
           var m = item && (item.movie || item.show);
           return m && sameAnyId(m.ids || {}, ids);
-        }) || false;
+        });
+        if (!found) return false;
+        // normalize: ensure found.id exists (fallback to rank)
+        if (!found.id && found.rank) found = Object.assign({}, found, { id: found.rank });
+        return found;
       });
     },
     addToFavorites: function addToFavorites(params) {
@@ -3081,11 +3085,29 @@
       body[key] = { ids: ids };
       return requestApi('POST', '/users/me/favorites/' + (isMovie ? 'movies' : 'shows'), body);
     },
+    removeFromFavoriteById: function removeFromFavoriteById(favoriteId) {
+      return new Promise(function(resolve, reject) {
+        var headers = ensureHeaders({ unauthorized: false });
+        $.ajax({
+          url: API_URL + '/users/me/favorites/' + favoriteId,
+          type: 'DELETE',
+          headers: headers,
+          timeout: 15000,
+          crossDomain: true
+        }).done(function() {
+          resolve(true);
+        }).fail(function(jqXHR) {
+          var status = jqXHR && jqXHR.status ? jqXHR.status : 0;
+          if (status >= 200 && status < 300) { resolve(true); return; }
+          reject(Object.assign(new Error('TraktTV favorites delete failed'), { status: status }));
+        });
+      });
+    },
     removeFromFavorites: function removeFromFavorites(params) {
       var self = this;
       return self.inFavorites(params).then(function(found) {
         if (!found || !found.id) return Promise.reject(new Error('Not in favorites'));
-        return requestApi('DELETE', '/users/me/favorites/' + found.id);
+        return self.removeFromFavoriteById(found.id);
       });
     },
     inHistory: function inHistory(params) {
@@ -7243,10 +7265,12 @@
               { title: Lampa.Lang.translate('trakt_watched_unknown_date'), action: 'unknown' },
               { title: Lampa.Lang.translate('trakt_menu_not_watched'), action: 'not_watched' }
             ];
+            var favoriteId = favoritesState && favoritesState.id;
             var favoritesItem = {
               title: favoritesState ? t$2('trakt_favorites_remove', 'Убрать из избранного') : t$2('trakt_favorites_add', 'В избранное'),
               target: 'favorites',
-              inFavorites: !!favoritesState
+              inFavorites: !!favoritesState,
+              favoriteId: favoriteId || null
             };
             var allItems = statusItems.concat([favoritesItem]).concat(buildManagerItems(!!watchlistState, withMembership));
             Lampa.Select.show({
@@ -7254,9 +7278,14 @@
               items: allItems,
               onSelect: function(a) {
                 if (a.target === 'favorites') {
-                  var favReq = a.inFavorites
-                    ? (api$1 ? api$1.removeFromFavorites(listParams) : Promise.reject())
-                    : (api$1 ? api$1.addToFavorites(listParams) : Promise.reject());
+                  var favReq;
+                  if (a.inFavorites) {
+                    favReq = a.favoriteId && api$1
+                      ? api$1.removeFromFavoriteById(a.favoriteId)
+                      : (api$1 ? api$1.removeFromFavorites(listParams) : Promise.reject(new Error('no api')));
+                  } else {
+                    favReq = api$1 ? api$1.addToFavorites(listParams) : Promise.reject(new Error('no api'));
+                  }
                   favReq.then(function() {
                     _invalidateListMenuCache(listParams);
                     notify(a.inFavorites ? t$2('trakt_favorites_remove', 'Убрать из избранного') : t$2('trakt_favorites_add', 'В избранное'));
