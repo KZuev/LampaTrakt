@@ -7315,6 +7315,18 @@
     if (sp) sp.textContent = t$2('trakt_magic_button', 'Magic Play');
   }
 
+  function _magicNormalizeCard(card) {
+    if (!card) return {};
+    // На полной карточке данные могут лежать во вложенном контейнере
+    // (тот же набор, что в onFullCardReady): movie, show, card, data
+    var containers = [card, card.movie, card.show, card.card, card.data];
+    for (var i = 0; i < containers.length; i++) {
+      var c = containers[i];
+      if (c && (c.title || c.name || c.original_title || c.original_name)) return c;
+    }
+    return card;
+  }
+
   function _magicCardTitle(card) {
     return card.title || card.name || card.original_title || card.original_name || '';
   }
@@ -7324,7 +7336,7 @@
   }
 
   function launchMagicShow(btn, card) {
-    card = (card && card.movie) || card || {};
+    card = _magicNormalizeCard(card);
     if (btn) {
       btn.classList.add('trakt-magic-loading');
       var sp = btn.querySelector('span');
@@ -7360,7 +7372,7 @@
   }
 
   function launchMagicMovie(btn, card) {
-    card = (card && card.movie) || card || {};
+    card = _magicNormalizeCard(card);
     _magicSelectPending = { type: 'movie' };
     var title = _magicCardTitle(card);
     var searchStr = title ? title + ' дубляж' : '';
