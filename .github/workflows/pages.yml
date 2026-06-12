@@ -2,6 +2,9 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main]
+concurrency:
+  group: pages
+  cancel-in-progress: true
 permissions:
   pages: write
   id-token: write
