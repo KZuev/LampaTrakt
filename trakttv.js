@@ -3851,7 +3851,7 @@
           } else { try { _listLogAdd('bC.onNext end→reject type=' + type + ' pg=' + object.page + '/' + total_pages); } catch(e) {} reject.call(this); }
         },
         onController: function onController(controller) {
-          if ((type === 'watchlist' || type === 'watching' || type === 'history') && object && typeof object.onHead === 'function') {
+          if ((type === 'watchlist' || type === 'watching' || type === 'history' || type === 'collection') && object && typeof object.onHead === 'function') {
             controller.up = function () {
               if (Navigator.canmove('up')) Navigator.move('up'); else object.onHead();
             };
@@ -3860,7 +3860,7 @@
         onEmpty: function onEmpty() {
           try { _listLogAdd('bC.onEmpty type=' + type); } catch(e) {}
           _emptyInstance = this.empty_class || null;
-          if ((type !== 'watchlist' && type !== 'watching' && type !== 'history') || !object || typeof object.onHead !== 'function') return;
+          if ((type !== 'watchlist' && type !== 'watching' && type !== 'history' && type !== 'collection') || !object || typeof object.onHead !== 'function') return;
           if (!this.empty_class || typeof this.empty_class.use !== 'function') return;
           this.empty_class.use({ onController: function (controller) {
             controller.up = function () { if (Navigator.canmove('up')) Navigator.move('up'); else object.onHead(); };
@@ -4799,6 +4799,27 @@
       onBack: opts.onBack
     });
   }
+  function buildYearFilterItems(cur, selectedYear, tr) {
+    var items = [{ title: tr('trakttv_filter_all', 'Любой'), value: '', selected: !selectedYear }];
+    function push(title, value) { items.push({ title: title, value: value, selected: selectedYear === value }); }
+    for (var i = 0; i < 5; i++) push(String(cur - i), String(cur - i));
+    var top = cur - 5;
+    while (top >= 2010) {
+      var bot = Math.max(top - 4, 2010);
+      push(bot + '–' + top, bot + '-' + top);
+      top = bot - 1;
+    }
+    push('2000–2009', '2000-2009');
+    push('1990–1999', '1990-1999');
+    push('1980–1989', '1980-1989');
+    push('1970–1979', '1970-1979');
+    push('до 1970', '1920-1969');
+    return items;
+  }
+  function yearFilterLabel(value, fallback) {
+    if (!value) return fallback;
+    return value.indexOf('-') > 0 ? value.replace('-', '–') : value;
+  }
   function watchlistHub(object) {
     var WL_FILTER_CTRL = 'trakt_watchlist_controls';
     var activity, html, controls, filtersRow, body;
@@ -4832,7 +4853,7 @@
     function isActive(val) { return !!val && val !== 'all'; }
 
     function getYearLabel() {
-      return activeFilters.year || tr('trakttv_filter_any_year', 'Год');
+      return yearFilterLabel(activeFilters.year, tr('trakttv_filter_any_year', 'Год'));
     }
     function getGenreLabel() {
       if (!activeFilters.genre) return tr('trakttv_filter_any_genre', 'Жанр');
@@ -4907,12 +4928,7 @@
     }
 
     function openYearFilter() {
-      var cur = new Date().getFullYear();
-      var items = [{ title: tr('trakttv_filter_all', 'Любой'), value: '', selected: !activeFilters.year }];
-      for (var y = cur; y >= 1990; y--) items.push({ title: String(y), value: String(y), selected: activeFilters.year === String(y) });
-      items.push({ title: '1980-е', value: '1980-1989', selected: activeFilters.year === '1980-1989' });
-      items.push({ title: '1970-е', value: '1970-1979', selected: activeFilters.year === '1970-1979' });
-      items.push({ title: 'до 1970', value: '1920-1969', selected: activeFilters.year === '1920-1969' });
+      var items = buildYearFilterItems(new Date().getFullYear(), activeFilters.year, tr);
       Lampa.Select.show({
         title: tr('trakttv_filter_year_title', 'Год выпуска'),
         items: items,
@@ -5124,7 +5140,7 @@
       if (activeFilters.type === 'tv') return tr('trakttv_watchlist_tab_shows', 'Сериалы');
       return tr('trakttv_filter_all', 'Все');
     }
-    function getYearLabel() { return activeFilters.year || tr('trakttv_filter_any_year', 'Год'); }
+    function getYearLabel() { return yearFilterLabel(activeFilters.year, tr('trakttv_filter_any_year', 'Год')); }
     function getGenreLabel() {
       if (!activeFilters.genre) return tr('trakttv_filter_any_genre', 'Жанр');
       return TRAKT_GENRE_NAMES_RU[activeFilters.genre] || activeFilters.genre;
@@ -5224,12 +5240,7 @@
       });
     }
     function openYearFilter() {
-      var cur = new Date().getFullYear();
-      var items = [{ title: tr('trakttv_filter_all', 'Любой'), value: '', selected: !activeFilters.year }];
-      for (var y = cur; y >= 1990; y--) items.push({ title: String(y), value: String(y), selected: activeFilters.year === String(y) });
-      items.push({ title: '1980-е', value: '1980-1989', selected: activeFilters.year === '1980-1989' });
-      items.push({ title: '1970-е', value: '1970-1979', selected: activeFilters.year === '1970-1979' });
-      items.push({ title: 'до 1970', value: '1920-1969', selected: activeFilters.year === '1920-1969' });
+      var items = buildYearFilterItems(new Date().getFullYear(), activeFilters.year, tr);
       Lampa.Select.show({
         title: tr('trakttv_filter_year_title', 'Год выпуска'),
         items: items,
@@ -5510,7 +5521,7 @@
       if (activeFilters.type === 'tv') return tr('trakttv_watchlist_tab_shows', 'Сериалы');
       return tr('trakttv_filter_all', 'Все');
     }
-    function getYearLabel() { return activeFilters.year || tr('trakttv_filter_any_year', 'Год'); }
+    function getYearLabel() { return yearFilterLabel(activeFilters.year, tr('trakttv_filter_any_year', 'Год')); }
     function getGenreLabel() {
       if (!activeFilters.genre) return tr('trakttv_filter_any_genre', 'Жанр');
       return TRAKT_GENRE_NAMES_RU[activeFilters.genre] || activeFilters.genre;
@@ -5575,12 +5586,7 @@
       });
     }
     function openYearFilter() {
-      var cur = new Date().getFullYear();
-      var items = [{ title: tr('trakttv_filter_all', 'Любой'), value: '', selected: !activeFilters.year }];
-      for (var y = cur; y >= 1990; y--) items.push({ title: String(y), value: String(y), selected: activeFilters.year === String(y) });
-      items.push({ title: '1980-е', value: '1980-1989', selected: activeFilters.year === '1980-1989' });
-      items.push({ title: '1970-е', value: '1970-1979', selected: activeFilters.year === '1970-1979' });
-      items.push({ title: 'до 1970', value: '1920-1969', selected: activeFilters.year === '1920-1969' });
+      var items = buildYearFilterItems(new Date().getFullYear(), activeFilters.year, tr);
       Lampa.Select.show({
         title: tr('trakttv_filter_year_title', 'Год выпуска'),
         items: items,
