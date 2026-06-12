@@ -7315,7 +7315,16 @@
     if (sp) sp.textContent = t$2('trakt_magic_button', 'Magic Play');
   }
 
+  function _magicCardTitle(card) {
+    return card.title || card.name || card.original_title || card.original_name || '';
+  }
+
+  function _magicCardOriginalTitle(card) {
+    return card.original_title || card.original_name || card.title || card.name || '';
+  }
+
   function launchMagicShow(btn, card) {
+    card = (card && card.movie) || card || {};
     if (btn) {
       btn.classList.add('trakt-magic-loading');
       var sp = btn.querySelector('span');
@@ -7339,10 +7348,10 @@
       } else {
         _magicSelectPending = { type: 'show', season: season, episode: episode };
       }
-      var searchStr = (card.title || card.original_title || '');
+      var searchStr = _magicCardTitle(card);
       if (season && episode) searchStr += ' S' + _pad2(season) + 'E' + _pad2(episode);
       _magicBtnReset(btn);
-      Lampa.Activity.push({ url: '', title: Lampa.Lang.translate('title_torrents') || 'Торренты', component: 'torrents', search: searchStr, search_one: card.title, search_two: card.original_title, movie: card, page: 1 });
+      Lampa.Activity.push({ url: '', title: Lampa.Lang.translate('title_torrents') || 'Торренты', component: 'torrents', search: searchStr, search_one: _magicCardTitle(card), search_two: _magicCardOriginalTitle(card), movie: card, page: 1 });
     }).catch(function(err) {
       _magicSelectPending = null;
       _magicBtnReset(btn);
@@ -7351,9 +7360,11 @@
   }
 
   function launchMagicMovie(btn, card) {
+    card = (card && card.movie) || card || {};
     _magicSelectPending = { type: 'movie' };
-    var searchStr = (card.title || card.original_title || '') + ' дубляж';
-    Lampa.Activity.push({ url: '', title: Lampa.Lang.translate('title_torrents') || 'Торренты', component: 'torrents', search: searchStr, search_one: card.title, search_two: card.original_title, movie: card, page: 1 });
+    var title = _magicCardTitle(card);
+    var searchStr = title ? title + ' дубляж' : '';
+    Lampa.Activity.push({ url: '', title: Lampa.Lang.translate('title_torrents') || 'Торренты', component: 'torrents', search: searchStr, search_one: _magicCardTitle(card), search_two: _magicCardOriginalTitle(card), movie: card, page: 1 });
   }
 
   function addMagicButton(card, method) {
