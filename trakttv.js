@@ -2747,6 +2747,11 @@
           }
         });
         filtered.sort(function(a, b) {
+          if (watchingFilter === 'active') {
+            var aHasRemaining = a.totalEps > a.watchedEps ? 1 : 0;
+            var bHasRemaining = b.totalEps > b.watchedEps ? 1 : 0;
+            if (aHasRemaining !== bHasRemaining) return bHasRemaining - aHasRemaining;
+          }
           var da = a.item.last_watched_at || '';
           var db = b.item.last_watched_at || '';
           return da > db ? -1 : da < db ? 1 : 0;
