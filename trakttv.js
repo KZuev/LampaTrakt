@@ -7298,6 +7298,13 @@
     return /rus|рус|дубл|многогол|двухгол|двуго|mvo|dvo|лицен/i.test(el.Title || '');
   }
 
+  function _magicSetting(name, def) {
+    try {
+      var v = Lampa.Storage.get(name);
+      return (v === undefined || v === null || v === '') ? def : v;
+    } catch (e) { return def; }
+  }
+
   function pickBestTorrentFromCollected(collected, ctx) {
     if (!collected || !collected.length) return null;
     var pool = collected;
@@ -7308,25 +7315,43 @@
       });
       if (seasonMatched.length) pool = seasonMatched;
     }
-    // Фильм: дубляж в приоритете, иначе хотя бы RUS-дорожки
-    if (ctx && ctx.type === 'movie') {
-      var dubbed = pool.filter(function(e) { return _magicIsDubbed(e.element.Title); });
-      if (dubbed.length) pool = dubbed;
-      else {
-        var rusM = pool.filter(_magicHasRusAudio);
-        if (rusM.length) pool = rusM;
+    // Фильтр озвучки по настройке
+    var voiceMode = _magicSetting('trakt_magic_voice', 'dub');
+    if (voiceMode !== 'any') {
+      if (ctx && ctx.type === 'movie' && voiceMode === 'dub') {
+        // Фильм: дубляж в приоритете, иначе хотя бы RUS-дорожки
+        var dubbed = pool.filter(function(e) { return _magicIsDubbed(e.element.Title); });
+        if (dubbed.length) pool = dubbed;
+        else {
+          var rusM = pool.filter(_magicHasRusAudio);
+          if (rusM.length) pool = rusM;
+        }
+      } else {
+        // Сериал или режим «любая русская»: RUS-дорожки в приоритете
+        var rusS = pool.filter(_magicHasRusAudio);
+        if (rusS.length) pool = rusS;
       }
-    } else {
-      // Сериал: RUS-дорожки в приоритете
-      var rusS = pool.filter(_magicHasRusAudio);
-      if (rusS.length) pool = rusS;
     }
-    // Максимальное качество в приоритете, внутри него — самый популярный
+    // Целевое качество по настройке: max — лучшее доступное;
+    // 4k/1080p/720p — точное совпадение в приоритете, затем ниже, затем выше
+    var qualityMode = _magicSetting('trakt_magic_quality', 'max');
+    var targetScore = { '4k': 4, '1080p': 3, '720p': 2 }[qualityMode] || 0;
+    function effectiveQuality(title) {
+      var q = qualityScore(title);
+      if (!targetScore) return q;
+      if (q === targetScore) return 100;
+      return q < targetScore ? q : -q; // ниже целевого лучше, чем выше
+    }
+    var popularityFirst = _magicSetting('trakt_magic_popularity', 'quality_first') === 'popularity_first';
     var sorted = pool.slice().sort(function(a, b) {
-      var qa = qualityScore(a.element.Title || ''), qb = qualityScore(b.element.Title || '');
-      if (qb !== qa) return qb - qa;
+      var qa = effectiveQuality(a.element.Title || ''), qb = effectiveQuality(b.element.Title || '');
       var pa = (a.element.Seeders || 0) + (a.element.Peers || 0);
       var pb = (b.element.Seeders || 0) + (b.element.Peers || 0);
+      if (popularityFirst) {
+        if (pb !== pa) return pb - pa;
+        return qb - qa;
+      }
+      if (qb !== qa) return qb - qa;
       return pb - pa;
     });
     return sorted[0] || null;
@@ -9684,6 +9709,63 @@
       component: 'trakt',
       param: { name: 'trakt_badge_watchlist', type: 'trigger', 'default': true },
       field: { name: 'Бейдж «Хочу посмотреть»', description: 'Закладка на фильмах и сериалах из списка желаний' }
+    });
+    // ── Magic Play ───────────────────────────────────────────────────────────────
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: { name: 'trakt_magic_section', type: 'static' },
+      field: { name: '' },
+      onRender: function(item) {
+        item.empty();
+        item.append('<div class="settings-param__name" style="opacity:.55;font-weight:700">Magic Play</div>');
+      }
+    });
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: { name: 'trakt_magic_enabled', type: 'trigger', 'default': false },
+      field: { name: 'Кнопка Magic Play', description: 'Автозапуск лучшего торрента в меню «Смотреть» — бонусный функционал, по умолчанию выключен' }
+    });
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: {
+        name: 'trakt_magic_quality',
+        type: 'select',
+        "default": 'max',
+        values: {
+          max: 'Максимальное доступное',
+          '4k': '4K',
+          '1080p': '1080p',
+          '720p': '720p'
+        }
+      },
+      field: { name: 'Magic Play: качество', description: 'Приоритетное качество при автовыборе торрента' }
+    });
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: {
+        name: 'trakt_magic_voice',
+        type: 'select',
+        "default": 'dub',
+        values: {
+          dub: 'Дубляж (фильмы), RUS (сериалы)',
+          rus: 'Любая русская озвучка',
+          any: 'Не фильтровать озвучку'
+        }
+      },
+      field: { name: 'Magic Play: озвучка', description: 'Фильтр озвучки при автовыборе торрента' }
+    });
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: {
+        name: 'trakt_magic_popularity',
+        type: 'select',
+        "default": 'quality_first',
+        values: {
+          quality_first: 'Качество, затем популярность',
+          popularity_first: 'Популярность, затем качество'
+        }
+      },
+      field: { name: 'Magic Play: приоритет сортировки', description: 'Что важнее при выборе: качество или количество раздающих' }
     });
     // ── Отладка ──────────────────────────────────────────────────────────────────
     Lampa.SettingsApi.addParam({
@@ -13118,7 +13200,8 @@
       }
 
       // Magic Button — вставляем в .buttons--container, откуда «Смотреть» берёт список источников
-      if (e.object.method === 'tv' || e.object.method === 'movie') {
+      // Бонусный функционал: показываем только если включён в настройках
+      if (readBooleanStorage$2('trakt_magic_enabled', false) && (e.object.method === 'tv' || e.object.method === 'movie')) {
         var magicRoot = e.object && e.object.activity && typeof e.object.activity.render === 'function'
           ? e.object.activity.render() : null;
         if (magicRoot) {
