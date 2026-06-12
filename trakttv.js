@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.9.37';
+  var PLUGIN_VERSION = '3.0.0';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -5833,6 +5833,14 @@
       trakt_history_button: {
         ru: "Добавить в историю",
       },
+      trakt_magic_button: {
+        ru: "Magic ▶",
+        en: "Magic ▶",
+      },
+      trakt_magic_searching: {
+        ru: "Ищем...",
+        en: "Searching...",
+      },
       trakt_watchlist_button: {
         ru: "Добавить в watchlist",
       },
@@ -7253,6 +7261,95 @@
     addWatchlistButton: addWatchlistButton,
     openManagerByCard: openManagerByCard
   };
+
+  function qualityScore(s) {
+    if (/2160|4k|uhd/i.test(s)) return 4;
+    if (/1080/i.test(s)) return 3;
+    if (/720/i.test(s)) return 2;
+    if (/480/i.test(s)) return 1;
+    return 0;
+  }
+
+  function pickBestTorrentFromCollected(collected, ctx) {
+    if (!collected || !collected.length) return null;
+    var pool = collected;
+    if (ctx && ctx.type === 'movie') {
+      var dubbed = collected.filter(function(e) {
+        return /дубляж|дублир|rus\.dub|russian\.dub/i.test(e.element.Title || '');
+      });
+      if (dubbed.length) pool = dubbed;
+    }
+    var sorted = pool.slice().sort(function(a, b) {
+      var qa = qualityScore(a.element.Title || ''), qb = qualityScore(b.element.Title || '');
+      if (qb !== qa) return qb - qa;
+      return (b.element.Seeders || 0) - (a.element.Seeders || 0);
+    });
+    return sorted[0] || null;
+  }
+
+  function pickBestFile(items, ctx) {
+    if (!items || !items.length) return null;
+    var pool = items;
+    if (ctx && ctx.season != null) {
+      var matched = items.filter(function(i) { return i.season === ctx.season && i.episode === ctx.episode; });
+      if (matched.length) pool = matched;
+    } else {
+      var dubbed = items.filter(function(i) { return /дубляж|дублир|rus\.dub|russian\.dub/i.test(i.title || i.path || ''); });
+      if (dubbed.length) pool = dubbed;
+    }
+    return pool.slice().sort(function(a, b) {
+      return qualityScore(b.title || b.path || '') - qualityScore(a.title || a.path || '');
+    })[0] || null;
+  }
+
+  function _pad2(n) { return n < 10 ? '0' + n : String(n); }
+
+  function launchMagicShow(btn, card) {
+    if (btn) {
+      btn.classList.add('trakt-magic-loading');
+      var sp = btn.querySelector('span');
+      if (sp) sp.textContent = t$2('trakt_magic_searching', 'Ищем...');
+    }
+    var tmdbId = card && card.id;
+    if (!tmdbId) {
+      if (btn) btn.classList.remove('trakt-magic-loading');
+      return;
+    }
+    requestApi('GET', '/search/tmdb/' + tmdbId + '?type=show').then(function(res) {
+      var traktId = res && res[0] && res[0].show && res[0].show.ids && res[0].show.ids.trakt;
+      if (!traktId) throw new Error('no trakt id');
+      return requestApi('GET', '/shows/' + traktId + '/progress/watched');
+    }).then(function(prog) {
+      var next = prog && prog.next_episode;
+      var season = next && next.season;
+      var episode = next && next.number;
+      if (!season || !episode) throw new Error('no next episode');
+      _magicSelectPending = { type: 'show', season: season, episode: episode };
+      var searchStr = (card.title || card.original_title || '') + ' S' + _pad2(season) + 'E' + _pad2(episode);
+      Lampa.Activity.push({ url: '', title: Lampa.Lang.translate('title_torrents') || 'Торренты', component: 'torrents', search: searchStr, search_one: card.title, search_two: card.original_title, movie: card, page: 1 });
+      if (btn) { btn.classList.remove('trakt-magic-loading'); var sp2 = btn.querySelector('span'); if (sp2) sp2.textContent = t$2('trakt_magic_button', 'Magic ▶'); }
+    }).catch(function() {
+      _magicSelectPending = null;
+      if (btn) { btn.classList.remove('trakt-magic-loading'); var sp3 = btn.querySelector('span'); if (sp3) sp3.textContent = t$2('trakt_magic_button', 'Magic ▶'); }
+    });
+  }
+
+  function launchMagicMovie(btn, card) {
+    _magicSelectPending = { type: 'movie' };
+    var searchStr = (card.title || card.original_title || '') + ' дубляж';
+    Lampa.Activity.push({ url: '', title: Lampa.Lang.translate('title_torrents') || 'Торренты', component: 'torrents', search: searchStr, search_one: card.title, search_two: card.original_title, movie: card, page: 1 });
+  }
+
+  function addMagicButton(card, method) {
+    var btn = document.createElement('div');
+    btn.className = 'full-start__button selector trakt-magic-button';
+    btn.innerHTML = '\n        ' + icons.TRAKT_ICON + '\n        <span>' + t$2('trakt_magic_button', 'Magic ▶') + '</span>\n    ';
+    btn.on('hover:enter', function() {
+      if (method === 'tv') launchMagicShow(btn, card);
+      else launchMagicMovie(btn, card);
+    });
+    return btn;
+  }
 
   var TraktHistory = {
     showWatchProgress: function showWatchProgress(data, element) {
@@ -11971,6 +12068,10 @@
   }
   var _watchedCache = null;
   var _watchedCachePromise = null;
+  var _magicSelectPending = null;
+  var _magicBestFile = null;
+  var _magicTorrentCollected = [];
+  var _magicTorrentTimer = null;
 
   var _UPCOMING_MOVIE_KEY = 'trakt_upcoming_movie_ids';
   function getUpcomingMovieIds() {
@@ -12463,6 +12564,45 @@
           _this.onFullCardReady(e);
         }
       });
+
+      // Magic Button: авто-выбор лучшего торрента из поисковой выдачи
+      Lampa.Listener.follow('torrent', function(e) {
+        if (!_magicSelectPending) return;
+        if (e.type === 'render') {
+          _magicTorrentCollected.push(e);
+          clearTimeout(_magicTorrentTimer);
+          _magicTorrentTimer = setTimeout(function() {
+            if (!_magicSelectPending) return;
+            var best = pickBestTorrentFromCollected(_magicTorrentCollected, _magicSelectPending);
+            _magicTorrentCollected = [];
+            _magicTorrentTimer = null;
+            if (best && best.item) best.item.trigger('hover:enter');
+          }, 400);
+        }
+      });
+
+      // Magic Button: авто-выбор нужного файла/эпизода внутри торрента
+      Lampa.Listener.follow('torrent_file', function(e) {
+        if (!_magicSelectPending) return;
+        if (e.type === 'list_open') {
+          _magicBestFile = pickBestFile(e.items || [], _magicSelectPending);
+        }
+        if (e.type === 'render' && _magicBestFile) {
+          var el = e.element, best = _magicBestFile;
+          var match = (best.season != null)
+            ? (el.season === best.season && el.episode === best.episode)
+            : (el.path === best.path || el.url === best.url);
+          if (match) {
+            _magicSelectPending = null;
+            _magicBestFile = null;
+            setTimeout(function() { if (e.item) e.item.trigger('hover:enter'); }, 50);
+          }
+        }
+        if (e.type === 'list_close') {
+          _magicSelectPending = null;
+          _magicBestFile = null;
+        }
+      });
       Lampa.Listener.follow('line', function (e) {
         if (!e || !e.type) return;
         if (e.type === 'append' && Array.isArray(e.items) && e.items.length > 0) {
@@ -12868,6 +13008,17 @@
             var rateLine = renderRoot.find('.full-start-new__rate-line');
             if (rateLine.length) rateLine.after(mwBtn);
           }
+        }
+      }
+
+      // Magic Button
+      if (e.object.method === 'tv' || e.object.method === 'movie') {
+        var magicRoot = e.object && e.object.activity && typeof e.object.activity.render === 'function'
+          ? e.object.activity.render() : null;
+        if (magicRoot) {
+          var magicBtn = addMagicButton(e.data, e.object.method);
+          var magicRateLine = magicRoot.find('.full-start-new__rate-line');
+          if (magicRateLine.length) magicRateLine.after(magicBtn);
         }
       }
     }
