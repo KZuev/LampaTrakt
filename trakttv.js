@@ -7311,18 +7311,14 @@
     return sorted[0] || null;
   }
 
-  function pickBestFile(items, ctx) {
-    if (!items || !items.length) return null;
-    var pool = items;
-    if (ctx && ctx.season != null) {
-      var matched = items.filter(function(i) { return i.season === ctx.season && i.episode === ctx.episode; });
-      if (matched.length) pool = matched;
-    } else {
-      var dubbed = items.filter(function(i) { return /дубляж|дублир|rus\.dub|russian\.dub/i.test(i.title || i.path || ''); });
-      if (dubbed.length) pool = dubbed;
-    }
+  function pickBestFileFromCollected(collected) {
+    if (!collected || !collected.length) return null;
+    var dubbed = collected.filter(function(e) {
+      return _magicIsDubbed(e.element.title || e.element.path || '');
+    });
+    var pool = dubbed.length ? dubbed : collected;
     return pool.slice().sort(function(a, b) {
-      return qualityScore(b.title || b.path || '') - qualityScore(a.title || a.path || '');
+      return qualityScore((b.element.title || b.element.path || '')) - qualityScore((a.element.title || a.element.path || ''));
     })[0] || null;
   }
 
@@ -12144,9 +12140,10 @@
   var _watchedCache = null;
   var _watchedCachePromise = null;
   var _magicSelectPending = null;
-  var _magicBestFile = null;
   var _magicTorrentCollected = [];
   var _magicTorrentTimer = null;
+  var _magicFileCollected = [];
+  var _magicFileTimer = null;
 
   var _UPCOMING_MOVIE_KEY = 'trakt_upcoming_movie_ids';
   function getUpcomingMovieIds() {
@@ -12656,26 +12653,39 @@
         }
       });
 
-      // Magic Button: авто-выбор нужного файла/эпизода внутри торрента
+      // Magic Button: авто-выбор нужного файла/эпизода внутри торрента.
+      // Важно: на list_open у файлов ещё нет season/episode (Lampa проставляет
+      // их позже через Arrays.extend), поэтому выбираем на render-событиях.
       Lampa.Listener.follow('torrent_file', function(e) {
         if (!_magicSelectPending) return;
-        if (e.type === 'list_open') {
-          _magicBestFile = pickBestFile(e.items || [], _magicSelectPending);
-        }
-        if (e.type === 'render' && _magicBestFile) {
-          var el = e.element, best = _magicBestFile;
-          var match = (best.season != null)
-            ? (el.season === best.season && el.episode === best.episode)
-            : (el.path === best.path || el.url === best.url);
-          if (match) {
-            _magicSelectPending = null;
-            _magicBestFile = null;
-            setTimeout(function() { if (e.item) e.item.trigger('hover:enter'); }, 50);
+        var ctx = _magicSelectPending;
+        if (e.type === 'render' && e.element) {
+          if (ctx.season != null && ctx.episode != null) {
+            // Сериал: ждём рендер файла с нужным сезоном/эпизодом
+            if (e.element.season == ctx.season && e.element.episode == ctx.episode) {
+              _magicSelectPending = null;
+              _magicFileCollected = [];
+              clearTimeout(_magicFileTimer);
+              setTimeout(function() { if (e.item) e.item.trigger('hover:enter'); }, 50);
+            }
+          } else {
+            // Фильм/без эпизода: собираем все файлы, после паузы выбираем лучший
+            _magicFileCollected.push(e);
+            clearTimeout(_magicFileTimer);
+            _magicFileTimer = setTimeout(function() {
+              if (!_magicSelectPending) return;
+              var best = pickBestFileFromCollected(_magicFileCollected);
+              _magicFileCollected = [];
+              _magicFileTimer = null;
+              _magicSelectPending = null;
+              if (best && best.item) best.item.trigger('hover:enter');
+            }, 300);
           }
         }
         if (e.type === 'list_close') {
           _magicSelectPending = null;
-          _magicBestFile = null;
+          _magicFileCollected = [];
+          clearTimeout(_magicFileTimer);
         }
       });
       Lampa.Listener.follow('line', function (e) {
