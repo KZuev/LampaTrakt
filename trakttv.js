@@ -7274,14 +7274,34 @@
     return 0;
   }
 
+  // Проверка «торрент содержит сезон N» — паттерны из фильтра Lampa (torrents.js filtred)
+  function _magicTitleMatchesSeason(title, season) {
+    title = (title || '').toLowerCase();
+    var f = parseInt(season, 10);
+    if (!f) return false;
+    var range = title.match(/\[s(\d+)-(\d+)\]/) || title.match(/season (\d+)\s*-\s*(\d+)/) || title.match(/сезон:? ?(\d+)-(\d+)/);
+    if (range && f >= parseInt(range[1], 10) && f <= parseInt(range[2], 10)) return true;
+    var re = new RegExp('\\[0?' + f + '[xх]|\\[s0?' + f + '[\\]\\-]|s0?' + f + 'e|s0?' + f + '-|сезон:? ?0?' + f + '\\b|\\b' + f + ' сезон|season ' + f + '\\b');
+    return re.test(title);
+  }
+
+  function _magicIsDubbed(title) {
+    // Паттерн «дубляж» из фильтра Lampa (voice p == 1)
+    return /дублирован|дубляж|  apple| dub | d[,| ]|[,\s]дб[,\s]/i.test(title || '');
+  }
+
   function pickBestTorrentFromCollected(collected, ctx) {
     if (!collected || !collected.length) return null;
     var pool = collected;
     if (ctx && ctx.type === 'movie') {
-      var dubbed = collected.filter(function(e) {
-        return /дубляж|дублир|rus\.dub|russian\.dub/i.test(e.element.Title || '');
-      });
+      var dubbed = collected.filter(function(e) { return _magicIsDubbed(e.element.Title); });
       if (dubbed.length) pool = dubbed;
+    }
+    if (ctx && ctx.type === 'show' && ctx.season) {
+      var seasonMatched = collected.filter(function(e) {
+        return _magicTitleMatchesSeason(e.element.Title, ctx.season);
+      });
+      if (seasonMatched.length) pool = seasonMatched;
     }
     var sorted = pool.slice().sort(function(a, b) {
       var qa = qualityScore(a.element.Title || ''), qb = qualityScore(b.element.Title || '');
@@ -7306,7 +7326,25 @@
     })[0] || null;
   }
 
-  function _pad2(n) { return n < 10 ? '0' + n : String(n); }
+  // Поисковая строка как у нативной кнопки «Торренты» (full/start/torrents.js)
+  function _magicSearchString(card) {
+    var year = ((card.first_air_date || card.release_date || '0000') + '').slice(0, 4);
+    var title = _magicCardTitle(card);
+    var orig = _magicCardOriginalTitle(card);
+    var combinations = {
+      'df': orig,
+      'df_year': orig + ' ' + year,
+      'df_lg': orig + ' ' + title,
+      'df_lg_year': orig + ' ' + title + ' ' + year,
+      'lg': title,
+      'lg_year': title + ' ' + year,
+      'lg_df': title + ' ' + orig,
+      'lg_df_year': title + ' ' + orig + ' ' + year
+    };
+    var key = '';
+    try { key = Lampa.Storage.field('parse_lang'); } catch (e) {}
+    return combinations[key] || title;
+  }
 
   function _magicBtnReset(btn) {
     if (!btn) return;
@@ -7360,10 +7398,8 @@
       } else {
         _magicSelectPending = { type: 'show', season: season, episode: episode };
       }
-      var searchStr = _magicCardTitle(card);
-      if (season && episode) searchStr += ' S' + _pad2(season) + 'E' + _pad2(episode);
       _magicBtnReset(btn);
-      Lampa.Activity.push({ url: '', title: Lampa.Lang.translate('title_torrents') || 'Торренты', component: 'torrents', search: searchStr, search_one: _magicCardTitle(card), search_two: _magicCardOriginalTitle(card), movie: card, page: 1 });
+      Lampa.Activity.push({ url: '', title: Lampa.Lang.translate('title_torrents') || 'Торренты', component: 'torrents', search: _magicSearchString(card), search_one: _magicCardTitle(card), search_two: _magicCardOriginalTitle(card), movie: card, page: 1 });
     }).catch(function(err) {
       _magicSelectPending = null;
       _magicBtnReset(btn);
@@ -7374,9 +7410,7 @@
   function launchMagicMovie(btn, card) {
     card = _magicNormalizeCard(card);
     _magicSelectPending = { type: 'movie' };
-    var title = _magicCardTitle(card);
-    var searchStr = title ? title + ' дубляж' : '';
-    Lampa.Activity.push({ url: '', title: Lampa.Lang.translate('title_torrents') || 'Торренты', component: 'torrents', search: searchStr, search_one: _magicCardTitle(card), search_two: _magicCardOriginalTitle(card), movie: card, page: 1 });
+    Lampa.Activity.push({ url: '', title: Lampa.Lang.translate('title_torrents') || 'Торренты', component: 'torrents', search: _magicSearchString(card), search_one: _magicCardTitle(card), search_two: _magicCardOriginalTitle(card), movie: card, page: 1 });
   }
 
   function addMagicButton(card, method) {
