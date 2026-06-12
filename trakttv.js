@@ -12393,7 +12393,11 @@
               var cv = cn && cn.querySelector('.card__view');
               if (cv && !cv.getAttribute('data-trakt-movie-id')) cv.setAttribute('data-trakt-movie-id', String(d.id));
             });
-            e.items.forEach(renderWatchedBadge);
+            var _isUpnextRow = e.data && e.data.trakt_row === 'upnext';
+            e.items.forEach(function(ci) {
+              if (_isUpnextRow && ci.data && ci.data.method !== 'movie') return;
+              renderWatchedBadge(ci);
+            });
             e.items.forEach(renderWatchlistBadge);
             e.items.forEach(renderDigitalReleaseBadge);
             refreshDigitalBadgesDOM();
