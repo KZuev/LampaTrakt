@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.9.23';
+  var PLUGIN_VERSION = '2.9.24';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -12055,7 +12055,7 @@
     var badge = document.createElement('div');
     badge.className = 'trakt-watched-badge';
     badge.setAttribute('data-tmdb', String(data.id));
-    badge.innerHTML = icons.TRAKT_ICON;
+    badge.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 12.5L9.5 18L20.5 7"/><path d="M6.5 10L10 13.5"/><path d="M9 7.5L12.5 11"/></svg>';
     cardView.appendChild(badge);
   }
 
