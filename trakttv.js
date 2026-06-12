@@ -7315,22 +7315,22 @@
       });
       if (seasonMatched.length) pool = seasonMatched;
     }
-    // Фильтр озвучки по настройке
-    var voiceMode = _magicSetting('trakt_magic_voice', 'dub');
-    if (voiceMode !== 'any') {
-      if (ctx && ctx.type === 'movie' && voiceMode === 'dub') {
-        // Фильм: дубляж в приоритете, иначе хотя бы RUS-дорожки
-        var dubbed = pool.filter(function(e) { return _magicIsDubbed(e.element.Title); });
-        if (dubbed.length) pool = dubbed;
-        else {
-          var rusM = pool.filter(_magicHasRusAudio);
-          if (rusM.length) pool = rusM;
-        }
-      } else {
-        // Сериал или режим «любая русская»: RUS-дорожки в приоритете
-        var rusS = pool.filter(_magicHasRusAudio);
-        if (rusS.length) pool = rusS;
+    // Фильтр озвучки — раздельные настройки для фильмов и сериалов
+    var isMovie = ctx && ctx.type === 'movie';
+    var voiceMode = isMovie
+      ? _magicSetting('trakt_magic_voice_movie', 'dub')
+      : _magicSetting('trakt_magic_voice_show', 'rus');
+    if (voiceMode === 'dub') {
+      // Дубляж в приоритете, иначе хотя бы RUS-дорожки
+      var dubbed = pool.filter(function(e) { return _magicIsDubbed(e.element.Title); });
+      if (dubbed.length) pool = dubbed;
+      else {
+        var rusD = pool.filter(_magicHasRusAudio);
+        if (rusD.length) pool = rusD;
       }
+    } else if (voiceMode === 'rus') {
+      var rus = pool.filter(_magicHasRusAudio);
+      if (rus.length) pool = rus;
     }
     // Целевое качество по настройке: max — лучшее доступное;
     // 4k/1080p/720p — точное совпадение в приоритете, затем ниже, затем выше
@@ -9723,7 +9723,7 @@
     Lampa.SettingsApi.addParam({
       component: 'trakt',
       param: { name: 'trakt_magic_enabled', type: 'trigger', 'default': false },
-      field: { name: 'Кнопка Magic Play', description: 'Автозапуск лучшего торрента в меню «Смотреть» — бонусный функционал, по умолчанию выключен' }
+      field: { name: 'Кнопка Magic Play', description: 'Автозапуск лучшего торрента в меню «Смотреть»' }
     });
     Lampa.SettingsApi.addParam({
       component: 'trakt',
@@ -9743,16 +9743,30 @@
     Lampa.SettingsApi.addParam({
       component: 'trakt',
       param: {
-        name: 'trakt_magic_voice',
+        name: 'trakt_magic_voice_movie',
         type: 'select',
         "default": 'dub',
         values: {
-          dub: 'Дубляж (фильмы), RUS (сериалы)',
+          dub: 'Дубляж',
           rus: 'Любая русская озвучка',
           any: 'Не фильтровать озвучку'
         }
       },
-      field: { name: 'Magic Play: озвучка', description: 'Фильтр озвучки при автовыборе торрента' }
+      field: { name: 'Magic Play: озвучка фильмов', description: 'Фильтр озвучки при автовыборе торрента фильма' }
+    });
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: {
+        name: 'trakt_magic_voice_show',
+        type: 'select',
+        "default": 'rus',
+        values: {
+          dub: 'Дубляж',
+          rus: 'Любая русская озвучка',
+          any: 'Не фильтровать озвучку'
+        }
+      },
+      field: { name: 'Magic Play: озвучка сериалов', description: 'Фильтр озвучки при автовыборе торрента сериала' }
     });
     Lampa.SettingsApi.addParam({
       component: 'trakt',
