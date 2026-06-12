@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.9.20';
+  var PLUGIN_VERSION = '2.9.21';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -3893,9 +3893,11 @@
                 var _bd = _card.data || element;
                 if (_bd && _bd.id) {
                   var _bt = _bd.method || _bd.card_type || _bd.type || (_bd.first_air_date ? 'tv' : 'movie');
-                  if (_bt === 'movie') {
+                  var _isM = _bt === 'movie';
+                  var _isS = _bt === 'tv' || _bt === 'show';
+                  if (_isM || _isS) {
                     if (_renderedCardInstances.indexOf(_card) < 0) _renderedCardInstances.push(_card);
-                    renderDigitalReleaseBadge(_card);
+                    if (_isM) renderDigitalReleaseBadge(_card);
                     renderWatchedBadge(_card);
                     renderWatchlistBadge(_card);
                   }
@@ -3981,9 +3983,12 @@
           var _bd = (card && card.data) || element;
           if (_bd && _bd.id) {
             var _bt = _bd.method || _bd.card_type || _bd.type || (_bd.first_air_date ? 'tv' : 'movie');
-            if (_bt === 'movie') {
+            var _isM = _bt === 'movie';
+            var _isS = _bt === 'tv' || _bt === 'show';
+            if (_isM || _isS) {
               if (_renderedCardInstances.indexOf(card) < 0) _renderedCardInstances.push(card);
-              renderDigitalReleaseBadge(card); renderWatchedBadge(card); renderWatchlistBadge(card);
+              if (_isM) renderDigitalReleaseBadge(card);
+              renderWatchedBadge(card); renderWatchlistBadge(card);
             }
           }
         }
