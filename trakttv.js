@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.9.19';
+  var PLUGIN_VERSION = '2.9.20';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -11945,42 +11945,50 @@
   function ensureWatchedCache() {
     if (_watchedCache) return Promise.resolve(_watchedCache);
     if (_watchedCachePromise) return _watchedCachePromise;
-    if (!Lampa.Storage.get('trakt_token')) return Promise.resolve({ movies: new Set(), shows: new Set() });
+    if (!Lampa.Storage.get('trakt_token')) return Promise.resolve({ movies: new Set(), shows: new Set(), completedShows: new Set() });
     var _A = typeof api$1 !== 'undefined' && api$1 || null;
-    if (!_A) return Promise.resolve({ movies: new Set(), shows: new Set() });
+    if (!_A) return Promise.resolve({ movies: new Set(), shows: new Set(), completedShows: new Set() });
     _watchedCachePromise = Promise.all([
       _A.watchedMovies().catch(function() { return []; }),
-      _A.watchedShows().catch(function() { return []; })
+      requestApi('GET', '/sync/watched/shows?extended=full').catch(function() { return []; })
     ]).then(function(res) {
-      var ms = new Set(), ss = new Set(), mDates = new Map();
+      var ms = new Set(), ss = new Set(), cs = new Set(), mDates = new Map();
       (res[0] || []).forEach(function(x) { var id = x.movie && x.movie.ids && x.movie.ids.tmdb; if (id) { ms.add(String(id)); if (x.last_watched_at) mDates.set(String(id), x.last_watched_at); } });
       _watchedEpisodesCache.clear();
       (res[1] || []).forEach(function(x) {
         var id = x.show && x.show.ids && x.show.ids.tmdb;
         if (!id) return;
         ss.add(String(id));
+        var totalEps = Number(x.show && x.show.aired_episodes) || 0;
+        var watchedEps = 0;
         if (Array.isArray(x.seasons)) {
           x.seasons.forEach(function(s) {
             if (!s || !Array.isArray(s.episodes)) return;
             s.episodes.forEach(function(ep) {
               if (!ep || !ep.number) return;
               _watchedEpisodesCache.add(String(id) + '-' + String(s.number) + '-' + String(ep.number));
+              if (s.number !== 0 && (ep.plays || 0) > 0) watchedEps++;
             });
           });
         }
+        if (totalEps > 0 && watchedEps >= totalEps) cs.add(String(id));
       });
-      _watchedCache = { movies: ms, shows: ss, moviesWatchedAt: mDates };
+      _watchedCache = { movies: ms, shows: ss, completedShows: cs, moviesWatchedAt: mDates };
       _watchedCachePromise = null;
       return _watchedCache;
     }).catch(function() {
       _watchedCachePromise = null;
-      _watchedCache = { movies: new Set(), shows: new Set(), moviesWatchedAt: new Map() };
+      _watchedCache = { movies: new Set(), shows: new Set(), completedShows: new Set(), moviesWatchedAt: new Map() };
       return _watchedCache;
     });
     return _watchedCachePromise;
   }
 
-  function loadWatchedCache() { ensureWatchedCache(); }
+  function loadWatchedCache() {
+    ensureWatchedCache().then(function() {
+      setTimeout(function() { _renderedCardInstances.forEach(renderWatchedBadge); }, 0);
+    }).catch(function() {});
+  }
 
   var _watchedEpisodesCache = new Set();
   function invalidateWatchedCache() { _watchedCache = null; _watchedCachePromise = null; _watchedEpisodesCache.clear(); }
@@ -12034,7 +12042,7 @@
     var isMovie = type === 'movie';
     var isShow = type === 'tv' || type === 'show';
     if (!isMovie && !isShow) return;
-    var watched = isMovie ? _watchedCache.movies.has(String(data.id)) : _watchedCache.shows.has(String(data.id));
+    var watched = isMovie ? _watchedCache.movies.has(String(data.id)) : (_watchedCache.completedShows && _watchedCache.completedShows.has(String(data.id)));
     if (!watched) return;
     var cardNode = typeof cardInstance.render === 'function' ? cardInstance.render(true) : null;
     var cardView = cardNode && cardNode.querySelector('.card__view');
@@ -12296,12 +12304,14 @@
       if (!Lampa.Storage.get('trakt_token')) return inst;
       if (inst && data && data.id) {
         var type = data.method || data.card_type || data.type || (data.first_air_date ? 'tv' : 'movie');
-        if (type === 'movie') {
+        var isMovie = type === 'movie';
+        var isShow = type === 'tv' || type === 'show';
+        if (isMovie || isShow) {
           if (_renderedCardInstances.indexOf(inst) < 0) _renderedCardInstances.push(inst);
           setTimeout(function() {
-            renderDigitalReleaseBadge(inst);
-            renderWatchedBadge(inst);
+            if (isMovie) renderDigitalReleaseBadge(inst);
             renderWatchlistBadge(inst);
+            renderWatchedBadge(inst);
           }, 0);
         }
       }
