@@ -13011,14 +13011,14 @@
         }
       }
 
-      // Magic Button
+      // Magic Button — вставляем в .buttons--container, откуда «Смотреть» берёт список источников
       if (e.object.method === 'tv' || e.object.method === 'movie') {
         var magicRoot = e.object && e.object.activity && typeof e.object.activity.render === 'function'
           ? e.object.activity.render() : null;
         if (magicRoot) {
           var magicBtn = addMagicButton(e.data, e.object.method);
-          var magicRateLine = magicRoot.find('.full-start-new__rate-line');
-          if (magicRateLine.length) magicRateLine.after(magicBtn);
+          var btnsContainer = magicRoot.find('.buttons--container');
+          if (btnsContainer.length) btnsContainer.append(magicBtn);
         }
       }
     }
