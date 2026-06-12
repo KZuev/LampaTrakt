@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.9.15';
+  var PLUGIN_VERSION = '2.9.16';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -3061,6 +3061,31 @@
           return entity.media && sameAnyId(entity.media.ids || {}, ids);
         });
         return !!found;
+      });
+    },
+    inFavorites: function inFavorites(params) {
+      var type = normalizeMediaType(params) === 'movie' ? 'movies' : 'shows';
+      var ids = resolveTraktIds(params);
+      return requestApi('GET', '/users/me/favorites/' + type + '?extended=full').then(function(r) {
+        return (Array.isArray(r) ? r : []).find(function(item) {
+          var m = item && (item.movie || item.show);
+          return m && sameAnyId(m.ids || {}, ids);
+        }) || false;
+      });
+    },
+    addToFavorites: function addToFavorites(params) {
+      var isMovie = normalizeMediaType(params) === 'movie';
+      var key = isMovie ? 'movie' : 'show';
+      var ids = resolveTraktIds(params);
+      var body = { notes: '' };
+      body[key] = { ids: ids };
+      return requestApi('POST', '/users/me/favorites/' + (isMovie ? 'movies' : 'shows'), body);
+    },
+    removeFromFavorites: function removeFromFavorites(params) {
+      var self = this;
+      return self.inFavorites(params).then(function(found) {
+        if (!found || !found.id) return Promise.reject(new Error('Not in favorites'));
+        return requestApi('DELETE', '/users/me/favorites/' + found.id);
       });
     },
     inHistory: function inHistory(params) {
@@ -5759,6 +5784,14 @@
         ru: "Не буду смотреть",
         en: "Not interested",
       },
+      trakt_favorites_add: {
+        ru: "В избранное",
+        en: "Add to Favorites",
+      },
+      trakt_favorites_remove: {
+        ru: "Убрать из избранного",
+        en: "Remove from Favorites",
+      },
       trakt_menu_not_watched: {
         ru: "Отметить как не просмотрено",
         en: "Mark as not watched",
@@ -6986,8 +7019,8 @@
     var e = _listMenuCache[_listMenuCacheKey(params)];
     return (e && Date.now() - e.ts < _LIST_MENU_TTL) ? e : null;
   }
-  function _setListMenuCache(params, watchlistState, withMembership) {
-    _listMenuCache[_listMenuCacheKey(params)] = { ts: Date.now(), watchlistState: watchlistState, withMembership: withMembership };
+  function _setListMenuCache(params, watchlistState, withMembership, favoritesState) {
+    _listMenuCache[_listMenuCacheKey(params)] = { ts: Date.now(), watchlistState: watchlistState, withMembership: withMembership, favoritesState: favoritesState };
   }
   function _invalidateListMenuCache(params) {
     if (params) delete _listMenuCache[_listMenuCacheKey(params)];
@@ -7201,7 +7234,7 @@
         }
         $(el).on('hover:enter', function() {
           var listParams = normalizeCardParams(data);
-          function showTraktMenu(watchlistState, withMembership) {
+          function showTraktMenu(watchlistState, withMembership, favoritesState) {
             var statusItems = isShow ? [
               { title: Lampa.Lang.translate('trakt_menu_mark_completed'), action: 'completed' },
               { title: Lampa.Lang.translate('trakt_menu_not_watched'), action: 'not_watched' }
@@ -7210,11 +7243,28 @@
               { title: Lampa.Lang.translate('trakt_watched_unknown_date'), action: 'unknown' },
               { title: Lampa.Lang.translate('trakt_menu_not_watched'), action: 'not_watched' }
             ];
-            var allItems = statusItems.concat(buildManagerItems(!!watchlistState, withMembership));
+            var favoritesItem = {
+              title: favoritesState ? t$2('trakt_favorites_remove', 'Убрать из избранного') : t$2('trakt_favorites_add', 'В избранное'),
+              target: 'favorites',
+              inFavorites: !!favoritesState
+            };
+            var allItems = statusItems.concat([favoritesItem]).concat(buildManagerItems(!!watchlistState, withMembership));
             Lampa.Select.show({
               title: 'Trakt.TV',
               items: allItems,
               onSelect: function(a) {
+                if (a.target === 'favorites') {
+                  var favReq = a.inFavorites
+                    ? (api$1 ? api$1.removeFromFavorites(listParams) : Promise.reject())
+                    : (api$1 ? api$1.addToFavorites(listParams) : Promise.reject());
+                  favReq.then(function() {
+                    _invalidateListMenuCache(listParams);
+                    notify(a.inFavorites ? t$2('trakt_favorites_remove', 'Убрать из избранного') : t$2('trakt_favorites_add', 'В избранное'));
+                  }).catch(function() {
+                    notify(t$2('trakt_list_action_error', 'List action failed'));
+                  });
+                  return;
+                }
                 if (a.target === 'watchlist' || a.target === 'list') {
                   handleSelectAction(a, listParams, function() { _invalidateListMenuCache(listParams); });
                   return;
@@ -7242,21 +7292,23 @@
           }
           var cached = _getListMenuCache(listParams);
           if (cached) {
-            showTraktMenu(cached.watchlistState, cached.withMembership);
+            showTraktMenu(cached.watchlistState, cached.withMembership, cached.favoritesState);
             return;
           }
           el.classList.add('trakt-loading');
           Promise.all([
             (api$1 ? api$1.inWatchlist(listParams).catch(function() { return false; }) : Promise.resolve(false)),
-            (api$1 ? api$1.myLists({ page: 1, limit: 100 }).catch(function() { return { results: [] }; }) : Promise.resolve({ results: [] }))
+            (api$1 ? api$1.myLists({ page: 1, limit: 100 }).catch(function() { return { results: [] }; }) : Promise.resolve({ results: [] })),
+            (api$1 ? api$1.inFavorites(listParams).catch(function() { return false; }) : Promise.resolve(false))
           ]).then(function(res) {
             var watchlistState = res[0];
             var myListsResponse = res[1];
+            var favoritesState = res[2];
             var lists = myListsResponse && Array.isArray(myListsResponse.results) ? myListsResponse.results : [];
             return loadMyListsMembership(listParams, lists).then(function(withMembership) {
-              _setListMenuCache(listParams, watchlistState, withMembership);
+              _setListMenuCache(listParams, watchlistState, withMembership, favoritesState);
               el.classList.remove('trakt-loading');
-              showTraktMenu(watchlistState, withMembership);
+              showTraktMenu(watchlistState, withMembership, favoritesState);
             });
           }).catch(function() {
             el.classList.remove('trakt-loading');
