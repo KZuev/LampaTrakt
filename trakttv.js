@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.9.17';
+  var PLUGIN_VERSION = '2.9.18';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -1899,6 +1899,7 @@
 
   var _multiwatchIdsCache = null;
   var _multiwatchIdsCachePromise = null;
+  var _triggerWatchingMenuSync = null;
 
   function invalidateMultiwatchIdsCache() {
     _multiwatchIdsCache = null;
@@ -2546,12 +2547,12 @@
         var total_pages = Math.max(1, Math.ceil(total / limit));
         var offset = (page - 1) * limit;
         var paginatedResults = combinedResults.slice(offset, offset + limit);
-        return enrichWithTmdbLocale({
+        return applyMultiwatchFilter(Promise.resolve(enrichWithTmdbLocale({
           results: paginatedResults,
           total: total,
           total_pages: total_pages,
           page: page
-        });
+        })));
       });
     },
     watchlist: function watchlist() {
@@ -2783,13 +2784,13 @@
           }
           return card;
         });
-        return applyMultiwatchFilter(Promise.resolve(enrichWithTmdbLocale({
+        return Promise.resolve(enrichWithTmdbLocale({
           results: mapped,
           total: total,
           total_pages: Math.max(1, Math.ceil(total / limit)),
           page: page,
           limit: limit
-        })));
+        }));
       });
     },
     watchingCounts: function() {
@@ -7833,10 +7834,12 @@
       var menuItem = sideMenuMap[key];
       if (!menuItem) return;
       var shouldShow = Lampa.Storage.get(key) === true;
+      if (key === 'trakt_watching' && readBooleanStorage$2('trakt_multiwatch_enabled', false)) shouldShow = false;
       var alreadyAdded = menuItem.parent().length > 0;
       if (shouldShow && !alreadyAdded) menuList.append(menuItem);
       if (!shouldShow && alreadyAdded) menuItem.remove();
     }
+    _triggerWatchingMenuSync = function() { syncSideMenuItem('trakt_watching'); };
     var combineButton = $("<li class=\"menu__item selector\">\n    <div class=\"menu__ico\">".concat(icons.TRAKT_ICON, " </div>\n        <div class=\"menu__text\">").concat(menuTitle, "</div>\n    </li>"));
     combineButton.on('hover:enter', function () {
       Lampa.Select.show({
@@ -7935,9 +7938,11 @@
             Lampa.Storage.set('trakt_multiwatch_slots', '[]');
           }
           invalidateMultiwatchIdsCache();
+          try { clearAllRowCaches(); } catch (e) {}
           try { clearResponseCache(); } catch (e) {}
           try { invalidateWatchedCache(); } catch (e) {}
           try { invalidateWatchlistBadgeCache(); } catch (e) {}
+          if (typeof _triggerWatchingMenuSync === 'function') _triggerWatchingMenuSync();
           updateTraktAccountSwitchBadge();
           try { Lampa.Controller.toggle(backTarget); } catch (e) {}
           if (backTarget === 'settings_component') { try { Lampa.Settings.update(); } catch(e) {} }
