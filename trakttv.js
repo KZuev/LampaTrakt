@@ -3635,29 +3635,41 @@
   }
   function rearrangeUpnextNotStarted(data) {
     if (!data || !Array.isArray(data.results)) return data;
-    var started = [], notStarted = [];
+    var movies = [], startedShows = [], notStarted = [];
     data.results.forEach(function (item) {
-      var watched = Number(item.trakt_upnext_watched);
-      if (Number.isFinite(watched) && watched === 0) {
+      var isMovie = item && (item.method === 'movie' || item.card_type === 'movie');
+      var watched = Number(item && item.trakt_upnext_watched);
+      if (isMovie) {
+        movies.push(item);
+      } else if (Number.isFinite(watched) && watched === 0) {
         notStarted.push(item);
       } else {
-        started.push(item);
+        startedShows.push(item);
       }
     });
+    if (movies.length > 0) movies[0]._trakt_upnext_first_movie = true;
+    var allShows = startedShows.concat(notStarted);
+    if (allShows.length > 0) allShows[0]._trakt_upnext_first_show = true;
     if (notStarted.length > 0) notStarted[0]._trakt_upnext_first_unstarted = true;
-    return Object.assign({}, data, { results: started.concat(notStarted) });
+    return Object.assign({}, data, { results: movies.concat(startedShows).concat(notStarted) });
   }
   function insertUpnextNotStartedDivider(comp) {
     var container = comp && typeof comp.render === 'function' ? comp.render(true) : null;
     if (!container) return;
-    if (container.querySelector('.trakt-upnext-notstarted-section')) return;
-    var firstUnstarted = container.querySelector('.trakt-upnext-first-unstarted');
-    if (!firstUnstarted || !firstUnstarted.parentNode) return;
-    var label = Lampa.Lang && Lampa.Lang.translate ? Lampa.Lang.translate('trakttv_upnext_not_started') || 'Не начатые' : 'Не начатые';
-    var div = document.createElement('div');
-    div.className = 'trakt-upcoming-section trakt-upnext-notstarted-section';
-    div.textContent = label;
-    firstUnstarted.parentNode.insertBefore(div, firstUnstarted);
+    function insertSection(cssClass, markerClass, langKey, fallback) {
+      if (container.querySelector('.' + cssClass)) return;
+      var anchor = container.querySelector('.' + markerClass);
+      if (!anchor || !anchor.parentNode) return;
+      var label = Lampa.Lang && Lampa.Lang.translate ? Lampa.Lang.translate(langKey) || fallback : fallback;
+      var div = document.createElement('div');
+      div.className = 'trakt-upcoming-section ' + cssClass;
+      div.textContent = label;
+      anchor.parentNode.insertBefore(div, anchor);
+    }
+    var hasMovies = !!container.querySelector('.trakt-upnext-first-movie');
+    insertSection('trakt-upnext-movies-section', 'trakt-upnext-first-movie', 'trakttv_upnext_movies', 'Фильмы');
+    if (hasMovies) insertSection('trakt-upnext-shows-section', 'trakt-upnext-first-show', 'trakttv_upnext_shows', 'Сериалы');
+    insertSection('trakt-upnext-notstarted-section', 'trakt-upnext-first-unstarted', 'trakttv_upnext_not_started', 'Не начатые сериалы');
   }
   function renderDroppedProgressBar(card, element) {
     var pct = Number(element.trakt_show_progress_pct);
@@ -3864,6 +3876,14 @@
                 var node = typeof this.render === 'function' ? this.render(true) : null;
                 if (node) node.classList.add('trakt-upcoming-first');
               }
+              if (type === 'upnext' && element._trakt_upnext_first_movie) {
+                var nodeM = typeof this.render === 'function' ? this.render(true) : null;
+                if (nodeM) nodeM.classList.add('trakt-upnext-first-movie');
+              }
+              if (type === 'upnext' && element._trakt_upnext_first_show) {
+                var nodeS = typeof this.render === 'function' ? this.render(true) : null;
+                if (nodeS) nodeS.classList.add('trakt-upnext-first-show');
+              }
               if (type === 'upnext' && element._trakt_upnext_first_unstarted) {
                 var node2 = typeof this.render === 'function' ? this.render(true) : null;
                 if (node2) node2.classList.add('trakt-upnext-first-unstarted');
@@ -3948,6 +3968,14 @@
         if (type === 'watchlist' && element._trakt_upcoming_first) {
           var node = typeof card.render === 'function' ? card.render(true) : null;
           if (node) node.classList.add('trakt-upcoming-first');
+        }
+        if (type === 'upnext' && element._trakt_upnext_first_movie) {
+          var nodeM = typeof card.render === 'function' ? card.render(true) : null;
+          if (nodeM) nodeM.classList.add('trakt-upnext-first-movie');
+        }
+        if (type === 'upnext' && element._trakt_upnext_first_show) {
+          var nodeS = typeof card.render === 'function' ? card.render(true) : null;
+          if (nodeS) nodeS.classList.add('trakt-upnext-first-show');
         }
         if (type === 'upnext' && element._trakt_upnext_first_unstarted) {
           var node2 = typeof card.render === 'function' ? card.render(true) : null;
@@ -5855,8 +5883,14 @@
       trakttv_watchlist_upcoming: {
         ru: "Скоро",
       },
+      trakttv_upnext_movies: {
+        ru: "Фильмы",
+      },
+      trakttv_upnext_shows: {
+        ru: "Сериалы",
+      },
       trakttv_upnext_not_started: {
-        ru: "Не начатые",
+        ru: "Не начатые сериалы",
       },
       trakttv_calendar: {
         ru: "Календарь",
