@@ -3866,7 +3866,7 @@
           card.use({
             onCreate: function onCreate() {
               renderTvTypeBadge(this, element);
-              if (type === 'upnext') { renderUpnextCardWatched(this, element); if (element.method !== 'movie') renderUpnextRemainingBadge(this, element); }
+              if (type === 'upnext' && element.method !== 'movie') { renderUpnextCardWatched(this, element); renderUpnextRemainingBadge(this, element); }
               if (type === 'watching' && element.trakt_upnext_progress) renderUpnextCardWatched(this, element);
               if (type === 'watching' && element.trakt_watching_filter !== 'dropped') renderUpnextRemainingBadge(this, element);
               if (type === 'history') renderHistoryDateBadge(this, element);
@@ -3960,7 +3960,7 @@
       };
       comp.cardRender = function (_, element, card) {
         renderTvTypeBadge(card, element);
-        if (type === 'upnext') { renderUpnextCardWatched(card, element); if (element.method !== 'movie') renderUpnextRemainingBadge(card, element); }
+        if (type === 'upnext' && element.method !== 'movie') { renderUpnextCardWatched(card, element); renderUpnextRemainingBadge(card, element); }
         if (type === 'watching' && element.trakt_upnext_progress) renderUpnextCardWatched(card, element);
         if (type === 'watching' && element.trakt_watching_filter !== 'dropped') renderUpnextRemainingBadge(card, element);
         if (type === 'history') renderHistoryDateBadge(card, element);
