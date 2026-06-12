@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.0.0';
+  var PLUGIN_VERSION = '3.0.1';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -2672,7 +2672,10 @@
     history: function(params) {
       var page = Math.max(1, parseInt(params && params.page, 10) || 1);
       var limit = Math.max(1, parseInt(params && params.limit, 10) || 36);
-      return requestApi('GET', '/sync/history?extended=full&limit=' + limit + '&page=' + page, {}, false, 0, { withMeta: true }).then(function(response) {
+      var qs = '/sync/history?extended=full&limit=' + limit + '&page=' + page;
+      if (params && params.start_at) qs += '&start_at=' + encodeURIComponent(params.start_at);
+      if (params && params.end_at) qs += '&end_at=' + encodeURIComponent(params.end_at);
+      return requestApi('GET', qs, {}, false, 0, { withMeta: true }).then(function(response) {
         var payload = response && Array.isArray(response.data) ? response.data : [];
         var headers = response && response.headers ? response.headers : {};
         var mapped = payload.map(mapHistoryItem).filter(Boolean);
@@ -3848,7 +3851,7 @@
           } else { try { _listLogAdd('bC.onNext end→reject type=' + type + ' pg=' + object.page + '/' + total_pages); } catch(e) {} reject.call(this); }
         },
         onController: function onController(controller) {
-          if ((type === 'watchlist' || type === 'watching') && object && typeof object.onHead === 'function') {
+          if ((type === 'watchlist' || type === 'watching' || type === 'history') && object && typeof object.onHead === 'function') {
             controller.up = function () {
               if (Navigator.canmove('up')) Navigator.move('up'); else object.onHead();
             };
@@ -3857,7 +3860,7 @@
         onEmpty: function onEmpty() {
           try { _listLogAdd('bC.onEmpty type=' + type); } catch(e) {}
           _emptyInstance = this.empty_class || null;
-          if ((type !== 'watchlist' && type !== 'watching') || !object || typeof object.onHead !== 'function') return;
+          if ((type !== 'watchlist' && type !== 'watching' && type !== 'history') || !object || typeof object.onHead !== 'function') return;
           if (!this.empty_class || typeof this.empty_class.use !== 'function') return;
           this.empty_class.use({ onController: function (controller) {
             controller.up = function () { if (Navigator.canmove('up')) Navigator.move('up'); else object.onHead(); };
@@ -5372,9 +5375,118 @@
     });
     return new baseComponent(paramsForBaseComponent, 'list');
   }
+  function historyHub(object) {
+    var HH_CTRL = 'trakt_history_hub_ctrl';
+    var activity, html, controls, tabsRow, body;
+    var currentView = null;
+    var lastTabFocus = null;
+    var activeTabKey = 'all';
+    var tabBtns = {};
+    var TABS = [
+      { key: 'all',       labelKey: 'trakt_history_tab_all',       fallback: 'Все' },
+      { key: 'today',     labelKey: 'trakt_history_tab_today',     fallback: 'Сегодня' },
+      { key: 'yesterday', labelKey: 'trakt_history_tab_yesterday', fallback: 'Вчера' },
+      { key: 'week',      labelKey: 'trakt_history_tab_week',      fallback: 'Неделя' },
+      { key: 'month',     labelKey: 'trakt_history_tab_month',     fallback: 'Месяц' },
+      { key: 'year',      labelKey: 'trakt_history_tab_year',      fallback: 'Год' }
+    ];
+    function tr(key, fallback) {
+      try { return Lampa.Lang.translate(key) || fallback; } catch(e) { return fallback; }
+    }
+    function getDateRange(key) {
+      var now = new Date();
+      var startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      if (key === 'today') return { start_at: startOfToday.toISOString(), end_at: now.toISOString() };
+      if (key === 'yesterday') {
+        var yesterday = new Date(startOfToday); yesterday.setDate(yesterday.getDate() - 1);
+        return { start_at: yesterday.toISOString(), end_at: startOfToday.toISOString() };
+      }
+      if (key === 'week') { var w = new Date(now); w.setDate(w.getDate() - 7); return { start_at: w.toISOString(), end_at: now.toISOString() }; }
+      if (key === 'month') { var m = new Date(now); m.setMonth(m.getMonth() - 1); return { start_at: m.toISOString(), end_at: now.toISOString() }; }
+      if (key === 'year') { var y = new Date(now); y.setFullYear(y.getFullYear() - 1); return { start_at: y.toISOString(), end_at: now.toISOString() }; }
+      return {};
+    }
+    function makeTabBtn(tabDef) {
+      var btn = $('<div class="simple-button simple-button--filter selector trakt-watchlist__tab"><div>' + tr(tabDef.labelKey, tabDef.fallback) + '</div></div>');
+      btn.on('hover:enter', function() { lastTabFocus = btn[0]; setActiveTab(tabDef.key); });
+      tabBtns[tabDef.key] = btn;
+      return btn;
+    }
+    function setActiveTab(key) {
+      activeTabKey = key;
+      TABS.forEach(function(tabDef) {
+        if (tabBtns[tabDef.key]) tabBtns[tabDef.key].toggleClass('active', tabDef.key === key);
+      });
+      rebuildView();
+    }
+    function rebuildView() {
+      if (currentView && currentView.destroy) currentView.destroy();
+      body.empty();
+      var dateRange = getDateRange(activeTabKey);
+      var viewObject = Object.assign({}, object, {
+        page: 1,
+        start_at: dateRange.start_at || null,
+        end_at: dateRange.end_at || null,
+        onHead: function() { Lampa.Controller.toggle(HH_CTRL); }
+      });
+      currentView = new baseComponent(viewObject, 'history');
+      currentView.activity = activity;
+      currentView.create();
+      body.append(currentView.render());
+      if (currentView.start) currentView.start();
+    }
+    return {
+      create: function() {
+        activity = this.activity;
+        html = $('<div class="trakt-watchlist-hub"></div>');
+        controls = $('<div class="trakt-watchlist-hub__controls"></div>');
+        tabsRow = $('<div class="trakt-watchlist-hub__tabs trakt-watching-hub__tabs"></div>');
+        body = $('<div class="trakt-watchlist-hub__body"></div>');
+        TABS.forEach(function(tabDef) {
+          var btn = makeTabBtn(tabDef);
+          if (tabDef.key === activeTabKey) btn.addClass('active');
+          tabsRow.append(btn);
+        });
+        controls.append(tabsRow);
+        html.append(controls, body);
+        Lampa.Controller.add(HH_CTRL, {
+          toggle: function() {
+            Lampa.Controller.collectionSet(controls);
+            var focus = lastTabFocus && document.body && document.body.contains(lastTabFocus) ? lastTabFocus : tabsRow.find('.selector')[0];
+            Lampa.Controller.collectionFocus(focus || false, controls);
+          },
+          right: function() { if (typeof Navigator !== 'undefined') Navigator.move('right'); },
+          left: function() {
+            if (typeof Navigator !== 'undefined' && Navigator.canmove('left')) Navigator.move('left');
+            else Lampa.Controller.toggle('menu');
+          },
+          down: function() {
+            if (typeof Navigator !== 'undefined' && Navigator.canmove('down')) Navigator.move('down');
+            else Lampa.Controller.toggle('content');
+          },
+          up: function() {
+            if (typeof Navigator !== 'undefined' && Navigator.canmove('up')) Navigator.move('up');
+            else Lampa.Controller.toggle('head');
+          },
+          back: function() { Lampa.Activity.backward(); }
+        });
+        rebuildView();
+        return this.render();
+      },
+      render: function(js) { return js ? html[0] : html; },
+      start: function() { if (currentView && currentView.start) currentView.start(); },
+      pause: function() {},
+      stop: function() {},
+      destroy: function() {
+        if (currentView && currentView.destroy) currentView.destroy();
+        if (html) html.remove();
+        currentView = null;
+      }
+    };
+  }
   function history(object) {
     if (!object.page) object.page = 1;
-    return new baseComponent(object, 'history');
+    return new historyHub(object);
   }
   function collectionHub(object) {
     var COL_FILTER_CTRL = 'trakt_collection_filter_ctrl';
@@ -5933,6 +6045,12 @@
         ru: "Все",
         en: "All",
       },
+      trakt_history_tab_all: { ru: "Все", en: "All" },
+      trakt_history_tab_today: { ru: "Сегодня", en: "Today" },
+      trakt_history_tab_yesterday: { ru: "Вчера", en: "Yesterday" },
+      trakt_history_tab_week: { ru: "Неделя", en: "Week" },
+      trakt_history_tab_month: { ru: "Месяц", en: "Month" },
+      trakt_history_tab_year: { ru: "Год", en: "Year" },
       trakt_switch_account: { ru: "Переключить аккаунт Trakt.TV", en: "Switch Trakt.TV Account" },
       trakt_switched_to: { ru: "Привет,", en: "Hello," },
       trakt_account_alias: { ru: "Отображать как", en: "Display as" },
