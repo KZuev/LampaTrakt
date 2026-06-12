@@ -7360,7 +7360,9 @@
     var btn = document.createElement('div');
     btn.className = 'full-start__button selector trakt-magic-button';
     btn.innerHTML = '<svg><use xlink:href="#sprite-torrent"></use></svg><span>' + t$2('trakt_magic_button', 'Magic Play') + '</span>';
-    btn.on('hover:enter', function() {
+    // jQuery-биндинг обязателен: меню «Смотреть» активирует источник через
+    // $(btn).trigger('hover:enter'), который не вызывает нативные addEventListener
+    $(btn).on('hover:enter', function() {
       if (method === 'tv') launchMagicShow(btn, card);
       else launchMagicMovie(btn, card);
     });
