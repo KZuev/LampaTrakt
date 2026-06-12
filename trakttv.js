@@ -7304,9 +7304,11 @@
       if (seasonMatched.length) pool = seasonMatched;
     }
     var sorted = pool.slice().sort(function(a, b) {
-      var qa = qualityScore(a.element.Title || ''), qb = qualityScore(b.element.Title || '');
-      if (qb !== qa) return qb - qa;
-      return (b.element.Seeders || 0) - (a.element.Seeders || 0);
+      // Популярность = раздают + качают; качество — tiebreaker
+      var pa = (a.element.Seeders || 0) + (a.element.Peers || 0);
+      var pb = (b.element.Seeders || 0) + (b.element.Peers || 0);
+      if (pb !== pa) return pb - pa;
+      return qualityScore(b.element.Title || '') - qualityScore(a.element.Title || '');
     });
     return sorted[0] || null;
   }
