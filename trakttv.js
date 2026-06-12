@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '2.9.16';
+  var PLUGIN_VERSION = '2.9.17';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -2691,9 +2691,7 @@
       var page = Math.max(1, parseInt(params && params.page, 10) || 1);
       var limit = 36;
       var watchingFilter = (params && params.watchingFilter) || 'active';
-      var activeStatuses = ['returning series', 'in production', 'planned', 'pilot'];
       var endedStatuses = ['ended', 'canceled', 'cancelled'];
-      var watchedPromise = requestApi('GET', '/sync/watched/shows?extended=full', {}, false, 300);
       function buildHiddenSet(list) {
         var set = {};
         if (Array.isArray(list)) list.forEach(function(entry) {
@@ -2705,7 +2703,7 @@
         });
         return set;
       }
-      // Hidden items: /users/hidden/{section} (OAuth-scoped, no "me" slug)
+      var watchedPromise = requestApi('GET', '/sync/watched/shows?extended=full', {}, false, 300);
       var hiddenProgressPromise = requestApi('GET', '/users/hidden/progress_watched?type=show&limit=500', {}, false, 300)
         .then(buildHiddenSet)['catch'](function() { return {}; });
       var hiddenCalendarPromise = requestApi('GET', '/users/hidden/calendar?type=show&limit=500', {}, false, 300)
@@ -2718,32 +2716,46 @@
         var droppedSet = results[3];
         if (!Array.isArray(items)) return { results: [], total: 0, total_pages: 1, page: 1, limit: limit };
         function isHidden(ids) { return !!(hiddenSet['trakt_' + ids.trakt] || hiddenSet['tmdb_' + ids.tmdb]); }
-        function isDropped(ids) { return !!(droppedSet['trakt_' + ids.trakt] || droppedSet['tmdb_' + ids.tmdb]); }
-        var filtered = items.filter(function(item) {
-          var show = item && item.show;
+        function isDroppedLocal(ids) { return !!(droppedSet['trakt_' + ids.trakt] || droppedSet['tmdb_' + ids.tmdb]); }
+        // Pre-compute per-show data once
+        var enriched = items.map(function(item) {
+          var show = item.show || {};
+          var totalEps = Number(show.aired_episodes) || 0;
+          var watchedEps = 0;
+          if (Array.isArray(item.seasons)) item.seasons.forEach(function(s) {
+            if (s.number === 0) return;
+            if (Array.isArray(s.episodes)) s.episodes.forEach(function(e) { if ((e.plays || 0) > 0) watchedEps++; });
+          });
+          var isEnded = endedStatuses.some(function(s) { return (show.status || '').toLowerCase() === s; });
+          var fullyWatched = totalEps > 0 && watchedEps >= totalEps;
+          return { item: item, show: show, totalEps: totalEps, watchedEps: watchedEps, isEnded: isEnded, fullyWatched: fullyWatched };
+        });
+        var filtered = enriched.filter(function(d) {
+          var show = d.show;
           if (!show || !show.ids || !show.ids.tmdb) return false;
           var ids = show.ids;
-          var status = (show.status || '').toLowerCase();
           if (watchingFilter === 'active') {
-            return !isHidden(ids) && !isDropped(ids) && activeStatuses.some(function(s) { return status === s; });
+            // Active = not dropped, not hidden, and not (ended + fully watched)
+            return !isHidden(ids) && !isDroppedLocal(ids) && !(d.isEnded && d.fullyWatched);
           } else if (watchingFilter === 'completed') {
-            return !isHidden(ids) && !isDropped(ids) && endedStatuses.some(function(s) { return status === s; });
+            // Completed = ended show that user has fully watched
+            return !isHidden(ids) && !isDroppedLocal(ids) && d.isEnded && d.fullyWatched;
           } else if (watchingFilter === 'dropped') {
-            return isDropped(ids);
+            return isDroppedLocal(ids);
           } else {
             return !isHidden(ids);
           }
         });
         filtered.sort(function(a, b) {
-          var da = a.last_watched_at || '';
-          var db = b.last_watched_at || '';
+          var da = a.item.last_watched_at || '';
+          var db = b.item.last_watched_at || '';
           return da > db ? -1 : da < db ? 1 : 0;
         });
         var total = filtered.length;
         var start = (page - 1) * limit;
         var pageItems = filtered.slice(start, start + limit);
-        var mapped = pageItems.map(function(item) {
-          var show = item.show;
+        var mapped = pageItems.map(function(d) {
+          var show = d.show;
           var card = {
             component: 'full',
             id: show.ids.tmdb,
@@ -2753,21 +2765,16 @@
             release_date: show.year ? String(show.year) : '',
             vote_average: Number(show.rating || 0),
             method: 'tv',
-            card_type: 'tv'
+            card_type: 'tv',
+            trakt_watching_filter: watchingFilter
           };
-          var totalEps = Number(show.aired_episodes) || 0;
-          var watchedEps = 0;
-          if (Array.isArray(item.seasons)) item.seasons.forEach(function(s) {
-            if (s.number === 0) return;
-            if (Array.isArray(s.episodes)) s.episodes.forEach(function(e) { if ((e.plays || 0) > 0) watchedEps++; });
-          });
           if (watchingFilter === 'dropped') {
-            card.trakt_show_progress_pct = totalEps > 0 ? Math.min(100, Math.round(watchedEps / totalEps * 100)) : 0;
+            card.trakt_show_progress_pct = d.totalEps > 0 ? Math.min(100, Math.round(d.watchedEps / d.totalEps * 100)) : 0;
           }
-          if (totalEps > 0 || watchedEps > 0) {
-            card.trakt_upnext_watched = watchedEps;
-            card.trakt_upnext_total = totalEps || watchedEps;
-            card.trakt_upnext_progress = watchedEps + '/' + (totalEps || watchedEps);
+          if (d.totalEps > 0 || d.watchedEps > 0) {
+            card.trakt_upnext_watched = d.watchedEps;
+            card.trakt_upnext_total = d.totalEps || d.watchedEps;
+            card.trakt_upnext_progress = d.watchedEps + '/' + (d.totalEps || d.watchedEps);
           }
           return card;
         });
@@ -2781,7 +2788,6 @@
       });
     },
     watchingCounts: function() {
-      var activeStatuses = ['returning series', 'in production', 'planned', 'pilot'];
       var endedStatuses = ['ended', 'canceled', 'cancelled'];
       function buildHiddenSet(list) {
         var set = {};
@@ -2811,13 +2817,20 @@
           var show = item && item.show;
           if (!show || !show.ids || !show.ids.tmdb) return;
           var ids = show.ids;
-          // Check dropped FIRST — dropped shows are also in progress_watched hidden list
           if (droppedSet['trakt_' + ids.trakt] || droppedSet['tmdb_' + ids.tmdb]) { counts.dropped++; counts.all++; return; }
           if (hiddenSet['trakt_' + ids.trakt] || hiddenSet['tmdb_' + ids.tmdb]) return;
+          // Compute fullyWatched for active/completed distinction
+          var totalEps = Number(show.aired_episodes) || 0;
+          var watchedEps = 0;
+          if (Array.isArray(item.seasons)) item.seasons.forEach(function(s) {
+            if (s.number === 0) return;
+            if (Array.isArray(s.episodes)) s.episodes.forEach(function(e) { if ((e.plays || 0) > 0) watchedEps++; });
+          });
+          var fullyWatched = totalEps > 0 && watchedEps >= totalEps;
+          var isEnded = endedStatuses.some(function(s) { return (show.status || '').toLowerCase() === s; });
           counts.all++;
-          var status = (show.status || '').toLowerCase();
-          if (activeStatuses.some(function(s) { return status === s; })) counts.active++;
-          else if (endedStatuses.some(function(s) { return status === s; })) counts.completed++;
+          if (isEnded && fullyWatched) counts.completed++;
+          else counts.active++;
         });
         return counts;
       })['catch'](function() { return { active: 0, completed: 0, dropped: 0, all: 0 }; });
@@ -3083,7 +3096,27 @@
     removeFromFavorites: function removeFromFavorites(params) {
       return requestApi('POST', '/sync/favorites/remove', buildSyncPayload(params));
     },
-    inHistory: function inHistory(params) {
+    addToDropped: function addToDropped(params) {
+      var ids = resolveTraktIds(params);
+      return requestApi('POST', '/users/hidden/dropped', { shows: [{ ids: ids }] });
+    },
+    removeFromDropped: function removeFromDropped(params) {
+      var traktId = (params && params._droppedTraktId) || resolveTraktIds(params).trakt;
+      if (!traktId) return Promise.reject(new Error('No trakt ID for hidden remove'));
+      return requestApi('DELETE', '/users/hidden/dropped/shows/' + traktId);
+    },
+    isDropped: function isDropped(params) {
+      if (normalizeMediaType(params) !== 'show') return Promise.resolve(false);
+      var ids = resolveTraktIds(params);
+      return requestApi('GET', '/users/hidden/dropped?type=show&limit=500', {}, false, 300).then(function(r) {
+        var found = (Array.isArray(r) ? r : []).find(function(item) {
+          var s = item && item.show;
+          return s && sameAnyId(s.ids || {}, ids);
+        });
+        if (!found) return false;
+        return { traktId: found.show && found.show.ids && found.show.ids.trakt };
+      }).catch(function() { return false; });
+    },
       var type = normalizeMediaType(params) === 'movie' ? 'movies' : 'shows';
       var ids = resolveTraktIds(params);
       return requestApi('GET', "/sync/history/".concat(type, "?extended=full")).then(function (response) {
@@ -3818,6 +3851,7 @@
               renderTvTypeBadge(this, element);
               if (type === 'upnext') { renderUpnextCardWatched(this, element); if (element.method !== 'movie') renderUpnextRemainingBadge(this, element); }
               if (type === 'watching' && element.trakt_upnext_progress) renderUpnextCardWatched(this, element);
+              if (type === 'watching' && element.trakt_watching_filter !== 'dropped') renderUpnextRemainingBadge(this, element);
               if (type === 'history') renderHistoryDateBadge(this, element);
               if (type === 'watching' && element.trakt_show_progress_pct) renderDroppedProgressBar(this, element);
               if (type === 'watchlist' && element._trakt_upcoming_first) {
@@ -3903,6 +3937,7 @@
         renderTvTypeBadge(card, element);
         if (type === 'upnext') { renderUpnextCardWatched(card, element); renderUpnextRemainingBadge(card, element); }
         if (type === 'watching' && element.trakt_upnext_progress) renderUpnextCardWatched(card, element);
+        if (type === 'watching' && element.trakt_watching_filter !== 'dropped') renderUpnextRemainingBadge(card, element);
         if (type === 'history') renderHistoryDateBadge(card, element);
         if (type === 'watchlist' && element._trakt_upcoming_first) {
           var node = typeof card.render === 'function' ? card.render(true) : null;
@@ -5787,6 +5822,14 @@
         ru: "Убрать из избранного",
         en: "Remove from Favorites",
       },
+      trakt_drop_show: {
+        ru: "Бросить сериал",
+        en: "Drop show",
+      },
+      trakt_undrop_show: {
+        ru: "Возобновить сериал",
+        en: "Resume show",
+      },
       trakt_menu_not_watched: {
         ru: "Отметить как не просмотрено",
         en: "Mark as not watched",
@@ -7014,8 +7057,8 @@
     var e = _listMenuCache[_listMenuCacheKey(params)];
     return (e && Date.now() - e.ts < _LIST_MENU_TTL) ? e : null;
   }
-  function _setListMenuCache(params, watchlistState, withMembership, favoritesState) {
-    _listMenuCache[_listMenuCacheKey(params)] = { ts: Date.now(), watchlistState: watchlistState, withMembership: withMembership, favoritesState: favoritesState };
+  function _setListMenuCache(params, watchlistState, withMembership, favoritesState, droppedState) {
+    _listMenuCache[_listMenuCacheKey(params)] = { ts: Date.now(), watchlistState: watchlistState, withMembership: withMembership, favoritesState: favoritesState, droppedState: droppedState };
   }
   function _invalidateListMenuCache(params) {
     if (params) delete _listMenuCache[_listMenuCacheKey(params)];
@@ -7229,7 +7272,7 @@
         }
         $(el).on('hover:enter', function() {
           var listParams = normalizeCardParams(data);
-          function showTraktMenu(watchlistState, withMembership, favoritesState) {
+          function showTraktMenu(watchlistState, withMembership, favoritesState, droppedState) {
             var statusItems = isShow ? [
               { title: Lampa.Lang.translate('trakt_menu_mark_completed'), action: 'completed' },
               { title: Lampa.Lang.translate('trakt_menu_not_watched'), action: 'not_watched' }
@@ -7243,7 +7286,16 @@
               target: 'favorites',
               inFavorites: !!favoritesState
             };
-            var allItems = statusItems.concat([favoritesItem]).concat(buildManagerItems(!!watchlistState, withMembership));
+            var extraItems = [favoritesItem];
+            if (isShow) {
+              extraItems.push({
+                title: droppedState ? t$2('trakt_undrop_show', 'Возобновить сериал') : t$2('trakt_drop_show', 'Бросить сериал'),
+                target: 'drop',
+                isDropped: !!droppedState,
+                droppedTraktId: droppedState && droppedState.traktId
+              });
+            }
+            var allItems = statusItems.concat(extraItems).concat(buildManagerItems(!!watchlistState, withMembership));
             Lampa.Select.show({
               title: 'Trakt.TV',
               items: allItems,
@@ -7255,6 +7307,18 @@
                   favReq.then(function() {
                     _invalidateListMenuCache(listParams);
                     notify(a.inFavorites ? t$2('trakt_favorites_remove', 'Убрать из избранного') : t$2('trakt_favorites_add', 'В избранное'));
+                  }).catch(function() {
+                    notify(t$2('trakt_list_action_error', 'List action failed'));
+                  });
+                  return;
+                }
+                if (a.target === 'drop') {
+                  var dropReq = a.isDropped
+                    ? (api$1 ? api$1.removeFromDropped({ _droppedTraktId: a.droppedTraktId }) : Promise.reject(new Error('no api')))
+                    : (api$1 ? api$1.addToDropped(listParams) : Promise.reject(new Error('no api')));
+                  dropReq.then(function() {
+                    _invalidateListMenuCache(listParams);
+                    notify(a.isDropped ? t$2('trakt_undrop_show', 'Возобновить сериал') : t$2('trakt_drop_show', 'Бросить сериал'));
                   }).catch(function() {
                     notify(t$2('trakt_list_action_error', 'List action failed'));
                   });
@@ -7287,23 +7351,25 @@
           }
           var cached = _getListMenuCache(listParams);
           if (cached) {
-            showTraktMenu(cached.watchlistState, cached.withMembership, cached.favoritesState);
+            showTraktMenu(cached.watchlistState, cached.withMembership, cached.favoritesState, cached.droppedState || false);
             return;
           }
           el.classList.add('trakt-loading');
           Promise.all([
             (api$1 ? api$1.inWatchlist(listParams).catch(function() { return false; }) : Promise.resolve(false)),
             (api$1 ? api$1.myLists({ page: 1, limit: 100 }).catch(function() { return { results: [] }; }) : Promise.resolve({ results: [] })),
-            (api$1 ? api$1.inFavorites(listParams).catch(function() { return false; }) : Promise.resolve(false))
+            (api$1 ? api$1.inFavorites(listParams).catch(function() { return false; }) : Promise.resolve(false)),
+            (isShow && api$1 ? api$1.isDropped(listParams).catch(function() { return false; }) : Promise.resolve(false))
           ]).then(function(res) {
             var watchlistState = res[0];
             var myListsResponse = res[1];
             var favoritesState = res[2];
+            var droppedState = res[3];
             var lists = myListsResponse && Array.isArray(myListsResponse.results) ? myListsResponse.results : [];
             return loadMyListsMembership(listParams, lists).then(function(withMembership) {
-              _setListMenuCache(listParams, watchlistState, withMembership, favoritesState);
+              _setListMenuCache(listParams, watchlistState, withMembership, favoritesState, droppedState);
               el.classList.remove('trakt-loading');
-              showTraktMenu(watchlistState, withMembership, favoritesState);
+              showTraktMenu(watchlistState, withMembership, favoritesState, droppedState);
             });
           }).catch(function() {
             el.classList.remove('trakt-loading');
