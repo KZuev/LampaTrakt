@@ -3667,7 +3667,6 @@
       anchor.parentNode.insertBefore(div, anchor);
     }
     var hasMovies = !!container.querySelector('.trakt-upnext-first-movie');
-    insertSection('trakt-upnext-movies-section', 'trakt-upnext-first-movie', 'trakttv_upnext_movies', 'Фильмы');
     if (hasMovies) insertSection('trakt-upnext-shows-section', 'trakt-upnext-first-show', 'trakttv_upnext_shows', 'Сериалы');
     insertSection('trakt-upnext-notstarted-section', 'trakt-upnext-first-unstarted', 'trakttv_upnext_not_started', 'Не начатые сериалы');
   }
@@ -12314,8 +12313,9 @@
     if (!event || !event.data || event.data.trakt_row !== 'upnext') return;
     if (!Array.isArray(event.items)) return;
     event.items.forEach(function(ci) {
-      renderUpnextProgressBadge(ci);
-      if (!ci.data || ci.data.method !== 'movie') renderUpnextRemainingBadge(ci, ci.data);
+      var isMovie = ci.data && ci.data.method === 'movie';
+      if (!isMovie) renderUpnextProgressBadge(ci);
+      if (!isMovie) renderUpnextRemainingBadge(ci, ci.data);
     });
   }
 
