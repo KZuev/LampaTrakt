@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.0.6';
+  var PLUGIN_VERSION = '3.0.7';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -5967,15 +5967,15 @@
       trakt_history_button: {
         ru: "Добавить в историю",
       },
-      trakt_magic_button: {
+      trakt_at_button: {
         ru: "Авто торрент",
         en: "Авто торрент",
       },
-      trakt_magic_searching: {
+      trakt_at_searching: {
         ru: "Ищем...",
         en: "Searching...",
       },
-      trakt_magic_no_next: {
+      trakt_at_no_next: {
         ru: "Следующий эпизод не найден",
         en: "Next episode not found",
       },
@@ -7415,7 +7415,7 @@
   }
 
   // Проверка «торрент содержит сезон N» — паттерны из фильтра Lampa (torrents.js filtred)
-  function _magicTitleMatchesSeason(title, season) {
+  function _atTitleMatchesSeason(title, season) {
     title = (title || '').toLowerCase();
     var f = parseInt(season, 10);
     if (!f) return false;
@@ -7425,12 +7425,12 @@
     return re.test(title);
   }
 
-  function _magicIsDubbed(title) {
+  function _atIsDubbed(title) {
     // Паттерн «дубляж» из фильтра Lampa (voice p == 1)
     return /дублирован|дубляж|  apple| dub | d[,| ]|[,\s]дб[,\s]/i.test(title || '');
   }
 
-  function _magicHasRusAudio(e) {
+  function _atHasRusAudio(e) {
     var el = e.element || {};
     if (Array.isArray(el.languages) && el.languages.some(function(l) {
       return String(l).toLowerCase().slice(0, 2) === 'ru';
@@ -7438,7 +7438,7 @@
     return /rus|рус|дубл|многогол|двухгол|двуго|mvo|dvo|лицен/i.test(el.Title || '');
   }
 
-  function _magicSetting(name, def) {
+  function _atSetting(name, def) {
     try {
       var v = Lampa.Storage.get(name);
       return (v === undefined || v === null || v === '') ? def : v;
@@ -7451,30 +7451,30 @@
     // Сериал: только торренты с нужным сезоном
     if (ctx && ctx.type === 'show' && ctx.season) {
       var seasonMatched = pool.filter(function(e) {
-        return _magicTitleMatchesSeason(e.element.Title, ctx.season);
+        return _atTitleMatchesSeason(e.element.Title, ctx.season);
       });
       if (seasonMatched.length) pool = seasonMatched;
     }
     // Фильтр озвучки — раздельные настройки для фильмов и сериалов
     var isMovie = ctx && ctx.type === 'movie';
     var voiceMode = isMovie
-      ? _magicSetting('trakt_magic_voice_movie', 'dub')
-      : _magicSetting('trakt_magic_voice_show', 'rus');
+      ? _atSetting('trakt_at_voice_movie', 'dub')
+      : _atSetting('trakt_at_voice_show', 'rus');
     if (voiceMode === 'dub') {
       // Дубляж в приоритете, иначе хотя бы RUS-дорожки
-      var dubbed = pool.filter(function(e) { return _magicIsDubbed(e.element.Title); });
+      var dubbed = pool.filter(function(e) { return _atIsDubbed(e.element.Title); });
       if (dubbed.length) pool = dubbed;
       else {
-        var rusD = pool.filter(_magicHasRusAudio);
+        var rusD = pool.filter(_atHasRusAudio);
         if (rusD.length) pool = rusD;
       }
     } else if (voiceMode === 'rus') {
-      var rus = pool.filter(_magicHasRusAudio);
+      var rus = pool.filter(_atHasRusAudio);
       if (rus.length) pool = rus;
     }
     // Целевое качество по настройке: max — лучшее доступное;
     // 4k/1080p/720p — точное совпадение в приоритете, затем ниже, затем выше
-    var qualityMode = _magicSetting('trakt_magic_quality', 'max');
+    var qualityMode = _atSetting('trakt_at_quality', 'max');
     var targetScore = { '4k': 4, '1080p': 3, '720p': 2 }[qualityMode] || 0;
     function effectiveQuality(title) {
       var q = qualityScore(title);
@@ -7482,7 +7482,7 @@
       if (q === targetScore) return 100;
       return q < targetScore ? q : -q; // ниже целевого лучше, чем выше
     }
-    var popularityFirst = _magicSetting('trakt_magic_popularity', 'quality_first') === 'popularity_first';
+    var popularityFirst = _atSetting('trakt_at_popularity', 'quality_first') === 'popularity_first';
     var sorted = pool.slice().sort(function(a, b) {
       var qa = effectiveQuality(a.element.Title || ''), qb = effectiveQuality(b.element.Title || '');
       var pa = (a.element.Seeders || 0) + (a.element.Peers || 0);
@@ -7500,7 +7500,7 @@
   function pickBestFileFromCollected(collected) {
     if (!collected || !collected.length) return null;
     var dubbed = collected.filter(function(e) {
-      return _magicIsDubbed(e.element.title || e.element.path || '');
+      return _atIsDubbed(e.element.title || e.element.path || '');
     });
     var pool = dubbed.length ? dubbed : collected;
     return pool.slice().sort(function(a, b) {
@@ -7509,10 +7509,10 @@
   }
 
   // Поисковая строка как у нативной кнопки «Торренты» (full/start/torrents.js)
-  function _magicSearchString(card) {
+  function _atSearchString(card) {
     var year = ((card.first_air_date || card.release_date || '0000') + '').slice(0, 4);
-    var title = _magicCardTitle(card);
-    var orig = _magicCardOriginalTitle(card);
+    var title = _atCardTitle(card);
+    var orig = _atCardOriginalTitle(card);
     var combinations = {
       'df': orig,
       'df_year': orig + ' ' + year,
@@ -7528,14 +7528,14 @@
     return combinations[key] || title;
   }
 
-  function _magicBtnReset(btn) {
+  function _atBtnReset(btn) {
     if (!btn) return;
     btn.classList.remove('trakt-magic-loading');
     var sp = btn.querySelector('span');
-    if (sp) sp.textContent = t$2('trakt_magic_button', 'Авто торрент');
+    if (sp) sp.textContent = t$2('trakt_at_button', 'Авто торрент');
   }
 
-  function _magicNormalizeCard(card) {
+  function _atNormalizeCard(card) {
     if (!card) return {};
     // На полной карточке данные могут лежать во вложенном контейнере
     // (тот же набор, что в onFullCardReady): movie, show, card, data
@@ -7547,23 +7547,23 @@
     return card;
   }
 
-  function _magicCardTitle(card) {
+  function _atCardTitle(card) {
     return card.title || card.name || card.original_title || card.original_name || '';
   }
 
-  function _magicCardOriginalTitle(card) {
+  function _atCardOriginalTitle(card) {
     return card.original_title || card.original_name || card.title || card.name || '';
   }
 
-  function launchMagicShow(btn, card) {
-    card = _magicNormalizeCard(card);
+  function launchAtShow(btn, card) {
+    card = _atNormalizeCard(card);
     if (btn) {
       btn.classList.add('trakt-magic-loading');
       var sp = btn.querySelector('span');
-      if (sp) sp.textContent = t$2('trakt_magic_searching', 'Ищем...');
+      if (sp) sp.textContent = t$2('trakt_at_searching', 'Ищем...');
     }
     var tmdbId = card && card.id;
-    if (!tmdbId) { _magicBtnReset(btn); return; }
+    if (!tmdbId) { _atBtnReset(btn); return; }
 
     requestApi('GET', '/search/tmdb/' + tmdbId + '?type=show').then(function(res) {
       var traktId = res && res[0] && res[0].show && res[0].show.ids && res[0].show.ids.trakt;
@@ -7575,35 +7575,35 @@
       var episode = next && next.number;
       if (!season || !episode) {
         // Нет следующего эпизода — запускаем поиск без номера эпизода
-        _magicSelectPending = { type: 'show', season: null, episode: null };
-        notify(t$2('trakt_magic_no_next', 'Следующий эпизод не найден'));
+        _atSelectPending = { type: 'show', season: null, episode: null };
+        notify(t$2('trakt_at_no_next', 'Следующий эпизод не найден'));
       } else {
-        _magicSelectPending = { type: 'show', season: season, episode: episode };
+        _atSelectPending = { type: 'show', season: season, episode: episode };
       }
-      _magicBtnReset(btn);
-      Lampa.Activity.push({ url: '', title: Lampa.Lang.translate('title_torrents') || 'Торренты', component: 'torrents', search: _magicSearchString(card), search_one: _magicCardTitle(card), search_two: _magicCardOriginalTitle(card), movie: card, page: 1 });
+      _atBtnReset(btn);
+      Lampa.Activity.push({ url: '', title: Lampa.Lang.translate('title_torrents') || 'Торренты', component: 'torrents', search: _atSearchString(card), search_one: _atCardTitle(card), search_two: _atCardOriginalTitle(card), movie: card, page: 1 });
     }).catch(function(err) {
-      _magicSelectPending = null;
-      _magicBtnReset(btn);
-      notify(t$2('trakt_magic_no_next', 'Следующий эпизод не найден'));
+      _atSelectPending = null;
+      _atBtnReset(btn);
+      notify(t$2('trakt_at_no_next', 'Следующий эпизод не найден'));
     });
   }
 
-  function launchMagicMovie(btn, card) {
-    card = _magicNormalizeCard(card);
-    _magicSelectPending = { type: 'movie' };
-    Lampa.Activity.push({ url: '', title: Lampa.Lang.translate('title_torrents') || 'Торренты', component: 'torrents', search: _magicSearchString(card), search_one: _magicCardTitle(card), search_two: _magicCardOriginalTitle(card), movie: card, page: 1 });
+  function launchAtMovie(btn, card) {
+    card = _atNormalizeCard(card);
+    _atSelectPending = { type: 'movie' };
+    Lampa.Activity.push({ url: '', title: Lampa.Lang.translate('title_torrents') || 'Торренты', component: 'torrents', search: _atSearchString(card), search_one: _atCardTitle(card), search_two: _atCardOriginalTitle(card), movie: card, page: 1 });
   }
 
-  function addMagicButton(card, method) {
+  function addAtButton(card, method) {
     var btn = document.createElement('div');
     btn.className = 'full-start__button selector trakt-magic-button';
-    btn.innerHTML = '<svg><use xlink:href="#sprite-torrent"></use></svg><span>' + t$2('trakt_magic_button', 'Авто торрент') + '</span>';
+    btn.innerHTML = '<svg><use xlink:href="#sprite-torrent"></use></svg><span>' + t$2('trakt_at_button', 'Авто торрент') + '</span>';
     // jQuery-биндинг обязателен: меню «Смотреть» активирует источник через
     // $(btn).trigger('hover:enter'), который не вызывает нативные addEventListener
     $(btn).on('hover:enter', function() {
-      if (method === 'tv') launchMagicShow(btn, card);
-      else launchMagicMovie(btn, card);
+      if (method === 'tv') launchAtShow(btn, card);
+      else launchAtMovie(btn, card);
     });
     return btn;
   }
@@ -9853,7 +9853,7 @@
     // ── Авто торрент ─────────────────────────────────────────────────────────────
     Lampa.SettingsApi.addParam({
       component: 'trakt',
-      param: { name: 'trakt_magic_section', type: 'static' },
+      param: { name: 'trakt_at_section', type: 'static' },
       field: { name: '' },
       onRender: function(item) {
         item.empty();
@@ -9862,13 +9862,13 @@
     });
     Lampa.SettingsApi.addParam({
       component: 'trakt',
-      param: { name: 'trakt_magic_enabled', type: 'trigger', 'default': false },
+      param: { name: 'trakt_at_enabled', type: 'trigger', 'default': false },
       field: { name: 'Кнопка Авто торрент', description: 'Автозапуск лучшего торрента в меню «Смотреть»' }
     });
     Lampa.SettingsApi.addParam({
       component: 'trakt',
       param: {
-        name: 'trakt_magic_quality',
+        name: 'trakt_at_quality',
         type: 'select',
         "default": 'max',
         values: {
@@ -9883,7 +9883,7 @@
     Lampa.SettingsApi.addParam({
       component: 'trakt',
       param: {
-        name: 'trakt_magic_voice_movie',
+        name: 'trakt_at_voice_movie',
         type: 'select',
         "default": 'dub',
         values: {
@@ -9897,7 +9897,7 @@
     Lampa.SettingsApi.addParam({
       component: 'trakt',
       param: {
-        name: 'trakt_magic_voice_show',
+        name: 'trakt_at_voice_show',
         type: 'select',
         "default": 'rus',
         values: {
@@ -9911,7 +9911,7 @@
     Lampa.SettingsApi.addParam({
       component: 'trakt',
       param: {
-        name: 'trakt_magic_popularity',
+        name: 'trakt_at_popularity',
         type: 'select',
         "default": 'quality_first',
         values: {
@@ -9950,7 +9950,8 @@
             { title: 'История отметок просмотренного (' + _watchMarkLog.length + ')', action: 'watchlog' },
             { title: 'Диагностика списков (' + _listLog.length + ')',                 action: 'listlog'  },
             { title: 'Сравнение высоты списков',                                     action: 'height'   },
-            { title: _badgesHidden ? 'Бейджи: ВКЛ (показать)' : 'Бейджи: ВЫКЛ (скрыть)', action: 'toggle_badges' }
+            { title: _badgesHidden ? 'Бейджи: ВКЛ (показать)' : 'Бейджи: ВЫКЛ (скрыть)', action: 'toggle_badges' },
+            { title: 'Мигрировать ключи Авто торрент (trakt_magic_* → trakt_at_*)',     action: 'migrate_at'   }
           ],
           onSelect: function(item) {
             if (!item) return;
@@ -9962,6 +9963,7 @@
             if (item.action === 'listlog')       { _showDebugListLog();       }
             if (item.action === 'height')        { _showDebugHeightCompare(); }
             if (item.action === 'toggle_badges') { _toggleBadgeVisibility();  }
+            if (item.action === 'migrate_at')    { _atMigrateStorage(true);   }
           },
           onBack: function() { Lampa.Controller.toggle('settings_component'); }
         });
@@ -9984,6 +9986,37 @@
         if (el) el.parentNode.removeChild(el);
         Lampa.Noty.show('Бейджи снова видны');
       }
+    }
+
+    var _AT_MIGRATE_MAP = {
+      trakt_magic_enabled:    'trakt_at_enabled',
+      trakt_magic_quality:    'trakt_at_quality',
+      trakt_magic_voice_movie:'trakt_at_voice_movie',
+      trakt_magic_voice_show: 'trakt_at_voice_show',
+      trakt_magic_popularity: 'trakt_at_popularity'
+    };
+
+    function _atMigrateStorage(showNotify) {
+      var migrated = 0, already = 0;
+      Object.keys(_AT_MIGRATE_MAP).forEach(function(old) {
+        var newKey = _AT_MIGRATE_MAP[old];
+        var oldVal = Lampa.Storage.get(old);
+        var newVal = Lampa.Storage.get(newKey);
+        if (oldVal !== undefined && oldVal !== null && oldVal !== '') {
+          if (newVal === undefined || newVal === null || newVal === '') {
+            Lampa.Storage.set(newKey, oldVal);
+            migrated++;
+          } else {
+            already++;
+          }
+        }
+      });
+      if (showNotify) {
+        Lampa.Noty.show(migrated
+          ? 'Мигрировано ' + migrated + ' ключ(ей). Уже было: ' + already
+          : 'Старых ключей не найдено (уже чисто)');
+      }
+      return migrated;
     }
 
     function applyBadgeVisibility() {
@@ -12409,11 +12442,11 @@
   }
   var _watchedCache = null;
   var _watchedCachePromise = null;
-  var _magicSelectPending = null;
-  var _magicTorrentCollected = [];
-  var _magicTorrentTimer = null;
-  var _magicFileCollected = [];
-  var _magicFileTimer = null;
+  var _atSelectPending = null;
+  var _atTorrentCollected = [];
+  var _atTorrentTimer = null;
+  var _atFileCollected = [];
+  var _atFileTimer = null;
 
   var _UPCOMING_MOVIE_KEY = 'trakt_upcoming_movie_ids';
   function getUpcomingMovieIds() {
@@ -12876,6 +12909,7 @@
 
       multiAccountMigrateToken();
       multiAccountFetchMissingUsernames();
+      _atMigrateStorage(false);
 
       try {
         Lampa.Listener.follow('profile', function (e) {
@@ -12909,15 +12943,15 @@
 
       // Magic Button: авто-выбор лучшего торрента из поисковой выдачи
       Lampa.Listener.follow('torrent', function(e) {
-        if (!_magicSelectPending) return;
+        if (!_atSelectPending) return;
         if (e.type === 'render') {
-          _magicTorrentCollected.push(e);
-          clearTimeout(_magicTorrentTimer);
-          _magicTorrentTimer = setTimeout(function() {
-            if (!_magicSelectPending) return;
-            var best = pickBestTorrentFromCollected(_magicTorrentCollected, _magicSelectPending);
-            _magicTorrentCollected = [];
-            _magicTorrentTimer = null;
+          _atTorrentCollected.push(e);
+          clearTimeout(_atTorrentTimer);
+          _atTorrentTimer = setTimeout(function() {
+            if (!_atSelectPending) return;
+            var best = pickBestTorrentFromCollected(_atTorrentCollected, _atSelectPending);
+            _atTorrentCollected = [];
+            _atTorrentTimer = null;
             if (best && best.item) best.item.trigger('hover:enter');
           }, 400);
         }
@@ -12927,35 +12961,35 @@
       // Важно: на list_open у файлов ещё нет season/episode (Lampa проставляет
       // их позже через Arrays.extend), поэтому выбираем на render-событиях.
       Lampa.Listener.follow('torrent_file', function(e) {
-        if (!_magicSelectPending) return;
-        var ctx = _magicSelectPending;
+        if (!_atSelectPending) return;
+        var ctx = _atSelectPending;
         if (e.type === 'render' && e.element) {
           if (ctx.season != null && ctx.episode != null) {
             // Сериал: ждём рендер файла с нужным сезоном/эпизодом
             if (e.element.season == ctx.season && e.element.episode == ctx.episode) {
-              _magicSelectPending = null;
-              _magicFileCollected = [];
-              clearTimeout(_magicFileTimer);
+              _atSelectPending = null;
+              _atFileCollected = [];
+              clearTimeout(_atFileTimer);
               setTimeout(function() { if (e.item) e.item.trigger('hover:enter'); }, 50);
             }
           } else {
             // Фильм/без эпизода: собираем все файлы, после паузы выбираем лучший
-            _magicFileCollected.push(e);
-            clearTimeout(_magicFileTimer);
-            _magicFileTimer = setTimeout(function() {
-              if (!_magicSelectPending) return;
-              var best = pickBestFileFromCollected(_magicFileCollected);
-              _magicFileCollected = [];
-              _magicFileTimer = null;
-              _magicSelectPending = null;
+            _atFileCollected.push(e);
+            clearTimeout(_atFileTimer);
+            _atFileTimer = setTimeout(function() {
+              if (!_atSelectPending) return;
+              var best = pickBestFileFromCollected(_atFileCollected);
+              _atFileCollected = [];
+              _atFileTimer = null;
+              _atSelectPending = null;
               if (best && best.item) best.item.trigger('hover:enter');
             }, 300);
           }
         }
         if (e.type === 'list_close') {
-          _magicSelectPending = null;
-          _magicFileCollected = [];
-          clearTimeout(_magicFileTimer);
+          _atSelectPending = null;
+          _atFileCollected = [];
+          clearTimeout(_atFileTimer);
         }
       });
       Lampa.Listener.follow('line', function (e) {
@@ -13378,13 +13412,13 @@
 
       // Magic Button — вставляем в .buttons--container, откуда «Смотреть» берёт список источников
       // Бонусный функционал: показываем только если включён в настройках
-      if (readBooleanStorage$2('trakt_magic_enabled', false) && (e.object.method === 'tv' || e.object.method === 'movie')) {
+      if (readBooleanStorage$2('trakt_at_enabled', false) && (e.object.method === 'tv' || e.object.method === 'movie')) {
         var magicRoot = e.object && e.object.activity && typeof e.object.activity.render === 'function'
           ? e.object.activity.render() : null;
         if (magicRoot) {
-          var magicBtn = addMagicButton(e.data, e.object.method);
+          var atBtn = addAtButton(e.data, e.object.method);
           var btnsContainer = magicRoot.find('.buttons--container');
-          if (btnsContainer.length) btnsContainer.append(magicBtn);
+          if (btnsContainer.length) btnsContainer.append(atBtn);
         }
       }
     }

@@ -10,7 +10,7 @@
 
 ## Текущая версия
 
-**v3.0.4** — Фикс scrobbling: «destroy» событие + убран overrestrictive `canFinishSafely`.
+**v3.0.7** — Rename: `_magic*`/`trakt_magic_*` → `_at*`/`trakt_at_*`; миграция storage при запуске.
 
 ## История фиксов
 
@@ -45,29 +45,32 @@
 | v3.0.2  | `cc32b00` | Фикс навигации в Избранном (Apple TV) + группировка годов в фильтрах |
 | v3.0.3  | `d5123d7` | Умная группировка годов (2026…2020 раздельно, потом пятилетками) |
 | v3.0.4  | TBD       | Фикс scrobbling: Player 'destroy' вместо 'stop'/'ended'; убран `canFinishSafely` |
+| v3.0.5  | TBD       | Диагностика: логи `finish_trigger_*` в «История отметок просмотренного» |
+| v3.0.6  | `22f9d5c` | UI rename: «Magic Play» → «Авто торрент» (видимые строки) |
+| v3.0.7  | TBD       | Code rename: `_magic*`/`trakt_magic_*` → `_at*`/`trakt_at_*`; авто-миграция storage |
 
 ## Авто торрент (v3.0.0) — архитектура
 
 **Как работает:**
-1. Кнопка «Авто торрент» появляется в `.buttons--container` (то же место, куда плагины добавляют источники в меню «Смотреть»). Добавляется только при включённой настройке `trakt_magic_enabled` (по умолчанию выключена).
+1. Кнопка «Авто торрент» появляется в `.buttons--container` (то же место, куда плагины добавляют источники в меню «Смотреть»). Добавляется только при включённой настройке `trakt_at_enabled` (по умолчанию выключена).
 2. **Сериал**: получает следующий эпизод через Trakt API (`/search/tmdb/{id}?type=show` → `/shows/{traktId}/progress/watched` → `next_episode`). Поисковая строка формируется как у нативной кнопки Torrents (по `parse_lang`).
 3. **Автовыбор торрента** (`Lampa.Listener.follow('torrent', ...)`): `render`-события собираются, через 400мс выбирается лучший (фильтр по сезону / озвучке / качеству / популярности).
 4. **Автовыбор файла** (`Lampa.Listener.follow('torrent_file', ...)`): на `render`-событии ищется файл с нужным `season`/`episode` и триггерится `hover:enter`.
 
 **Ключевые паттерны:**
 - `$(btn).on('hover:enter', ...)` — обязательно jQuery, не `btn.on(...)`: меню «Смотреть» активирует через jQuery `trigger`, нативный `addEventListener` не срабатывает
-- `_magicNormalizeCard(card)` — нормализует вложенные контейнеры (`movie`, `show`, `card`, `data`)
-- `_magicSearchString(card)` — строит поисковую строку по `parse_lang` как `full/start/torrents.js`
-- `_magicTitleMatchesSeason(title, season)` — паттерны из фильтра Lampa (диапазоны, одиночные сезоны)
-- `_magicIsDubbed(title)` — паттерн из фильтра озвучки Lampa (voice p==1)
-- `_magicHasRusAudio(e)` — проверяет `languages: ru` или ключевые слова в названии
+- `_atNormalizeCard(card)` — нормализует вложенные контейнеры (`movie`, `show`, `card`, `data`)
+- `_atSearchString(card)` — строит поисковую строку по `parse_lang` как `full/start/torrents.js`
+- `_atTitleMatchesSeason(title, season)` — паттерны из фильтра Lampa (диапазоны, одиночные сезоны)
+- `_atIsDubbed(title)` — паттерн из фильтра озвучки Lampa (voice p==1)
+- `_atHasRusAudio(e)` — проверяет `languages: ru` или ключевые слова в названии
 
 **Настройки** (секция «Авто торрент» в настройках плагина):
-- `trakt_magic_enabled` (trigger, default: false)
-- `trakt_magic_quality`: max / 4K / 1080p / 720p
-- `trakt_magic_voice_movie`: дубляж / любая русская / не фильтровать
-- `trakt_magic_voice_show`: любая русская / дубляж / не фильтровать
-- `trakt_magic_popularity`: quality_first / popularity_first
+- `trakt_at_enabled` (trigger, default: false)
+- `trakt_at_quality`: max / 4K / 1080p / 720p
+- `trakt_at_voice_movie`: дубляж / любая русская / не фильтровать
+- `trakt_at_voice_show`: любая русская / дубляж / не фильтровать
+- `trakt_at_popularity`: quality_first / popularity_first
 
 ## Бейджи на постерах — архитектура
 
