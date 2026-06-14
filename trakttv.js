@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.0.3';
+  var PLUGIN_VERSION = '3.0.4';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -13033,20 +13033,14 @@
             var minProg2 = parseInt(Lampa.Storage.field('trakt_min_progress') || config.minProgress);
             var shouldFinishOnStop = (lastPct >= minProg2) || !!(evt && evt.type === 'ended' && !lastTimeline.hash);
             if (shouldFinishOnStop && watching && typeof watching.finish === 'function') {
-              var contentType = watching && typeof watching.getContentType === 'function' ? watching.getContentType(media) : 'movie';
-              var season = media.season_number || media.season || media.seasonNumber;
-              var episode = media.episode_number || media.episode || media.episodeNumber;
-              var canFinishSafely = contentType === 'movie' || season && episode || media.hash;
-              if (canFinishSafely) {
-                watching.finish(media)["catch"](function (e) {
-                  logWarn('Finish on stop failed', {
-                    eventType: evt && evt.type,
-                    error: e
-                  }, {
-                    debugOnly: true
-                  });
+              watching.finish(media)["catch"](function (e) {
+                logWarn('Finish on stop failed', {
+                  eventType: evt && evt.type,
+                  error: e
+                }, {
+                  debugOnly: true
                 });
-              }
+              });
             } else if (lastPct > 0 && lastPct < minProg2 && media && watching && typeof watching.scrobblePause === 'function') {
               watching.scrobblePause(media, lastPct);
             }
@@ -13058,6 +13052,11 @@
         };
         Lampa.Player.listener.follow('ended', routeFinishIntent);
         Lampa.Player.listener.follow('stop', routeFinishIntent);
+        // Lampa.Player.listener fires 'destroy' when player is destroyed (always fires).
+        // 'stop'/'ended' are only fired by some Lampa builds; 'destroy' is universal.
+        Lampa.Player.listener.follow('destroy', function () {
+          routeFinishIntent({ type: 'stop' });
+        });
         Lampa.Player.listener.follow('visibility', function (e) {
           if (e && e.hidden) routeFinishIntent({
             type: 'hidden'

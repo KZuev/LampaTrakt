@@ -10,7 +10,7 @@
 
 ## Текущая версия
 
-**v3.0.1** — История просмотров с вкладками по датам.
+**v3.0.4** — Фикс scrobbling: «destroy» событие + убран overrestrictive `canFinishSafely`.
 
 ## История фиксов
 
@@ -41,7 +41,10 @@
 | v2.9.36 | `9b63f41` | Бейдж «Смотрю» — логотип Trakt, кружок с полузаливкой |
 | v2.9.37 | `52e5527` | Правая половина кружка «Смотрю» ярче (.28 → .52 opacity) |
 | v3.0.0  | `578fd68` | **Magic Play**: автовыбор лучшего торрента в меню «Смотреть» |
-| v3.0.1  | TBD       | История просмотров: вкладки Все/Сегодня/Вчера/Неделя/Месяц/Год (`historyHub`, Trakt `start_at`/`end_at`) |
+| v3.0.1  | `3cee003` | История просмотров: вкладки Все/Сегодня/Вчера/Неделя/Месяц/Год (`historyHub`, Trakt `start_at`/`end_at`) |
+| v3.0.2  | `cc32b00` | Фикс навигации в Избранном (Apple TV) + группировка годов в фильтрах |
+| v3.0.3  | `d5123d7` | Умная группировка годов (2026…2020 раздельно, потом пятилетками) |
+| v3.0.4  | TBD       | Фикс scrobbling: Player 'destroy' вместо 'stop'/'ended'; убран `canFinishSafely` |
 
 ## Magic Play (v3.0.0) — архитектура
 
@@ -98,6 +101,8 @@
 - `more.onVisible` делает `find('.items-line__head').append` без проверки null при `total_pages > 1`
 - `registerMainScreenAutoLoad` пустой намеренно — scroll-hack удалён (вызывал краши)
 - `_isPlayerActive` guard в `processTimelineUpdate` — не трогать (защита от ложных отметок)
+- `Lampa.Player.listener` НЕ отправляет 'stop'/'ended' — только 'start', 'destroy', 'create', 'ready', 'external'. `routeFinishIntent` подключён к 'destroy' (всегда срабатывает при закрытии плеера) + 'stop'/'ended' как запас на будущее
+- Timeline 'update' событие срабатывает: (1) каждые 2 мин через `saveTimeLoop`, (2) при закрытии плеера через `destroy()` → `saveTimeView()`. Это основной путь скробблинга.
 - `.buttons--container` — скрытый контейнер, из которого «Смотреть» читает список источников; плагины добавляют `.full-start__button.selector` сюда
 - `Element.prototype.on` в Lampa = `addEventListener`; для jQuery-событий (`hover:enter`) нужно `$(el).on(...)`
 - `torrent_file` event `list_open` отправляется ДО `Arrays.extend` файлов — `season`/`episode` ещё не проставлены; нужно слушать `render`
