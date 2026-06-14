@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.0.4';
+  var PLUGIN_VERSION = '3.0.5';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -11296,6 +11296,7 @@
                       _context2.n = 1;
                       break;
                     }
+                    try { _watchLogAdd('finish_skip', { type: check.reason, extra: key.slice(0, 40) }); } catch(e2) {}
                     return _context2.a(2, {
                       skipped: true,
                       reason: check.reason
@@ -11470,6 +11471,7 @@
               break;
             }
             slog('Request for key is already in progress, skipping.', key);
+            try { _watchLogAdd('finish_skip', { type: 'in_progress', extra: key.slice(0, 40) }); } catch(e2) {}
             return _context5.a(2, {
               skipped: true,
               reason: 'in_progress'
@@ -11995,6 +11997,17 @@
         // Save context so addToHistory$1 can log percent in one entry
         try {
           _lastWatchContext = { percent: percent, minProg: minProgress, hash: hash ? String(hash).slice(0,8) : '?', trigger: 'timeline' };
+        } catch(e) {}
+        try {
+          _watchLogAdd('finish_trigger_timeline', {
+            type: meta && meta.season ? 'show' : 'movie',
+            show: card && (card.original_name || card.name || card.title),
+            season: meta && meta.season,
+            episode: meta && meta.episode,
+            percent: percent,
+            minProg: minProgress,
+            extra: 'key:' + key.slice(0, 30)
+          });
         } catch(e) {}
         // Mark intent quickly so event-driven finishes coalesce
         markFinishIntent(key);
@@ -13033,6 +13046,17 @@
             var minProg2 = parseInt(Lampa.Storage.field('trakt_min_progress') || config.minProgress);
             var shouldFinishOnStop = (lastPct >= minProg2) || !!(evt && evt.type === 'ended' && !lastTimeline.hash);
             if (shouldFinishOnStop && watching && typeof watching.finish === 'function') {
+              try {
+                _watchLogAdd('finish_trigger_destroy', {
+                  type: meta && meta.season ? 'show' : 'movie',
+                  show: card && (card.original_name || card.name || card.title),
+                  season: meta && meta.season,
+                  episode: meta && meta.episode,
+                  percent: lastPct,
+                  minProg: minProg2,
+                  extra: 'evt:' + (evt && evt.type || '?')
+                });
+              } catch(e) {}
               watching.finish(media)["catch"](function (e) {
                 logWarn('Finish on stop failed', {
                   eventType: evt && evt.type,
