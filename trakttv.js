@@ -384,7 +384,39 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.0.7';
+  var PLUGIN_VERSION = '3.0.8';
+
+  var _AT_MIGRATE_MAP = {
+    trakt_magic_enabled:    'trakt_at_enabled',
+    trakt_magic_quality:    'trakt_at_quality',
+    trakt_magic_voice_movie:'trakt_at_voice_movie',
+    trakt_magic_voice_show: 'trakt_at_voice_show',
+    trakt_magic_popularity: 'trakt_at_popularity'
+  };
+
+  function _atMigrateStorage(showNotify) {
+    if (!Lampa || !Lampa.Storage) return 0;
+    var migrated = 0, already = 0;
+    Object.keys(_AT_MIGRATE_MAP).forEach(function(old) {
+      var newKey = _AT_MIGRATE_MAP[old];
+      var oldVal = Lampa.Storage.get(old);
+      var newVal = Lampa.Storage.get(newKey);
+      if (oldVal !== undefined && oldVal !== null && oldVal !== '') {
+        if (newVal === undefined || newVal === null || newVal === '') {
+          Lampa.Storage.set(newKey, oldVal);
+          migrated++;
+        } else {
+          already++;
+        }
+      }
+    });
+    if (showNotify && Lampa.Noty) {
+      Lampa.Noty.show(migrated
+        ? 'Мигрировано ' + migrated + ' ключ(ей). Уже было: ' + already
+        : 'Старых ключей не найдено (уже чисто)');
+    }
+    return migrated;
+  }
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -9986,37 +10018,6 @@
         if (el) el.parentNode.removeChild(el);
         Lampa.Noty.show('Бейджи снова видны');
       }
-    }
-
-    var _AT_MIGRATE_MAP = {
-      trakt_magic_enabled:    'trakt_at_enabled',
-      trakt_magic_quality:    'trakt_at_quality',
-      trakt_magic_voice_movie:'trakt_at_voice_movie',
-      trakt_magic_voice_show: 'trakt_at_voice_show',
-      trakt_magic_popularity: 'trakt_at_popularity'
-    };
-
-    function _atMigrateStorage(showNotify) {
-      var migrated = 0, already = 0;
-      Object.keys(_AT_MIGRATE_MAP).forEach(function(old) {
-        var newKey = _AT_MIGRATE_MAP[old];
-        var oldVal = Lampa.Storage.get(old);
-        var newVal = Lampa.Storage.get(newKey);
-        if (oldVal !== undefined && oldVal !== null && oldVal !== '') {
-          if (newVal === undefined || newVal === null || newVal === '') {
-            Lampa.Storage.set(newKey, oldVal);
-            migrated++;
-          } else {
-            already++;
-          }
-        }
-      });
-      if (showNotify) {
-        Lampa.Noty.show(migrated
-          ? 'Мигрировано ' + migrated + ' ключ(ей). Уже было: ' + already
-          : 'Старых ключей не найдено (уже чисто)');
-      }
-      return migrated;
     }
 
     function applyBadgeVisibility() {

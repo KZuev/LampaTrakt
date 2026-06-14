@@ -48,6 +48,7 @@
 | v3.0.5  | TBD       | Диагностика: логи `finish_trigger_*` в «История отметок просмотренного» |
 | v3.0.6  | `22f9d5c` | UI rename: «Magic Play» → «Авто торрент» (видимые строки) |
 | v3.0.7  | TBD       | Code rename: `_magic*`/`trakt_magic_*` → `_at*`/`trakt_at_*`; авто-миграция storage |
+| v3.0.8  | TBD       | Фикс «Script error»: `_atMigrateStorage` перенесена в scope модуля (была в `main()`, недоступна из `events.init`) |
 
 ## Авто торрент (v3.0.0) — архитектура
 
