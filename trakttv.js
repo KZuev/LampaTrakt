@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.0.5';
+  var PLUGIN_VERSION = '3.0.6';
   function getClientId() { return Lampa.Storage && Lampa.Storage.get('trakt_client_id') || ''; }
   function getClientSecret() { return Lampa.Storage && Lampa.Storage.get('trakt_client_secret') || ''; }
   var TOKEN_EXPIRY_SKEW_MS = 2 * 60 * 1000;
@@ -5968,8 +5968,8 @@
         ru: "Добавить в историю",
       },
       trakt_magic_button: {
-        ru: "Magic Play",
-        en: "Magic Play",
+        ru: "Авто торрент",
+        en: "Авто торрент",
       },
       trakt_magic_searching: {
         ru: "Ищем...",
@@ -7532,7 +7532,7 @@
     if (!btn) return;
     btn.classList.remove('trakt-magic-loading');
     var sp = btn.querySelector('span');
-    if (sp) sp.textContent = t$2('trakt_magic_button', 'Magic Play');
+    if (sp) sp.textContent = t$2('trakt_magic_button', 'Авто торрент');
   }
 
   function _magicNormalizeCard(card) {
@@ -7598,7 +7598,7 @@
   function addMagicButton(card, method) {
     var btn = document.createElement('div');
     btn.className = 'full-start__button selector trakt-magic-button';
-    btn.innerHTML = '<svg><use xlink:href="#sprite-torrent"></use></svg><span>' + t$2('trakt_magic_button', 'Magic Play') + '</span>';
+    btn.innerHTML = '<svg><use xlink:href="#sprite-torrent"></use></svg><span>' + t$2('trakt_magic_button', 'Авто торрент') + '</span>';
     // jQuery-биндинг обязателен: меню «Смотреть» активирует источник через
     // $(btn).trigger('hover:enter'), который не вызывает нативные addEventListener
     $(btn).on('hover:enter', function() {
@@ -9850,20 +9850,20 @@
       param: { name: 'trakt_badge_watchlist', type: 'trigger', 'default': true },
       field: { name: 'Бейдж «Хочу посмотреть»', description: 'Закладка на фильмах и сериалах из списка желаний' }
     });
-    // ── Magic Play ───────────────────────────────────────────────────────────────
+    // ── Авто торрент ─────────────────────────────────────────────────────────────
     Lampa.SettingsApi.addParam({
       component: 'trakt',
       param: { name: 'trakt_magic_section', type: 'static' },
       field: { name: '' },
       onRender: function(item) {
         item.empty();
-        item.append('<div class="settings-param__name" style="opacity:.55;font-weight:700">Magic Play</div>');
+        item.append('<div class="settings-param__name" style="opacity:.55;font-weight:700">Авто торрент</div>');
       }
     });
     Lampa.SettingsApi.addParam({
       component: 'trakt',
       param: { name: 'trakt_magic_enabled', type: 'trigger', 'default': false },
-      field: { name: 'Кнопка Magic Play', description: 'Автозапуск лучшего торрента в меню «Смотреть»' }
+      field: { name: 'Кнопка Авто торрент', description: 'Автозапуск лучшего торрента в меню «Смотреть»' }
     });
     Lampa.SettingsApi.addParam({
       component: 'trakt',
@@ -9878,7 +9878,7 @@
           '720p': '720p'
         }
       },
-      field: { name: 'Magic Play: качество', description: 'Приоритетное качество при автовыборе торрента' }
+      field: { name: 'Авто торрент: качество', description: 'Приоритетное качество при автовыборе торрента' }
     });
     Lampa.SettingsApi.addParam({
       component: 'trakt',
@@ -9892,7 +9892,7 @@
           any: 'Не фильтровать озвучку'
         }
       },
-      field: { name: 'Magic Play: озвучка фильмов', description: 'Фильтр озвучки при автовыборе торрента фильма' }
+      field: { name: 'Авто торрент: озвучка фильмов', description: 'Фильтр озвучки при автовыборе торрента фильма' }
     });
     Lampa.SettingsApi.addParam({
       component: 'trakt',
@@ -9906,7 +9906,7 @@
           any: 'Не фильтровать озвучку'
         }
       },
-      field: { name: 'Magic Play: озвучка сериалов', description: 'Фильтр озвучки при автовыборе торрента сериала' }
+      field: { name: 'Авто торрент: озвучка сериалов', description: 'Фильтр озвучки при автовыборе торрента сериала' }
     });
     Lampa.SettingsApi.addParam({
       component: 'trakt',
@@ -9919,7 +9919,7 @@
           popularity_first: 'Популярность, затем качество'
         }
       },
-      field: { name: 'Magic Play: приоритет сортировки', description: 'Что важнее при выборе: качество или количество раздающих' }
+      field: { name: 'Авто торрент: приоритет сортировки', description: 'Что важнее при выборе: качество или количество раздающих' }
     });
     // ── Отладка ──────────────────────────────────────────────────────────────────
     Lampa.SettingsApi.addParam({
