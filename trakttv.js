@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.0.11';
+  var PLUGIN_VERSION = '3.0.12';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -6000,8 +6000,8 @@
         ru: "Добавить в историю",
       },
       trakt_at_button: {
-        ru: "Авто торрент",
-        en: "Авто торрент",
+        ru: "Авто-торрент",
+        en: "Авто-торрент",
       },
       trakt_at_searching: {
         ru: "Ищем...",
@@ -6024,7 +6024,7 @@
         en: "Opening file…",
       },
       trakt_at_timeout: {
-        ru: "Авто торрент: время ожидания истекло",
+        ru: "Авто-торрент: время ожидания истекло",
         en: "Auto torrent: timed out",
       },
       trakt_watchlist_button: {
@@ -7580,7 +7580,7 @@
     if (!btn) return;
     btn.classList.remove('trakt-magic-loading');
     var sp = btn.querySelector('span');
-    if (sp) sp.textContent = t$2('trakt_at_button', 'Авто торрент');
+    if (sp) sp.textContent = t$2('trakt_at_button', 'Авто-торрент');
   }
 
   function _atOverlayShow(msg) {
@@ -7593,7 +7593,7 @@
     _atOverlay = el;
     _atOverlaySafetyTimer = setTimeout(function() {
       _atOverlayHide();
-      notify(t$2('trakt_at_timeout', 'Авто торрент: время ожидания истекло'));
+      notify(t$2('trakt_at_timeout', 'Авто-торрент: время ожидания истекло'));
     }, 15000);
   }
 
@@ -7677,7 +7677,7 @@
   function addAtButton(card, method) {
     var btn = document.createElement('div');
     btn.className = 'full-start__button selector trakt-magic-button';
-    btn.innerHTML = '<svg><use xlink:href="#sprite-torrent"></use></svg><span>' + t$2('trakt_at_button', 'Авто торрент') + '</span>';
+    btn.innerHTML = '<svg><use xlink:href="#sprite-torrent"></use></svg><span>' + t$2('trakt_at_button', 'Авто-торрент') + '</span>';
     // jQuery-биндинг обязателен: меню «Смотреть» активирует источник через
     // $(btn).trigger('hover:enter'), который не вызывает нативные addEventListener
     $(btn).on('hover:enter', function() {
@@ -9929,20 +9929,20 @@
       param: { name: 'trakt_badge_watchlist', type: 'trigger', 'default': true },
       field: { name: 'Бейдж «Хочу посмотреть»', description: 'Закладка на фильмах и сериалах из списка желаний' }
     });
-    // ── Авто торрент ─────────────────────────────────────────────────────────────
+    // ── Авто-торрент ─────────────────────────────────────────────────────────────
     Lampa.SettingsApi.addParam({
       component: 'trakt',
       param: { name: 'trakt_at_section', type: 'static' },
       field: { name: '' },
       onRender: function(item) {
         item.empty();
-        item.append('<div class="settings-param__name" style="opacity:.55;font-weight:700">Авто торрент</div>');
+        item.append('<div class="settings-param__name" style="opacity:.55;font-weight:700">Авто-торрент</div>');
       }
     });
     Lampa.SettingsApi.addParam({
       component: 'trakt',
       param: { name: 'trakt_at_enabled', type: 'trigger', 'default': false },
-      field: { name: 'Кнопка Авто торрент', description: 'Автозапуск лучшего торрента в меню «Смотреть»' }
+      field: { name: 'Кнопка Авто-торрент', description: 'Автозапуск лучшего торрента в меню «Смотреть»' }
     });
     Lampa.SettingsApi.addParam({
       component: 'trakt',
@@ -9957,7 +9957,7 @@
           '720p': '720p'
         }
       },
-      field: { name: 'Авто торрент: качество', description: 'Приоритетное качество при автовыборе торрента' }
+      field: { name: 'Авто-торрент: качество', description: 'Приоритетное качество при автовыборе торрента' }
     });
     Lampa.SettingsApi.addParam({
       component: 'trakt',
@@ -9971,7 +9971,7 @@
           any: 'Не фильтровать озвучку'
         }
       },
-      field: { name: 'Авто торрент: озвучка фильмов', description: 'Фильтр озвучки при автовыборе торрента фильма' }
+      field: { name: 'Авто-торрент: озвучка фильмов', description: 'Фильтр озвучки при автовыборе торрента фильма' }
     });
     Lampa.SettingsApi.addParam({
       component: 'trakt',
@@ -9985,7 +9985,7 @@
           any: 'Не фильтровать озвучку'
         }
       },
-      field: { name: 'Авто торрент: озвучка сериалов', description: 'Фильтр озвучки при автовыборе торрента сериала' }
+      field: { name: 'Авто-торрент: озвучка сериалов', description: 'Фильтр озвучки при автовыборе торрента сериала' }
     });
     Lampa.SettingsApi.addParam({
       component: 'trakt',
@@ -9998,7 +9998,7 @@
           popularity_first: 'Популярность, затем качество'
         }
       },
-      field: { name: 'Авто торрент: приоритет сортировки', description: 'Что важнее при выборе: качество или количество раздающих' }
+      field: { name: 'Авто-торрент: приоритет сортировки', description: 'Что важнее при выборе: качество или количество раздающих' }
     });
     // ── Отладка ──────────────────────────────────────────────────────────────────
     Lampa.SettingsApi.addParam({
@@ -10030,7 +10030,7 @@
             { title: 'Диагностика списков (' + _listLog.length + ')',                 action: 'listlog'  },
             { title: 'Сравнение высоты списков',                                     action: 'height'   },
             { title: _badgesHidden ? 'Бейджи: ВКЛ (показать)' : 'Бейджи: ВЫКЛ (скрыть)', action: 'toggle_badges' },
-            { title: 'Мигрировать ключи Авто торрент (trakt_magic_* → trakt_at_*)',     action: 'migrate_at'   }
+            { title: 'Мигрировать ключи Авто-торрент (trakt_magic_* → trakt_at_*)',     action: 'migrate_at'   }
           ],
           onSelect: function(item) {
             if (!item) return;
