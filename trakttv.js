@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.0.15';
+  var PLUGIN_VERSION = '3.0.16';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -11851,6 +11851,12 @@
       if (window.Lampa && Lampa.Listener) {
         Lampa.Listener.follow('torrent_file', this.onTorrentFileList.bind(this));
       }
+      try {
+        _watchLogAdd('init_done', {
+          extra: 'tl:' + !!(window.Lampa && Lampa.Timeline && Lampa.Timeline.listener)
+               + ',pl:' + !!(window.Lampa && Lampa.Player && Lampa.Player.listener)
+        });
+      } catch(e) {}
     },
     /**
      * Обработчик списка файлов торрента — заполняет hashMetaCache для всего сезона
@@ -12107,6 +12113,8 @@
         slog('Below minProgress, no finish');
         if ((watchedByPercent || watchedByTime) && !_isPlayerActive) {
           try { _watchLogAdd('timeline_inactive', { percent: percent, minProg: minProgress, extra: 'threshold_met_but_inactive' }); } catch(e) {}
+        } else {
+          try { _watchLogAdd('timeline_low_pct', { percent: percent, minProg: minProgress }); } catch(e) {}
         }
       }
     },
@@ -13194,6 +13202,8 @@
             type: 'hidden'
           });
         });
+      } else {
+        try { _watchLogAdd('init_no_player', { extra: 'Lampa.Player.listener absent at init' }); } catch(e) {}
       }
     },
     /**
