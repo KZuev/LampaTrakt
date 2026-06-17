@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.0.12';
+  var PLUGIN_VERSION = '3.0.13';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -11998,6 +11998,7 @@
       var enableWatching = Lampa.Storage.field('trakt_enable_watching');
       slog('trakt_enable_watching setting:', enableWatching);
       if (!enableWatching) {
+        try { _watchLogAdd('timeline_disabled', { extra: 'enableWatching=false' }); } catch(e) {}
         return;
       }
       if (!data || !data.data || !data.data.hash || !data.data.road) {
@@ -12005,6 +12006,7 @@
         slog('Invalid data - data.data:', data && data.data);
         slog('Invalid data - data.data.hash:', data && data.data && data.data.hash);
         slog('Invalid data - data.data.road:', data && data.data && data.data.road);
+        try { _watchLogAdd('timeline_baddata', { extra: 'hash=' + !!(data && data.data && data.data.hash) + ',road=' + !!(data && data.data && data.data.road) }); } catch(e) {}
         return;
       }
       var hash = data.data.hash;
@@ -12028,6 +12030,7 @@
       });
       if (!token) {
         slog('No token found');
+        try { _watchLogAdd('timeline_notoken', { extra: 'no trakt_token' }); } catch(e) {}
         return;
       }
       var card = this.getCurrentCard();
@@ -12051,6 +12054,7 @@
       slog('Card from getCurrentCard:', card);
       if (!card) {
         slog('No card found, skipping update');
+        try { _watchLogAdd('timeline_nocard', { extra: 'hash:' + String(hash).slice(0, 12) }); } catch(e) {}
         return;
       }
 
@@ -12099,6 +12103,9 @@
         });
       } else {
         slog('Below minProgress, no finish');
+        if ((watchedByPercent || watchedByTime) && !_isPlayerActive) {
+          try { _watchLogAdd('timeline_inactive', { percent: percent, minProg: minProgress, extra: 'threshold_met_but_inactive' }); } catch(e) {}
+        }
       }
     },
     /**
@@ -13110,6 +13117,10 @@
           // On resume the player continues without firing 'start' again.
           if (!(evt && evt.type === 'hidden')) _isPlayerActive = false;
           try {
+            var _lastPctNow = window.last_timeline_event && window.last_timeline_event.data && window.last_timeline_event.data.road && Math.round(parseFloat(window.last_timeline_event.data.road.percent || 0));
+            try { _watchLogAdd('destroy_called', { extra: 'evt:' + (evt && evt.type || '?') + ',lastPct:' + _lastPctNow }); } catch(e) {}
+          } catch(e) {}
+          try {
             if (!Lampa.Storage.field('trakt_enable_watching')) return;
             var token = Lampa.Storage.get('trakt_token');
             if (!token) return;
@@ -13137,6 +13148,9 @@
             var lastPct = parseFloat(lastRoad.percent || 0);
             var minProg2 = parseInt(Lampa.Storage.field('trakt_min_progress') || config.minProgress);
             var shouldFinishOnStop = (lastPct >= minProg2) || !!(evt && evt.type === 'ended' && !lastTimeline.hash);
+            if (!shouldFinishOnStop) {
+              try { _watchLogAdd('destroy_below', { percent: lastPct, minProg: minProg2, extra: 'evt:' + (evt && evt.type || '?') }); } catch(e) {}
+            }
             if (shouldFinishOnStop && watching && typeof watching.finish === 'function') {
               try {
                 _watchLogAdd('finish_trigger_destroy', {
