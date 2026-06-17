@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.0.16';
+  var PLUGIN_VERSION = '3.0.17';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -11837,6 +11837,13 @@
       loadSessionCache();
       loadHashMetaCache();
       slog('watching.init');
+      // Restore watch log from storage before logging init_done so history isn't lost on restart
+      if (!_watchMarkLog.length) {
+        try {
+          var _storedLog = Lampa.Storage.get('trakt_watch_log');
+          if (Array.isArray(_storedLog) && _storedLog.length) _watchMarkLog = _storedLog;
+        } catch(e) {}
+      }
 
       if (window.Lampa && Lampa.Timeline && Lampa.Timeline.listener) {
         Lampa.Timeline.listener.follow('update', this.processTimelineUpdate.bind(this));
@@ -12114,7 +12121,7 @@
         if ((watchedByPercent || watchedByTime) && !_isPlayerActive) {
           try { _watchLogAdd('timeline_inactive', { percent: percent, minProg: minProgress, extra: 'threshold_met_but_inactive' }); } catch(e) {}
         } else {
-          try { _watchLogAdd('timeline_low_pct', { percent: percent, minProg: minProgress }); } catch(e) {}
+          try { _watchLogAdd('timeline_low_pct', { percent: percent, minProg: minProgress, extra: 'min:' + minProgress }); } catch(e) {}
         }
       }
     },
