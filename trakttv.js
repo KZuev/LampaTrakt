@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.0.17';
+  var PLUGIN_VERSION = '3.0.18';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -12079,7 +12079,7 @@
       slog('Checking if should finish with idempotency, percent:', percent, 'minProgress:', minProgress);
       var watchedByPercent = (typeof percent === 'number' ? percent : 0) >= minProgress;
       var watchedByTime = road && road.time && road.duration ? road.time / road.duration * 100 >= minProgress : false;
-      if ((watchedByPercent || watchedByTime) && _isPlayerActive) {
+      if (watchedByPercent || watchedByTime) {
         var media = Object.assign({}, card, {
           hash: hash
         });
