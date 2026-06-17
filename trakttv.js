@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.0.14';
+  var PLUGIN_VERSION = '3.0.15';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -10214,7 +10214,7 @@
         return;
       }
       var items = log.map(function(e) {
-        var time = e.ts ? e.ts.slice(11, 19) : '?';
+        var time = e.ts ? (e.ts.slice(5, 10) + ' ' + e.ts.slice(11, 19)) : '?';
         var who  = e.type === 'movie' ? (e.title || '?') : ((e.show || '?') + (e.season != null ? ' S' + e.season : '') + (e.episode != null ? 'E' + e.episode : ''));
         var pct  = e.percent != null ? ' ' + Math.round(e.percent) + '%' : '';
         var xtra = e.extra ? ' [' + e.extra + ']' : '';
