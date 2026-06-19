@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.0.18';
+  var PLUGIN_VERSION = '3.0.19';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -12079,7 +12079,7 @@
       slog('Checking if should finish with idempotency, percent:', percent, 'minProgress:', minProgress);
       var watchedByPercent = (typeof percent === 'number' ? percent : 0) >= minProgress;
       var watchedByTime = road && road.time && road.duration ? road.time / road.duration * 100 >= minProgress : false;
-      if (watchedByPercent || watchedByTime) {
+      if ((watchedByPercent || watchedByTime) && _isPlayerActive) {
         var media = Object.assign({}, card, {
           hash: hash
         });
@@ -13202,7 +13202,10 @@
         // Lampa.Player.listener fires 'destroy' when player is destroyed (always fires).
         // 'stop'/'ended' are only fired by some Lampa builds; 'destroy' is universal.
         Lampa.Player.listener.follow('destroy', function () {
-          routeFinishIntent({ type: 'stop' });
+          // Delay so the final timeline 'update' (from saveTimeView) can arrive
+          // while _isPlayerActive is still true — processTimelineUpdate handles it,
+          // and routeFinishIntent acts as fallback if it doesn't.
+          setTimeout(function() { routeFinishIntent({ type: 'stop' }); }, 500);
         });
         Lampa.Player.listener.follow('visibility', function (e) {
           if (e && e.hidden) routeFinishIntent({
