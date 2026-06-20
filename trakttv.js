@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.0.29';
+  var PLUGIN_VERSION = '3.0.30';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -10142,6 +10142,16 @@
       param: { name: 'trakt_badge_watchlist', type: 'trigger', 'default': true },
       field: { name: 'Бейдж «Хочу посмотреть»', description: 'Закладка на фильмах и сериалах из списка желаний' }
     });
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: { name: 'trakt_badge_digital_release', type: 'trigger', 'default': true },
+      field: { name: t$1('trakttv_badge_digital_release', 'Бейдж «Цифровой релиз»'), description: t$1('trakttv_badge_digital_release_descr', 'Дата цифрового релиза на постере фильма') }
+    });
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: { name: 'trakt_badge_digital_date', type: 'trigger', 'default': true },
+      field: { name: t$1('trakttv_badge_digital_date', 'Дата цифрового релиза в карточке'), description: t$1('trakttv_badge_digital_date_descr', 'Показывать дату цифрового релиза в детальной карточке фильма') }
+    });
     // ── Авто-торрент ─────────────────────────────────────────────────────────────
     Lampa.SettingsApi.addParam({
       component: 'trakt',
@@ -10302,6 +10312,8 @@
       if (!readBooleanStorage$2('trakt_badge_completed', true)) hidden.push('.trakt-watched-badge');
       if (!readBooleanStorage$2('trakt_badge_watching', true)) hidden.push('.trakt-watching-badge');
       if (!readBooleanStorage$2('trakt_badge_watchlist', true)) hidden.push('.trakt-watchlist-badge');
+      if (!readBooleanStorage$2('trakt_badge_digital_release', true)) hidden.push('.trakt-digital-release');
+      if (!readBooleanStorage$2('trakt_badge_digital_date', true)) hidden.push('.trakt-digital-date');
       if (hidden.length) {
         if (!el) { el = document.createElement('style'); el.id = styleId; document.head.appendChild(el); }
         el.textContent = hidden.join(',') + '{display:none!important}';
@@ -10312,7 +10324,7 @@
     applyBadgeVisibility();
     if (Lampa.Storage && Lampa.Storage.listener) {
       Lampa.Storage.listener.follow('change', function(e) {
-        if (e && (e.name === 'trakt_badge_completed' || e.name === 'trakt_badge_watching' || e.name === 'trakt_badge_watchlist')) applyBadgeVisibility();
+        if (e && (e.name === 'trakt_badge_completed' || e.name === 'trakt_badge_watching' || e.name === 'trakt_badge_watchlist' || e.name === 'trakt_badge_digital_release' || e.name === 'trakt_badge_digital_date')) applyBadgeVisibility();
       });
     }
 
