@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.0.28';
+  var PLUGIN_VERSION = '3.0.29';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -882,7 +882,7 @@
   function buildRecommendationsUrl$1(type, limit, extraParams) {
     var ignoreWatchlisted = readBooleanStorage$2('trakt_source_ignore_watchlisted', false) ? 'true' : 'false';
     var ignoreWatchedOverride = extraParams && typeof extraParams.ignoreWatched === 'boolean' ? extraParams.ignoreWatched : null;
-    var ignoreWatched = ignoreWatchedOverride !== null ? ignoreWatchedOverride : (readBooleanStorage$2('trakt_source_ignore_watched', false) || readBooleanStorage$2('trakt_recommendations_ignore_watched', false));
+    var ignoreWatched = ignoreWatchedOverride !== null ? ignoreWatchedOverride : (readBooleanStorage$2('trakt_source_ignore_watched', false) || readBooleanStorage$2('trakt_recommendations_ignore_watched', true));
     var query = new URLSearchParams({
       extended: 'full,images',
       limit: String(Math.max(1, parseInt(limit, 10) || 36)),
@@ -5261,7 +5261,7 @@
     function rebuildView() {
       if (currentView && currentView.destroy) currentView.destroy();
       body.empty();
-      var ignoreWatched = readBooleanStorage$2('trakt_source_ignore_watched', false) || readBooleanStorage$2('trakt_recommendations_ignore_watched', false);
+      var ignoreWatched = readBooleanStorage$2('trakt_source_ignore_watched', false) || readBooleanStorage$2('trakt_recommendations_ignore_watched', true);
       var viewObject = Object.assign({}, object, {
         page: 1,
         filterType: activeFilters.type,
@@ -9874,7 +9874,7 @@
       param: {
         name: 'trakt_recommendations_ignore_watched',
         type: 'trigger',
-        "default": false
+        "default": true
       },
       field: {
         name: t$1('trakttv_recommendations_ignore_watched', 'Recommendations: hide watched'),
