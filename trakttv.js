@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.0.34';
+  var PLUGIN_VERSION = '3.0.35';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -6557,7 +6557,7 @@
         ru: "Избранное",
       },
       trakttv_topshelf: {
-        ru: "Top Shelf (Apple TV)",
+        ru: "Top Shelf",
       },
       trakttv_topshelf_descr: {
         ru: "Обновлять Top Shelf на Apple TV",
@@ -9948,21 +9948,6 @@
         description: Lampa.Lang.translate('trakttv_enable_watching_descr')
       }
     });
-    if (Lampa.Platform.is('apple_tv') === true) {
-      Lampa.SettingsApi.addParam({
-        component: 'trakt',
-        param: {
-          name: 'trakttv_topshelf',
-          type: 'trigger',
-          "default": false
-        },
-        field: {
-          name: Lampa.Lang.translate('trakttv_topshelf'),
-          description: Lampa.Lang.translate('trakttv_topshelf_descr')
-        }
-      });
-    }
-
     Lampa.SettingsApi.addParam({
       component: 'trakt',
       param: {
@@ -10289,6 +10274,26 @@
       },
       field: { name: 'Авто-торрент: число попыток', description: 'Сколько торрентов перебрать при неудаче, прежде чем сдаться' }
     });
+    // ── Apple TV ──────────────────────────────────────────────────────────────────
+    if (Lampa.Platform.is('apple_tv') === true) {
+      Lampa.SettingsApi.addParam({
+        component: 'trakt',
+        param: { name: 'trakt_appletv_section', type: 'static' },
+        field: { name: '' },
+        onRender: function(item) {
+          item.empty();
+          item.append('<div class="settings-param__name" style="opacity:.55;font-weight:700">Apple TV</div>');
+        }
+      });
+      Lampa.SettingsApi.addParam({
+        component: 'trakt',
+        param: { name: 'trakttv_topshelf', type: 'trigger', 'default': false },
+        field: {
+          name: Lampa.Lang.translate('trakttv_topshelf'),
+          description: Lampa.Lang.translate('trakttv_topshelf_descr')
+        }
+      });
+    }
     // ── Отладка ──────────────────────────────────────────────────────────────────
     Lampa.SettingsApi.addParam({
       component: 'trakt',
