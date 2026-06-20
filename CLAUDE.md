@@ -10,7 +10,7 @@
 
 ## Текущая версия
 
-**v3.0.23** — Авто-торрент: сброс/восстановление фильтра торрентов Lampa перед автовыбором.
+**v3.0.24** — Авто-торрент: перебор торрентов при неудаче, таймаут 30с/попытку, отмена кнопкой Назад, настройка числа попыток.
 
 ## История фиксов
 
@@ -53,7 +53,8 @@
 | v3.0.20 | `b994c03` | Клик на версию в настройках открывает README.md из репозитория |
 | v3.0.21 | `cf56e97` | Полноценный Markdown-рендерер (таблицы, списки, код-блоки) |
 | v3.0.22 | `08eb698` | README-окно: `size: 'large'`, стиль как нативный диалог Lampa |
-| v3.0.23 | TBD | Авто-торрент: сброс/восстановление фильтра торрентов Lampa перед автовыбором |
+| v3.0.23 | `7986e22` | Авто-торрент: сброс/восстановление фильтра торрентов Lampa перед автовыбором |
+| v3.0.24 | TBD | Авто-торрент: перебор торрентов при неудаче, 30с/попытку, отмена Назад, настройка числа попыток |
 
 ## Архитектура scrobbling
 
@@ -73,8 +74,10 @@
 1. Кнопка добавляется в `.buttons--container` только при `trakt_at_enabled: true`.
 2. **Сериал**: следующий эпизод через `/search/tmdb/{id}?type=show` → `/shows/{traktId}/progress/watched` → `next_episode`.
 3. **Сброс фильтра** перед открытием `torrents`: `_atSaveAndClearTorrentFilter()` сохраняет и очищает `torrents_filter` + `torrents_filter_data`, иначе ручной фильтр качества Lampa скрыл бы часть торрентов (например 4K) ещё до `render`-событий. `_atRestoreTorrentFilter()` возвращает фильтр после выбора торрента (идемпотентно).
-4. **Автовыбор торрента** (`Lampa.Listener.follow('torrent', ...)`): `render`-события собираются 400 мс, затем выбирается лучший по сезону / озвучке / качеству / популярности.
-5. **Автовыбор файла** (`Lampa.Listener.follow('torrent_file', ...)`): на `render` ищется файл с нужным `season`/`episode`, триггерится `hover:enter`.
+4. **Сортировка кандидатов** (`Lampa.Listener.follow('torrent', ...)`): `render`-события собираются 400 мс, затем `_atSortTorrentCandidates` строит ВЕСЬ отсортированный список (сезон / озвучка / качество / популярность) для перебора.
+5. **Перебор + автовыбор файла** (`Lampa.Listener.follow('torrent_file', ...)`): `_atTryCurrentTorrent` открывает кандидата с таймаутом `AT_ATTEMPT_MS` (30с). Успех — нужный `season`/`episode` (сериал) или лучший файл (фильм) → `_atSucceed()` + `hover:enter`. Неудача (пустой `list_open`, нет нужной серии после `AT_SETTLE_MS`=2.5с, или 30с-таймаут) → `_atTorrentFailed()` → `Lampa.Controller.back()` закрывает модал → ветка `list_close` с флагом `_atRetrying` открывает следующего кандидата. Лимит — `_atMaxAttempts()` (`trakt_at_max_attempts`: all/5/3).
+
+**Прерываемость:** слой-контроллер `trakt_at` (`_atControllerEnable/Disable`, в Lampa нет `Controller.remove` — возврат через `toggle('content')`) с `back: _atCancel` активен между попытками; во время модала Назад отменяет через `list_close` (не `_atRetrying`). `Lampa.Listener.follow('activity', destroy/torrents)` ловит выход с экрана торрентов до выбора. `_atCancel/_atFailAll` чистят таймеры/состояние, восстанавливают фильтр, прячут оверлей.
 
 **Ключевые паттерны:**
 - `$(btn).on('hover:enter', ...)` — обязательно jQuery (меню «Смотреть» активирует через jQuery trigger)
@@ -83,7 +86,8 @@
 - `_atTitleMatchesSeason(title, season)` — паттерны из фильтра Lampa
 - `_atIsDubbed(title)` — паттерн озвучки (voice p==1)
 - `_atHasRusAudio(e)` — `languages: ru` или ключевые слова
-- `_atSaveAndClearTorrentFilter()` / `_atRestoreTorrentFilter()` — бэкап/сброс/возврат фильтра торрентов; восстановление вызывается на всех путях тимдауна (выбор сделан, `list_close`, 15с-таймаут, ошибка API)
+- `_atSaveAndClearTorrentFilter()` / `_atRestoreTorrentFilter()` — бэкап/сброс/возврат фильтра торрентов; восстановление на всех путях тимдауна (выбор сделан, `list_close`, таймаут, ошибка API, отмена)
+- Состояние перебора: `_atTorrentCandidates/_atTorrentIndex/_atAttemptTimer/_atSettleTimer/_atRetrying`; `_atResetState()` — полный сброс
 
 ## Бейджи на постерах — архитектура
 

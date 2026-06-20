@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.0.23';
+  var PLUGIN_VERSION = '3.0.24';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -6027,6 +6027,22 @@
         ru: "Авто-торрент: время ожидания истекло",
         en: "Auto torrent: timed out",
       },
+      trakt_at_status_retry: {
+        ru: "Пробуем другой торрент…",
+        en: "Trying another torrent…",
+      },
+      trakt_at_no_torrent: {
+        ru: "Не удалось подобрать торрент",
+        en: "No suitable torrent found",
+      },
+      trakt_at_cancelled: {
+        ru: "Авто-торрент отменён",
+        en: "Auto torrent cancelled",
+      },
+      trakt_at_cancel_hint: {
+        ru: "Назад — отмена",
+        en: "Back — cancel",
+      },
       trakt_watchlist_button: {
         ru: "Добавить в watchlist",
       },
@@ -7495,7 +7511,7 @@
 
   // Сохраняет ручной фильтр торрентов Lampa и очищает его, чтобы при автовыборе
   // рендерились ВСЕ торренты (иначе сохранённый фильтр качества скрыл бы, например,
-  // 4K, и логика pickBestTorrentFromCollected до него не дошла бы).
+  // 4K, и логика _atSortTorrentCandidates до него не дошла бы).
   function _atSaveAndClearTorrentFilter() {
     try {
       _atFilterBackup = {
@@ -7518,8 +7534,10 @@
     } catch (e) {}
   }
 
-  function pickBestTorrentFromCollected(collected, ctx) {
-    if (!collected || !collected.length) return null;
+  // Возвращает ВЕСЬ отсортированный список подходящих торрентов (лучший — первый).
+  // Используется для перебора кандидатов при неудачном открытии файла.
+  function _atSortTorrentCandidates(collected, ctx) {
+    if (!collected || !collected.length) return [];
     var pool = collected;
     // Сериал: только торренты с нужным сезоном
     if (ctx && ctx.type === 'show' && ctx.season) {
@@ -7556,7 +7574,7 @@
       return q < targetScore ? q : -q; // ниже целевого лучше, чем выше
     }
     var popularityFirst = _atSetting('trakt_at_popularity', 'quality_first') === 'popularity_first';
-    var sorted = pool.slice().sort(function(a, b) {
+    return pool.slice().sort(function(a, b) {
       var qa = effectiveQuality(a.element.Title || ''), qb = effectiveQuality(b.element.Title || '');
       var pa = (a.element.Seeders || 0) + (a.element.Peers || 0);
       var pb = (b.element.Seeders || 0) + (b.element.Peers || 0);
@@ -7567,7 +7585,6 @@
       if (qb !== qa) return qb - qa;
       return pb - pa;
     });
-    return sorted[0] || null;
   }
 
   function pickBestFileFromCollected(collected) {
@@ -7608,19 +7625,24 @@
     if (sp) sp.textContent = t$2('trakt_at_button', 'Авто-торрент');
   }
 
+  var AT_ATTEMPT_MS = 30000;   // жёсткий лимит на одну попытку (медленная загрузка торрента)
+  var AT_SETTLE_MS = 2500;     // дебаунс: файлы прогрузились, нужной серии нет → следующий
+
   function _atOverlayShow(msg) {
     _atOverlayHide();
     var el = document.createElement('div');
     el.className = 'trakt-at-overlay';
     el.innerHTML = '<div class="trakt-at-overlay__spinner"></div>'
-                 + '<div class="trakt-at-overlay__status">' + msg + '</div>';
+                 + '<div class="trakt-at-overlay__status">' + msg + '</div>'
+                 + '<div class="trakt-at-overlay__hint" style="margin-top:.8em;opacity:.6;font-size:.8em">'
+                 + t$2('trakt_at_cancel_hint', 'Назад — отмена') + '</div>';
     document.body.appendChild(el);
     _atOverlay = el;
+    // Страховка на фазу до первого модала (поиск API + сбор торрентов).
+    // На каждую попытку открытия файла действует отдельный _atAttemptTimer.
     _atOverlaySafetyTimer = setTimeout(function() {
-      _atOverlayHide();
-      _atRestoreTorrentFilter();
-      notify(t$2('trakt_at_timeout', 'Авто-торрент: время ожидания истекло'));
-    }, 15000);
+      _atCancel(t$2('trakt_at_timeout', 'Авто-торрент: время ожидания истекло'));
+    }, AT_ATTEMPT_MS);
   }
 
   function _atOverlaySetStatus(msg) {
@@ -7634,6 +7656,113 @@
     _atOverlaySafetyTimer = null;
     if (_atOverlay && _atOverlay.parentNode) _atOverlay.parentNode.removeChild(_atOverlay);
     _atOverlay = null;
+  }
+
+  // ── Перебор торрентов и прерываемость ────────────────────────────────────────
+  function _atMaxAttempts() {
+    var v = _atSetting('trakt_at_max_attempts', 'all');
+    return v === 'all' ? Infinity : (parseInt(v, 10) || Infinity);
+  }
+
+  // Слой-контроллер поверх спиннер-оверлея: Назад = отмена в любой момент.
+  // Программные trigger('hover:enter') не зависят от фокуса контроллера.
+  function _atControllerEnable() {
+    try {
+      Lampa.Controller.add('trakt_at', {
+        invisible: true,
+        toggle: function() {},
+        back: function() { _atCancel(); }
+      });
+      Lampa.Controller.toggle('trakt_at');
+    } catch (e) {}
+  }
+  // В Lampa нет Controller.remove — если наш слой активен, возвращаем фокус списку торрентов.
+  function _atControllerDisable() {
+    try {
+      if (Lampa.Controller.enabled().name === 'trakt_at') Lampa.Controller.toggle('content');
+    } catch (e) {}
+  }
+
+  // Если открыт экран торрентов — вернуться к карточке; иначе ничего не двигать.
+  function _atBackwardIfTorrents() {
+    try {
+      var act = Lampa.Activity.active();
+      if (act && act.component === 'torrents') Lampa.Activity.backward();
+    } catch (e) {}
+  }
+
+  // Полный сброс состояния перебора (таймеры, кандидаты, флаги).
+  function _atResetState() {
+    clearTimeout(_atAttemptTimer); _atAttemptTimer = null;
+    clearTimeout(_atSettleTimer);  _atSettleTimer = null;
+    clearTimeout(_atFileTimer);    _atFileTimer = null;
+    clearTimeout(_atTorrentTimer); _atTorrentTimer = null;
+    _atSelectPending = null;
+    _atTorrentCandidates = [];
+    _atTorrentIndex = 0;
+    _atTorrentCollected = [];
+    _atFileCollected = [];
+    _atRetrying = false;
+  }
+
+  // Открыть текущего кандидата (по индексу) и завести таймаут попытки.
+  function _atTryCurrentTorrent() {
+    var cand = _atTorrentCandidates[_atTorrentIndex];
+    if (!_atSelectPending || !cand || !cand.item) { _atFailAll(); return; }
+    // Дальше таймауты держит per-attempt _atAttemptTimer — страховку из overlayShow снимаем
+    clearTimeout(_atOverlaySafetyTimer); _atOverlaySafetyTimer = null;
+    _atFileCollected = [];
+    clearTimeout(_atSettleTimer); _atSettleTimer = null;
+    clearTimeout(_atAttemptTimer);
+    var n = _atTorrentIndex + 1, total = _atTorrentCandidates.length;
+    _atOverlaySetStatus(t$2('trakt_at_status_file', 'Открываем файл…') + ' (' + n + '/' + (isFinite(_atMaxAttempts()) ? Math.min(total, _atMaxAttempts()) : total) + ')');
+    _atAttemptTimer = setTimeout(_atTorrentFailed, AT_ATTEMPT_MS);
+    cand.item.trigger('hover:enter');
+  }
+
+  // Текущий торрент не подошёл → следующий кандидат либо общий провал.
+  function _atTorrentFailed() {
+    if (!_atSelectPending) return;
+    clearTimeout(_atAttemptTimer); _atAttemptTimer = null;
+    clearTimeout(_atSettleTimer);  _atSettleTimer = null;
+    _atTorrentIndex++;
+    if (_atTorrentIndex < _atTorrentCandidates.length && _atTorrentIndex < _atMaxAttempts()) {
+      _atRetrying = true;
+      _atOverlaySetStatus(t$2('trakt_at_status_retry', 'Пробуем другой торрент…'));
+      try { Lampa.Controller.back(); } catch (e) {}   // закрыть модал → list_close → следующий
+    } else {
+      _atFailAll();
+    }
+  }
+
+  // Успех: файл найден и запущен.
+  function _atSucceed() {
+    _atOverlayHide();
+    _atControllerDisable();
+    _atResetState();
+  }
+
+  // Кандидаты исчерпаны: закрыть открытый модал файлов (если есть), убрать всё, уведомить.
+  function _atFailAll() {
+    var hadPending = !!_atSelectPending;
+    _atResetState();
+    _atOverlayHide();
+    _atRestoreTorrentFilter();
+    _atControllerDisable();
+    // Если открыт модал файлов последней попытки — закрыть его (вернёт к списку торрентов)
+    try { if (document.querySelector('.modal')) Lampa.Controller.back(); } catch (e) {}
+    if (hadPending) notify(t$2('trakt_at_no_torrent', 'Не удалось подобрать торрент'));
+  }
+
+  // Отмена пользователем (Назад) либо страховочный таймаут: свернуть всё и вернуться к карточке.
+  function _atCancel(msg) {
+    if (!_atSelectPending && !_atOverlay) return;  // нечего отменять
+    _atResetState();
+    _atOverlayHide();
+    _atRestoreTorrentFilter();
+    _atControllerDisable();
+    _atBackwardIfTorrents();
+    notify(msg || t$2('trakt_at_cancelled', 'Авто-торрент отменён'));
   }
 
   function _atNormalizeCard(card) {
@@ -7676,21 +7805,21 @@
       var season = next && next.season;
       var episode = next && next.number;
       if (!season || !episode) {
+        // Следующий эпизод неизвестен — берём лучший видеофайл (как для фильма)
         _atSelectPending = { type: 'show', season: null, episode: null };
-        _atOverlayHide();
-        notify(t$2('trakt_at_no_next', 'Следующий эпизод не найден'));
       } else {
         _atSelectPending = { type: 'show', season: season, episode: episode };
-        _atOverlaySetStatus(t$2('trakt_at_status_torrent', 'Ищем торрент…'));
       }
+      _atOverlaySetStatus(t$2('trakt_at_status_torrent', 'Ищем торрент…'));
       _atBtnReset(btn);
       _atSaveAndClearTorrentFilter();
       Lampa.Activity.push({ url: '', title: Lampa.Lang.translate('title_torrents') || 'Торренты', component: 'torrents', search: _atSearchString(card), search_one: _atCardTitle(card), search_two: _atCardOriginalTitle(card), movie: card, page: 1 });
     }).catch(function(err) {
-      _atSelectPending = null;
+      _atResetState();
       _atBtnReset(btn);
       _atOverlayHide();
       _atRestoreTorrentFilter();
+      _atControllerDisable();
       notify(t$2('trakt_at_no_next', 'Следующий эпизод не найден'));
     });
   }
@@ -10023,6 +10152,20 @@
         }
       },
       field: { name: 'Авто-торрент: приоритет сортировки', description: 'Что важнее при выборе: качество или количество раздающих' }
+    });
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: {
+        name: 'trakt_at_max_attempts',
+        type: 'select',
+        "default": 'all',
+        values: {
+          all: 'Все подходящие',
+          '5': 'До 5 торрентов',
+          '3': 'До 3 торрентов'
+        }
+      },
+      field: { name: 'Авто-торрент: число попыток', description: 'Сколько торрентов перебрать при неудаче, прежде чем сдаться' }
     });
     // ── Отладка ──────────────────────────────────────────────────────────────────
     Lampa.SettingsApi.addParam({
@@ -12633,7 +12776,12 @@
   var _atFileTimer = null;
   var _atOverlay = null;
   var _atOverlaySafetyTimer = null;
-  var _atFilterBackup = null;   // бэкап фильтра торрентов Lampa на время авто-выбора
+  var _atFilterBackup = null;     // бэкап фильтра торрентов Lampa на время авто-выбора
+  var _atTorrentCandidates = [];  // отсортированный список кандидатов для перебора
+  var _atTorrentIndex = 0;        // индекс текущей попытки
+  var _atAttemptTimer = null;     // жёсткий таймаут текущей попытки (AT_ATTEMPT_MS)
+  var _atSettleTimer = null;      // дебаунс «файлы прогрузились, нужной серии нет» (сериал)
+  var _atRetrying = false;        // true, когда list_close инициирован нами для ретрая
 
   var _UPCOMING_MOVIE_KEY = 'trakt_upcoming_movie_ids';
   function getUpcomingMovieIds() {
@@ -13136,16 +13284,16 @@
           clearTimeout(_atTorrentTimer);
           _atTorrentTimer = setTimeout(function() {
             if (!_atSelectPending) return;
-            var best = pickBestTorrentFromCollected(_atTorrentCollected, _atSelectPending);
+            _atTorrentCandidates = _atSortTorrentCandidates(_atTorrentCollected, _atSelectPending);
+            _atTorrentIndex = 0;
             _atTorrentCollected = [];
             _atTorrentTimer = null;
             _atRestoreTorrentFilter();   // решение по торренту принято — фильтр больше не нужен
-            if (best && best.item) {
-              _atOverlaySetStatus(t$2('trakt_at_status_file', 'Открываем файл…'));
-              best.item.trigger('hover:enter');
+            if (_atTorrentCandidates.length) {
+              _atControllerEnable();     // Назад = отмена в любой момент
+              _atTryCurrentTorrent();
             } else {
-              _atSelectPending = null;
-              _atOverlayHide();
+              _atFailAll();
             }
           }, 400);
         }
@@ -13157,14 +13305,22 @@
       Lampa.Listener.follow('torrent_file', function(e) {
         if (!_atSelectPending) return;
         var ctx = _atSelectPending;
+        // Торрент без видеофайлов → сразу следующий кандидат
+        if (e.type === 'list_open') {
+          if (!e.items || !e.items.length) { _atTorrentFailed(); return; }
+        }
         if (e.type === 'render' && e.element) {
           if (ctx.season != null && ctx.episode != null) {
             // Сериал: ждём рендер файла с нужным сезоном/эпизодом
             if (e.element.season == ctx.season && e.element.episode == ctx.episode) {
-              _atSelectPending = null;
-              _atFileCollected = [];
-              clearTimeout(_atFileTimer);
-              setTimeout(function() { if (e.item) e.item.trigger('hover:enter'); }, 50);
+              var item = e.item;
+              _atSucceed();
+              setTimeout(function() { if (item) item.trigger('hover:enter'); }, 50);
+            } else {
+              // Файлы рендерятся, но нужной серии пока нет — взводим быстрый отказ.
+              // Совпадение (если придёт в этом же бёрсте) отменит таймер выше.
+              clearTimeout(_atSettleTimer);
+              _atSettleTimer = setTimeout(_atTorrentFailed, AT_SETTLE_MS);
             }
           } else {
             // Фильм/без эпизода: собираем все файлы, после паузы выбираем лучший
@@ -13175,17 +13331,33 @@
               var best = pickBestFileFromCollected(_atFileCollected);
               _atFileCollected = [];
               _atFileTimer = null;
-              _atSelectPending = null;
-              if (best && best.item) best.item.trigger('hover:enter');
+              if (best && best.item) {
+                var fitem = best.item;
+                _atSucceed();
+                fitem.trigger('hover:enter');
+              } else {
+                _atTorrentFailed();
+              }
             }, 300);
           }
         }
         if (e.type === 'list_close') {
-          _atOverlayHide();
-          _atRestoreTorrentFilter();
-          _atSelectPending = null;
-          _atFileCollected = [];
-          clearTimeout(_atFileTimer);
+          if (_atRetrying) {
+            // Это мы сами закрыли модал ради ретрая — открыть следующий кандидат
+            _atRetrying = false;
+            _atControllerEnable();
+            setTimeout(function() { if (_atSelectPending) _atTryCurrentTorrent(); }, 300);
+            return;
+          }
+          // Пользователь нажал Назад во время модала → отмена всего процесса
+          _atCancel();
+        }
+      });
+      // Пользователь покинул экран торрентов до выбора файла (пустой результат,
+      // ручной Назад вне модала) → свернуть авто-торрент, чтобы не висел оверлей.
+      Lampa.Listener.follow('activity', function(e) {
+        if (e && e.type === 'destroy' && e.component === 'torrents' && _atSelectPending && !_atRetrying) {
+          _atCancel();
         }
       });
       Lampa.Listener.follow('line', function (e) {
