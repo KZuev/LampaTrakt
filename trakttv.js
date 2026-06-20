@@ -8687,9 +8687,10 @@
         if (!Array.isArray(selected)) selected = [];
         var extra = selected.filter(function (s) { return s !== active; });
         if (extra.length > 0) {
+          badge[0].style.backgroundImage = '';
           badge.html(icons.MULTIWATCH_PEOPLE_ICON)
                .addClass('trakt-account-badge--multiwatch')
-               .removeClass('trakt-account-badge--multi');
+               .removeClass('trakt-account-badge--multi trakt-account-badge--avatar');
           return;
         }
       }
@@ -9692,7 +9693,11 @@
                       avatar: (user.images && user.images.avatar && user.images.avatar.full) || '',
                       vip: !!(user.vip)
                     });
-                    var newLabel = user.username;
+                    var _updSlot = multiAccountGetSlot(slotIndex);
+                    var newLabel = getSlotDisplayName(slotIndex);
+                    if (_updSlot && _updSlot.alias && _updSlot.alias.trim() && user.username && user.username !== '…') {
+                      newLabel += ' (' + user.username + ')';
+                    }
                     if (slotIndex === _active) newLabel += ' ' + t$1('trakt_account_slot_active', '(активен)');
                     item.find('.settings-param__name').text((slotIndex + 1) + '. ' + newLabel);
                     item.find('.trakt-slot-userinfo').remove();
