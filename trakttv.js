@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.0.27';
+  var PLUGIN_VERSION = '3.0.28';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -1347,6 +1347,15 @@
               if (error && (error.status === 400 || error.status === 401)) {
                 setAuthBlocked("refresh_failed_".concat(error.status));
                 clearAuthStorage();
+                try {
+                  multiAccountUpdateSlot(multiAccountGetActiveSlot(), {
+                    token: null,
+                    refresh_token: null,
+                    expires_at: null,
+                    expires_in: null
+                  });
+                  refreshTraktAccountSwitcher();
+                } catch (e) {}
               }
               throw error;
             }));
