@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.0.30';
+  var PLUGIN_VERSION = '3.0.31';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -6281,7 +6281,7 @@
         ru: "Настройки прогресса",
       },
       trakttv_show_tv_progress: {
-        ru: "Кнопка Trakt в карточке",
+        ru: "Кнопка Trakt на странице фильма и сериала",
       },
       trakttv_show_tv_progress_descr: {
         ru: "Добавляет кнопку Trakt на страницу фильма или сериала. Показывает статус просмотра (просмотрено / смотрю S·E / не начато). При нажатии открывает меню: отметить просмотренным, добавить в вишлист и списки.",
@@ -9906,18 +9906,6 @@
         description: Lampa.Lang.translate('trakttv_enable_watching_descr')
       }
     });
-    Lampa.SettingsApi.addParam({
-      component: 'trakt',
-      param: {
-        name: 'trakttv_show_tv_progress',
-        type: 'trigger',
-        "default": true
-      },
-      field: {
-        name: Lampa.Lang.translate('trakttv_show_tv_progress'),
-        description: Lampa.Lang.translate('trakttv_show_tv_progress_descr')
-      }
-    });
     if (Lampa.Platform.is('apple_tv') === true) {
       Lampa.SettingsApi.addParam({
         component: 'trakt',
@@ -10117,6 +10105,32 @@
           onBack: function() { Lampa.Controller.toggle('settings_component'); }
         });
     }
+    // ── Страница фильма и сериала ─────────────────────────────────────────────────
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: { name: 'trakt_card_section', type: 'static' },
+      field: { name: '' },
+      onRender: function(item) {
+        item.empty();
+        item.append('<div class="settings-param__name" style="opacity:.55;font-weight:700">' + t$1('trakt_card_section', 'Страница фильма и сериала') + '</div>');
+      }
+    });
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: { name: 'trakttv_show_tv_progress', type: 'trigger', 'default': true },
+      field: {
+        name: Lampa.Lang.translate('trakttv_show_tv_progress'),
+        description: Lampa.Lang.translate('trakttv_show_tv_progress_descr')
+      }
+    });
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: { name: 'trakt_badge_digital_date', type: 'trigger', 'default': true },
+      field: {
+        name: t$1('trakttv_badge_digital_date', 'Дата цифрового релиза'),
+        description: t$1('trakttv_badge_digital_date_descr', 'Показывать дату цифрового релиза на странице фильма')
+      }
+    });
     // ── Бейджи ───────────────────────────────────────────────────────────────────
     Lampa.SettingsApi.addParam({
       component: 'trakt',
@@ -10146,11 +10160,6 @@
       component: 'trakt',
       param: { name: 'trakt_badge_digital_release', type: 'trigger', 'default': true },
       field: { name: t$1('trakttv_badge_digital_release', 'Бейдж «Цифровой релиз»'), description: t$1('trakttv_badge_digital_release_descr', 'Дата цифрового релиза на постере фильма') }
-    });
-    Lampa.SettingsApi.addParam({
-      component: 'trakt',
-      param: { name: 'trakt_badge_digital_date', type: 'trigger', 'default': true },
-      field: { name: t$1('trakttv_badge_digital_date', 'Дата цифрового релиза в карточке'), description: t$1('trakttv_badge_digital_date_descr', 'Показывать дату цифрового релиза в детальной карточке фильма') }
     });
     // ── Авто-торрент ─────────────────────────────────────────────────────────────
     Lampa.SettingsApi.addParam({
