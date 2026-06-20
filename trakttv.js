@@ -9735,7 +9735,7 @@
                 menuItems.push({ title: aliasTitle, action: 'rename' });
                 menuItems.push({
                   title: t$1('trakt_account_show_avatar', 'Использовать аватар профиля Trakt.TV'),
-                  subtitle: (d && d.show_avatar && d.avatar) ? t$1('trakt_yes', 'Да') : t$1('trakt_no', 'Нет'),
+                  subtitle: (d && d.show_avatar) ? t$1('trakt_yes', 'Да') : t$1('trakt_no', 'Нет'),
                   action: 'toggle_avatar'
                 });
                 if (slotIndex !== active) {
