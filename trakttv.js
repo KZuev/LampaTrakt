@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.0.33';
+  var PLUGIN_VERSION = '3.0.34';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -703,7 +703,7 @@
     multiAccountSnapshotActive();
   }
   // ── Multi-Account Storage Layer ──────────────────────────────────────────
-  var MULTI_MAX_SLOTS = 5;
+  var MULTI_MAX_SLOTS = 6;
   function multiAccountGetAll() {
     try {
       var r = Lampa.Storage.get('trakt_accounts');
