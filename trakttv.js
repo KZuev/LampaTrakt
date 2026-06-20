@@ -8580,7 +8580,15 @@
           if (secs.length > 0) {
             setTimeout(function() { ensureMultiwatchIdsCache().catch(function() {}); }, 300);
           }
-          setTimeout(function() { try { initTraktAccountSwitchButton(); updateTraktAccountSwitchBadge(); } catch(e) {} }, 500);
+          var _mwDesc = getCurrentActivityDescriptor();
+          if (_mwDesc) {
+            try {
+              Lampa.Activity.replace(Object.assign({}, _mwDesc, { refresh: Date.now() }));
+              setTimeout(function() { try { initTraktAccountSwitchButton(); updateTraktAccountSwitchBadge(); } catch(e) {} }, 800);
+            } catch (e) {}
+          } else {
+            setTimeout(function() { try { initTraktAccountSwitchButton(); updateTraktAccountSwitchBadge(); } catch(e) {} }, 500);
+          }
           return;
         }
         var idx = selected.indexOf(item.slot);
