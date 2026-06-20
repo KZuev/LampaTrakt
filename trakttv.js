@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.0.22';
+  var PLUGIN_VERSION = '3.0.23';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -7493,6 +7493,31 @@
     } catch (e) { return def; }
   }
 
+  // Сохраняет ручной фильтр торрентов Lampa и очищает его, чтобы при автовыборе
+  // рендерились ВСЕ торренты (иначе сохранённый фильтр качества скрыл бы, например,
+  // 4K, и логика pickBestTorrentFromCollected до него не дошла бы).
+  function _atSaveAndClearTorrentFilter() {
+    try {
+      _atFilterBackup = {
+        filter: JSON.parse(JSON.stringify(Lampa.Storage.get('torrents_filter', {}) || {})),
+        data:   JSON.parse(JSON.stringify(Lampa.Storage.get('torrents_filter_data', {}) || {}))
+      };
+      Lampa.Storage.set('torrents_filter', {});
+      Lampa.Storage.set('torrents_filter_data', {});
+    } catch (e) { _atFilterBackup = null; }
+  }
+
+  // Восстанавливает ранее сохранённый фильтр. Идемпотентно: безопасно при повторных вызовах.
+  function _atRestoreTorrentFilter() {
+    if (!_atFilterBackup) return;
+    var b = _atFilterBackup;
+    _atFilterBackup = null;
+    try {
+      Lampa.Storage.set('torrents_filter', b.filter);
+      Lampa.Storage.set('torrents_filter_data', b.data);
+    } catch (e) {}
+  }
+
   function pickBestTorrentFromCollected(collected, ctx) {
     if (!collected || !collected.length) return null;
     var pool = collected;
@@ -7593,6 +7618,7 @@
     _atOverlay = el;
     _atOverlaySafetyTimer = setTimeout(function() {
       _atOverlayHide();
+      _atRestoreTorrentFilter();
       notify(t$2('trakt_at_timeout', 'Авто-торрент: время ожидания истекло'));
     }, 15000);
   }
@@ -7658,11 +7684,13 @@
         _atOverlaySetStatus(t$2('trakt_at_status_torrent', 'Ищем торрент…'));
       }
       _atBtnReset(btn);
+      _atSaveAndClearTorrentFilter();
       Lampa.Activity.push({ url: '', title: Lampa.Lang.translate('title_torrents') || 'Торренты', component: 'torrents', search: _atSearchString(card), search_one: _atCardTitle(card), search_two: _atCardOriginalTitle(card), movie: card, page: 1 });
     }).catch(function(err) {
       _atSelectPending = null;
       _atBtnReset(btn);
       _atOverlayHide();
+      _atRestoreTorrentFilter();
       notify(t$2('trakt_at_no_next', 'Следующий эпизод не найден'));
     });
   }
@@ -7671,6 +7699,7 @@
     card = _atNormalizeCard(card);
     _atSelectPending = { type: 'movie' };
     _atOverlayShow(t$2('trakt_at_status_torrent', 'Ищем торрент…'));
+    _atSaveAndClearTorrentFilter();
     Lampa.Activity.push({ url: '', title: Lampa.Lang.translate('title_torrents') || 'Торренты', component: 'torrents', search: _atSearchString(card), search_one: _atCardTitle(card), search_two: _atCardOriginalTitle(card), movie: card, page: 1 });
   }
 
@@ -12604,6 +12633,7 @@
   var _atFileTimer = null;
   var _atOverlay = null;
   var _atOverlaySafetyTimer = null;
+  var _atFilterBackup = null;   // бэкап фильтра торрентов Lampa на время авто-выбора
 
   var _UPCOMING_MOVIE_KEY = 'trakt_upcoming_movie_ids';
   function getUpcomingMovieIds() {
@@ -13109,6 +13139,7 @@
             var best = pickBestTorrentFromCollected(_atTorrentCollected, _atSelectPending);
             _atTorrentCollected = [];
             _atTorrentTimer = null;
+            _atRestoreTorrentFilter();   // решение по торренту принято — фильтр больше не нужен
             if (best && best.item) {
               _atOverlaySetStatus(t$2('trakt_at_status_file', 'Открываем файл…'));
               best.item.trigger('hover:enter');
@@ -13151,6 +13182,7 @@
         }
         if (e.type === 'list_close') {
           _atOverlayHide();
+          _atRestoreTorrentFilter();
           _atSelectPending = null;
           _atFileCollected = [];
           clearTimeout(_atFileTimer);

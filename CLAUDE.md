@@ -10,7 +10,7 @@
 
 ## Текущая версия
 
-**v3.0.22** — README-окно в стиле Lampa (`size: 'large'`, нативные шрифты).
+**v3.0.23** — Авто-торрент: сброс/восстановление фильтра торрентов Lampa перед автовыбором.
 
 ## История фиксов
 
@@ -53,6 +53,7 @@
 | v3.0.20 | `b994c03` | Клик на версию в настройках открывает README.md из репозитория |
 | v3.0.21 | `cf56e97` | Полноценный Markdown-рендерер (таблицы, списки, код-блоки) |
 | v3.0.22 | `08eb698` | README-окно: `size: 'large'`, стиль как нативный диалог Lampa |
+| v3.0.23 | TBD | Авто-торрент: сброс/восстановление фильтра торрентов Lampa перед автовыбором |
 
 ## Архитектура scrobbling
 
@@ -71,8 +72,9 @@
 
 1. Кнопка добавляется в `.buttons--container` только при `trakt_at_enabled: true`.
 2. **Сериал**: следующий эпизод через `/search/tmdb/{id}?type=show` → `/shows/{traktId}/progress/watched` → `next_episode`.
-3. **Автовыбор торрента** (`Lampa.Listener.follow('torrent', ...)`): `render`-события собираются 400 мс, затем выбирается лучший по сезону / озвучке / качеству / популярности.
-4. **Автовыбор файла** (`Lampa.Listener.follow('torrent_file', ...)`): на `render` ищется файл с нужным `season`/`episode`, триггерится `hover:enter`.
+3. **Сброс фильтра** перед открытием `torrents`: `_atSaveAndClearTorrentFilter()` сохраняет и очищает `torrents_filter` + `torrents_filter_data`, иначе ручной фильтр качества Lampa скрыл бы часть торрентов (например 4K) ещё до `render`-событий. `_atRestoreTorrentFilter()` возвращает фильтр после выбора торрента (идемпотентно).
+4. **Автовыбор торрента** (`Lampa.Listener.follow('torrent', ...)`): `render`-события собираются 400 мс, затем выбирается лучший по сезону / озвучке / качеству / популярности.
+5. **Автовыбор файла** (`Lampa.Listener.follow('torrent_file', ...)`): на `render` ищется файл с нужным `season`/`episode`, триггерится `hover:enter`.
 
 **Ключевые паттерны:**
 - `$(btn).on('hover:enter', ...)` — обязательно jQuery (меню «Смотреть» активирует через jQuery trigger)
@@ -81,6 +83,7 @@
 - `_atTitleMatchesSeason(title, season)` — паттерны из фильтра Lampa
 - `_atIsDubbed(title)` — паттерн озвучки (voice p==1)
 - `_atHasRusAudio(e)` — `languages: ru` или ключевые слова
+- `_atSaveAndClearTorrentFilter()` / `_atRestoreTorrentFilter()` — бэкап/сброс/возврат фильтра торрентов; восстановление вызывается на всех путях тимдауна (выбор сделан, `list_close`, 15с-таймаут, ошибка API)
 
 ## Бейджи на постерах — архитектура
 
