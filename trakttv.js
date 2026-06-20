@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.0.31';
+  var PLUGIN_VERSION = '3.0.32';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -8720,6 +8720,32 @@
     try { updateTraktAccountSwitchBadge(); } catch (e) {}
   }
 
+  function checkGuestSlotExpiry() {
+    try {
+      var now = Date.now();
+      var slots = multiAccountGetAll();
+      var changed = false;
+      slots.forEach(function (s) {
+        if (s && s.guest_expires_at && now >= s.guest_expires_at) {
+          if (s.slot === multiAccountGetActiveSlot()) {
+            try { if (Api$1) Api$1.auth.logout(); } catch (e) {}
+            clearAuthStorage();
+          }
+          multiAccountUpdateSlot(s.slot, {
+            token: null, refresh_token: null, expires_at: null,
+            label: null, alias: null, avatar: null, vip: null,
+            guest_expires_at: null
+          });
+          changed = true;
+        }
+      });
+      if (changed) {
+        try { Lampa.Settings.update(); } catch (e) {}
+        refreshTraktAccountSwitcher();
+      }
+    } catch (e) {}
+  }
+
   var PAGE_LIMIT = 100;
   var MAX_PAGES = 100;
   var SUPPORTED_FAVORITE_TYPES = ['book', 'like', 'wath', 'look', 'viewed', 'scheduled', 'continued', 'thrown'];
@@ -9358,7 +9384,8 @@
     logDebugOnce(API_MISSING_LOG_KEY$1, 'API bridge is unavailable in config');
   }
 
-  function startDeviceAuthForSlot(targetSlot) {
+  function startDeviceAuthForSlot(targetSlot, isGuest) {
+    pendingGuestMode = !!isGuest;
     if (!getClientId() || !getClientSecret()) {
       Lampa.Noty.show('Сначала введите Client ID и Client Secret в настройках Trakt');
       return;
@@ -9665,71 +9692,83 @@
             var active = multiAccountGetActiveSlot();
             var flatToken = (slotIndex === 0 && active === 0) ? (Lampa.Storage.get('trakt_token') || null) : null;
             var hasToken = !!(d && d.token) || !!flatToken;
-            var menuItems = [];
-            if (!hasToken) {
-              menuItems.push({ title: t$1('trakt_account_login_slot', 'Войти в этот аккаунт'), action: 'login' });
-            } else {
-              if (d && typeof d.vip === 'boolean') {
-                menuItems.push({ title: 'Trakt.TV VIP: ' + t$1(d.vip ? 'trakttv_vip_enabled' : 'trakttv_vip_disabled', d.vip ? 'Trakt VIP активирован' : 'Trakt VIP не активирован'), action: 'info' });
-              }
-              var aliasTitle = (d && d.alias && d.alias.trim())
-                ? t$1('trakt_account_alias', 'Отображать как') + ': ' + d.alias.trim()
-                : t$1('trakt_account_alias', 'Отображать как') + '...';
-              menuItems.push({ title: aliasTitle, action: 'rename' });
-              if (slotIndex !== active) {
-                menuItems.push({ title: t$1('trakt_account_switch', 'Сделать активным'), action: 'switch' });
-              }
-              menuItems.push({ title: t$1('trakt_account_logout_slot', 'Выйти из аккаунта'), action: 'logout' });
-            }
             var menuLabel = hasToken
               ? ((!d || !d.label || d.label === '…') ? '...' : getSlotDisplayName(slotIndex))
               : t$1('trakt_account_slot_empty', 'Не привязан');
-            Lampa.Select.show({
-              title: (slotIndex + 1) + '. ' + menuLabel,
-              items: menuItems,
-              onSelect: function (a) {
-                if (a.action === 'info') {
-                  Lampa.Controller.toggle('settings_component');
-                } else if (a.action === 'rename') {
-                  var _slot = multiAccountGetSlot(slotIndex);
-                  var _curAlias = (_slot && _slot.alias) ? _slot.alias : '';
-                  Lampa.Input.edit({
-                    title: t$1('trakt_account_alias', 'Отображать как'),
-                    value: _curAlias,
-                    free: true,
-                    nosave: true,
-                    nomic: true
-                  }, function (val) {
-                    var trimmed = (val || '').trim();
-                    multiAccountUpdateSlot(slotIndex, { alias: trimmed || null });
-                    try { Lampa.Settings.update(); } catch (e) {}
-                  });
-                } else if (a.action === 'switch') {
-                  multiAccountActivateSlot(slotIndex);
-                  try { clearResponseCache(); } catch (e) {}
-                  invalidateWatchedCache();
-                  invalidateWatchlistBadgeCache();
-                  loadWatchedCache();
-                  ensureWatchlistBadgeCache();
-                  updateTraktAccountSwitchBadge();
-                  try { Lampa.Settings.update(); } catch (e) {}
-                  var _desc = getCurrentActivityDescriptor();
-                  if (_desc) {
-                    try { Lampa.Activity.replace(Object.assign({}, _desc, { refresh: Date.now() })); } catch (e) {}
-                  }
-                } else if (a.action === 'logout') {
-                  if (slotIndex === multiAccountGetActiveSlot()) {
-                    if (Api$1) Api$1.auth.logout();
-                  }
-                  multiAccountUpdateSlot(slotIndex, { token: null, refresh_token: null, expires_at: null, label: null, alias: null });
-                  try { Lampa.Settings.update(); } catch (e) {}
-                  refreshTraktAccountSwitcher();
-                } else if (a.action === 'login') {
-                  startDeviceAuthForSlot(slotIndex);
+            var _guestMode = false;
+            function showSlotMenu() {
+              var menuItems = [];
+              if (!hasToken) {
+                menuItems.push({ title: t$1('trakt_account_login_slot', 'Войти в этот аккаунт'), action: 'login' });
+                menuItems.push({
+                  title: t$1('trakt_guest_login', 'Гостевой вход на 24 ч') + ': ' +
+                         (_guestMode ? t$1('trakt_yes', 'Да') : t$1('trakt_no', 'Нет')),
+                  action: 'toggle_guest'
+                });
+              } else {
+                if (d && typeof d.vip === 'boolean') {
+                  menuItems.push({ title: 'Trakt.TV VIP: ' + t$1(d.vip ? 'trakttv_vip_enabled' : 'trakttv_vip_disabled', d.vip ? 'Trakt VIP активирован' : 'Trakt VIP не активирован'), action: 'info' });
                 }
-              },
-              onBack: function () { Lampa.Controller.toggle('settings_component'); }
-            });
+                var aliasTitle = (d && d.alias && d.alias.trim())
+                  ? t$1('trakt_account_alias', 'Отображать как') + ': ' + d.alias.trim()
+                  : t$1('trakt_account_alias', 'Отображать как') + '...';
+                menuItems.push({ title: aliasTitle, action: 'rename' });
+                if (slotIndex !== active) {
+                  menuItems.push({ title: t$1('trakt_account_switch', 'Сделать активным'), action: 'switch' });
+                }
+                menuItems.push({ title: t$1('trakt_account_logout_slot', 'Выйти из аккаунта'), action: 'logout' });
+              }
+              Lampa.Select.show({
+                title: (slotIndex + 1) + '. ' + menuLabel,
+                items: menuItems,
+                onSelect: function (a) {
+                  if (a.action === 'toggle_guest') {
+                    _guestMode = !_guestMode;
+                    showSlotMenu();
+                  } else if (a.action === 'info') {
+                    Lampa.Controller.toggle('settings_component');
+                  } else if (a.action === 'rename') {
+                    var _slot = multiAccountGetSlot(slotIndex);
+                    var _curAlias = (_slot && _slot.alias) ? _slot.alias : '';
+                    Lampa.Input.edit({
+                      title: t$1('trakt_account_alias', 'Отображать как'),
+                      value: _curAlias,
+                      free: true,
+                      nosave: true,
+                      nomic: true
+                    }, function (val) {
+                      var trimmed = (val || '').trim();
+                      multiAccountUpdateSlot(slotIndex, { alias: trimmed || null });
+                      try { Lampa.Settings.update(); } catch (e) {}
+                    });
+                  } else if (a.action === 'switch') {
+                    multiAccountActivateSlot(slotIndex);
+                    try { clearResponseCache(); } catch (e) {}
+                    invalidateWatchedCache();
+                    invalidateWatchlistBadgeCache();
+                    loadWatchedCache();
+                    ensureWatchlistBadgeCache();
+                    updateTraktAccountSwitchBadge();
+                    try { Lampa.Settings.update(); } catch (e) {}
+                    var _desc = getCurrentActivityDescriptor();
+                    if (_desc) {
+                      try { Lampa.Activity.replace(Object.assign({}, _desc, { refresh: Date.now() })); } catch (e) {}
+                    }
+                  } else if (a.action === 'logout') {
+                    if (slotIndex === multiAccountGetActiveSlot()) {
+                      if (Api$1) Api$1.auth.logout();
+                    }
+                    multiAccountUpdateSlot(slotIndex, { token: null, refresh_token: null, expires_at: null, label: null, alias: null, avatar: null, vip: null, guest_expires_at: null });
+                    try { Lampa.Settings.update(); } catch (e) {}
+                    refreshTraktAccountSwitcher();
+                  } else if (a.action === 'login') {
+                    startDeviceAuthForSlot(slotIndex, _guestMode);
+                  }
+                },
+                onBack: function () { Lampa.Controller.toggle('settings_component'); }
+              });
+            }
+            showSlotMenu();
           }
         });
       })(_slotIdx);
@@ -11063,6 +11102,7 @@
   var pollInFlight = false;
   var checkNowHandler = null;
   var pendingLoginSlot = null;
+  var pendingGuestMode = false;
   var lastMultiwatchSelection = [];
 
   // Centralized error handling and polling stop
@@ -11118,8 +11158,10 @@
         token: response.access_token || null,
         refresh_token: response.refresh_token || null,
         expires_at: response.expires_in ? ((Number(response.created_at) || Math.floor(Date.now() / 1000)) * 1000 + Number(response.expires_in) * 1000) : null,
-        label: multiAccountGetSlot(targetSlot) && multiAccountGetSlot(targetSlot).label || ('Account ' + (targetSlot + 1))
+        label: multiAccountGetSlot(targetSlot) && multiAccountGetSlot(targetSlot).label || ('Account ' + (targetSlot + 1)),
+        guest_expires_at: pendingGuestMode ? (Date.now() + 24 * 60 * 60 * 1000) : null
       });
+      pendingGuestMode = false;
       requestApiWithToken(response.access_token, 'GET', '/users/me').then(function (user) {
         if (user && user.username) {
           multiAccountUpdateSlot(targetSlot, {
@@ -11146,7 +11188,11 @@
     }
     var activeSlotForSave = multiAccountGetActiveSlot();
     multiAccountSnapshotActive();
-    multiAccountUpdateSlot(activeSlotForSave, { label: '…' });
+    multiAccountUpdateSlot(activeSlotForSave, {
+      label: '…',
+      guest_expires_at: pendingGuestMode ? (Date.now() + 24 * 60 * 60 * 1000) : null
+    });
+    pendingGuestMode = false;
     requestApiWithToken(response.access_token || Lampa.Storage.get('trakt_token'), 'GET', '/users/me').then(function (user) {
       if (user) {
         multiAccountUpdateSlot(activeSlotForSave, {
@@ -13597,6 +13643,8 @@
       loadWatchedCache();
       ensureWatchlistBadgeCache();
       refreshTraktAccountSwitcher();
+      checkGuestSlotExpiry();
+      setInterval(checkGuestSlotExpiry, 30 * 60 * 1000);
       setTimeout(syncPlaybackFromTrakt, 2000);
       _patchLampaCard();
       // Повторная попытка патча на случай позднего создания Lampa.Card
