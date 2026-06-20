@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.0.25';
+  var PLUGIN_VERSION = '3.0.26';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -10177,7 +10177,8 @@
         values: {
           all: 'Все подходящие',
           '5': 'До 5 торрентов',
-          '3': 'До 3 торрентов'
+          '3': 'До 3 торрентов',
+          '1': '1 торрент (без перебора)'
         }
       },
       field: { name: 'Авто-торрент: число попыток', description: 'Сколько торрентов перебрать при неудаче, прежде чем сдаться' }
