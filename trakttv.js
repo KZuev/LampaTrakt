@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.0.21';
+  var PLUGIN_VERSION = '3.0.22';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -10260,12 +10260,12 @@
       return out.join('');
     }
     function _openReadme() {
-      var body = $('<div style="padding:1em 1.5em;color:#fff;line-height:1.6;font-size:1em"></div>');
+      var body = $('<div style="font-size:1.2em;line-height:1.5;font-weight:300"></div>');
       body.html('<div style="text-align:center;padding:3em;opacity:.6">Загрузка…</div>');
       Lampa.Modal.open({
         title: 'LampaTrakt v' + PLUGIN_VERSION,
         html: body,
-        size: 'full',
+        size: 'large',
         onBack: function() { Lampa.Modal.close(); Lampa.Controller.toggle('settings_component'); }
       });
       $.ajax({
@@ -10273,7 +10273,7 @@
         dataType: 'text',
         timeout: 10000,
         success: function(md) {
-          body.html('<p style="margin:.5em 0">' + _mdToHtml(md) + '</p>');
+          body.html(_mdToHtml(md));
         },
         error: function() {
           body.html('<div style="padding:2em;text-align:center;opacity:.7">Не удалось загрузить README.<br>Проверьте соединение с интернетом.</div>');
