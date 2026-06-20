@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.0.19';
+  var PLUGIN_VERSION = '3.0.20';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -9208,17 +9208,12 @@
     });
     Lampa.SettingsApi.addParam({
       component: 'trakt',
-      param: {
-        name: 'trakttv_about',
-        type: 'static'
-      },
-      field: {
-        name: ''
-      },
+      param: { name: 'trakttv_about', type: 'button' },
+      field: { name: 'v' + PLUGIN_VERSION + ' · LampaTrakt' },
       onRender: function onRender(item) {
-        item.empty();
-        item.append('<div class="settings-param__value" style="opacity:.6;font-size:.9em"><a href="https://github.com/kzuev/lampatrakt" style="color:inherit">v' + PLUGIN_VERSION + '</a> · Основан на плагине <a href="https://lampame.github.io/main/trakttv.js" style="color:inherit">lampame.github.io/main/trakttv.js</a></div>');
-      }
+        item.find('.settings-param__name').append('<span style="opacity:.45;font-size:.82em;margin-left:.5em">· Основан на lampame.github.io/main/trakttv.js</span>');
+      },
+      onChange: function() { _openReadme(); }
     });
 
     Lampa.SettingsApi.addParam({
@@ -10196,6 +10191,41 @@
           if (item && item.action === 'copy') _copyToClipboard(item._text);
         },
         onBack: function() { Lampa.Controller.toggle('settings_component'); }
+      });
+    }
+    function _mdToHtml(md) {
+      return md
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/^### (.+)$/gm, '<h3 style="margin:.6em 0 .2em;font-size:1.1em">$1</h3>')
+        .replace(/^## (.+)$/gm, '<h2 style="margin:.8em 0 .3em;font-size:1.25em">$1</h2>')
+        .replace(/^# (.+)$/gm, '<h1 style="margin:.5em 0 .4em;font-size:1.5em">$1</h1>')
+        .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+        .replace(/\*(.+?)\*/g, '<i>$1</i>')
+        .replace(/`([^`\n]+)`/g, '<code style="background:rgba(255,255,255,.1);padding:.1em .3em;border-radius:.2em;font-size:.92em">$1</code>')
+        .replace(/^\- (.+)$/gm, '<li style="margin:.2em 0;padding-left:.3em">$1</li>')
+        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" style="color:#c850c0;text-decoration:none">$1</a>')
+        .replace(/\n\n+/g, '</p><p style="margin:.5em 0">')
+        .replace(/\n/g, '<br>');
+    }
+    function _openReadme() {
+      var body = $('<div style="padding:1em 1.5em;color:#fff;line-height:1.6;font-size:1em"></div>');
+      body.html('<div style="text-align:center;padding:3em;opacity:.6">Загрузка…</div>');
+      Lampa.Modal.open({
+        title: 'LampaTrakt v' + PLUGIN_VERSION,
+        html: body,
+        size: 'full',
+        onBack: function() { Lampa.Modal.close(); Lampa.Controller.toggle('settings_component'); }
+      });
+      $.ajax({
+        url: 'https://raw.githubusercontent.com/kzuev/lampatrakt/main/README.md',
+        dataType: 'text',
+        timeout: 10000,
+        success: function(md) {
+          body.html('<p style="margin:.5em 0">' + _mdToHtml(md) + '</p>');
+        },
+        error: function() {
+          body.html('<div style="padding:2em;text-align:center;opacity:.7">Не удалось загрузить README.<br>Проверьте соединение с интернетом.</div>');
+        }
       });
     }
 
