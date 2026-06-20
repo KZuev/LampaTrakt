@@ -797,7 +797,7 @@
       if (d.label && d.label !== '…') return;
       if (_fetchingSlots[d.slot]) return;
       _fetchingSlots[d.slot] = true;
-      requestApiWithToken(d.token, 'GET', '/users/me').then(function (user) {
+      requestApiWithToken(d.token, 'GET', '/users/me?extended=full').then(function (user) {
         delete _fetchingSlots[d.slot];
         if (user && user.username) {
           multiAccountUpdateSlot(d.slot, {
@@ -1871,7 +1871,7 @@
               setAuthBlocked('unauthorized_after_refresh');
               notifyAuthBlockedOnce();
             }
-            if (!unauthorized && _t3 && _t3.status === 403 && normalizedEndpoint === '/users/me') {
+            if (!unauthorized && _t3 && _t3.status === 403 && /^\/users\/me(\?|$)/.test(normalizedEndpoint)) {
               setAuthBlocked('users_me_forbidden');
               notifyAuthBlockedOnce();
             }
@@ -9684,7 +9684,7 @@
               if ((needsLabelFetch || !d.avatar) && !_fetchingSlots[slotIndex]) {
                 _fetchingSlots[slotIndex] = true;
                 var _active = active;
-                requestApiWithToken(d.token, 'GET', '/users/me').then(function (user) {
+                requestApiWithToken(d.token, 'GET', '/users/me?extended=full').then(function (user) {
                   delete _fetchingSlots[slotIndex];
                   if (user && user.username) {
                     multiAccountUpdateSlot(slotIndex, {
@@ -9757,7 +9757,7 @@
                     d = multiAccountGetSlot(slotIndex);
                     if (_newShowAvatar && !d.avatar && d.token && !_fetchingSlots[slotIndex]) {
                       _fetchingSlots[slotIndex] = true;
-                      requestApiWithToken(d.token, 'GET', '/users/me').then(function (user) {
+                      requestApiWithToken(d.token, 'GET', '/users/me?extended=full').then(function (user) {
                         delete _fetchingSlots[slotIndex];
                         if (user && user.username) {
                           multiAccountUpdateSlot(slotIndex, {
@@ -11216,7 +11216,7 @@
         guest_expires_at: pendingGuestMode ? (Date.now() + 24 * 60 * 60 * 1000) : null
       });
       pendingGuestMode = false;
-      requestApiWithToken(response.access_token, 'GET', '/users/me').then(function (user) {
+      requestApiWithToken(response.access_token, 'GET', '/users/me?extended=full').then(function (user) {
         if (user && user.username) {
           multiAccountUpdateSlot(targetSlot, {
             label: user.username,
@@ -11247,7 +11247,7 @@
       guest_expires_at: pendingGuestMode ? (Date.now() + 24 * 60 * 60 * 1000) : null
     });
     pendingGuestMode = false;
-    requestApiWithToken(response.access_token || Lampa.Storage.get('trakt_token'), 'GET', '/users/me').then(function (user) {
+    requestApiWithToken(response.access_token || Lampa.Storage.get('trakt_token'), 'GET', '/users/me?extended=full').then(function (user) {
       if (user) {
         multiAccountUpdateSlot(activeSlotForSave, {
           label: user.username || ('Account ' + (activeSlotForSave + 1)),
