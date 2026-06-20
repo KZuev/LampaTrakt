@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.0.32';
+  var PLUGIN_VERSION = '3.0.33';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -9701,13 +9701,16 @@
               if (!hasToken) {
                 menuItems.push({ title: t$1('trakt_account_login_slot', 'Войти в этот аккаунт'), action: 'login' });
                 menuItems.push({
-                  title: t$1('trakt_guest_login', 'Гостевой вход на 24 ч') + ': ' +
-                         (_guestMode ? t$1('trakt_yes', 'Да') : t$1('trakt_no', 'Нет')),
+                  title: t$1('trakt_guest_login', 'Гостевой вход на 24 ч'),
+                  subtitle: _guestMode ? t$1('trakt_yes', 'Да') : t$1('trakt_no', 'Нет'),
                   action: 'toggle_guest'
                 });
               } else {
                 if (d && typeof d.vip === 'boolean') {
                   menuItems.push({ title: 'Trakt.TV VIP: ' + t$1(d.vip ? 'trakttv_vip_enabled' : 'trakttv_vip_disabled', d.vip ? 'Trakt VIP активирован' : 'Trakt VIP не активирован'), action: 'info' });
+                }
+                if (d && d.guest_expires_at) {
+                  menuItems.push({ title: t$1('trakt_guest_login', 'Гостевой вход на 24 часа'), action: 'info' });
                 }
                 var aliasTitle = (d && d.alias && d.alias.trim())
                   ? t$1('trakt_account_alias', 'Отображать как') + ': ' + d.alias.trim()
