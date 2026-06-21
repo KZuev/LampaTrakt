@@ -4119,7 +4119,7 @@
           renderTvTypeBadge(card, element);
           card.use({
             onCreate: function() {
-              card.onMenu = function() { watchlist.openManagerByCard(element, makeRecMenuOptions(object, element)); };
+              card.onMenu = function() { openRecommendationActions(object, element); };
             }
           });
           card.use({
@@ -4127,7 +4127,7 @@
             onlyEnter: function onlyEnter() {
               Lampa.Activity.push({ url: '', component: 'full', id: element.id, method: element.method, card: this.data, source: 'tmdb' });
             },
-            onLong: function() { watchlist.openManagerByCard(element, makeRecMenuOptions(object, element)); }
+            onLong: function() { openRecommendationActions(object, element); }
           });
         },
         onController: function onController(controller) {
@@ -4178,7 +4178,7 @@
       };
       comp.cardRender = function (object, element, card) {
         renderTvTypeBadge(card, element);
-        card.onMenu = function() { watchlist.openManagerByCard(element, makeRecMenuOptions(object, element)); };
+        card.onMenu = function() { openRecommendationActions(object, element); };
         card.onEnter = function () {
           Lampa.Activity.push({ url: '', component: 'full', id: element.id, method: element.method, card: card, source: 'tmdb' });
         };
@@ -4547,11 +4547,13 @@
       });
     } catch(e) {}
   }
-  function makeRecMenuOptions(object, element) {
-    return {
-      appendItems: [{ title: t$3('trakt_hide_recommendation_action', 'Скрыть рекомендацию'), action: 'trakt_hide_rec' }],
-      onAppendSelect: function() {
-        if (!Api$2 || !element) return;
+  function openRecommendationActions(object, element) {
+    if (!Api$2 || !element) return;
+    Lampa.Select.show({
+      title: t$3('trakt_hide_recommendation_title', 'Рекомендация'),
+      items: [{ title: t$3('trakt_hide_recommendation_action', 'Скрыть рекомендацию'), action: 'hide' }],
+      onSelect: function(item) {
+        if (item.action !== 'hide') return;
         Api$2.hideRecommendation(element)
           .then(function() {
             clearRecommendationsRowCache();
@@ -4561,7 +4563,7 @@
           ['catch'](function(err) { showApiError(err, 'trakt_hide_recommendation_error'); });
       },
       onBack: function() { Lampa.Controller.toggle('content'); }
-    };
+    });
   }
   function renderWideListCard(card, element) {
     var root = card.render();
