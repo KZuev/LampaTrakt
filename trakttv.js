@@ -4119,7 +4119,7 @@
           renderTvTypeBadge(card, element);
           card.use({
             onCreate: function() {
-              card.onMenu = function() { openRecommendationActions(object, element); };
+              card.onMenu = function() { watchlist.openManagerByCard(element, makeRecMenuOptions(object, element)); };
             }
           });
           card.use({
@@ -4127,7 +4127,7 @@
             onlyEnter: function onlyEnter() {
               Lampa.Activity.push({ url: '', component: 'full', id: element.id, method: element.method, card: this.data, source: 'tmdb' });
             },
-            onLong: function() { openRecommendationActions(object, element); }
+            onLong: function() { watchlist.openManagerByCard(element, makeRecMenuOptions(object, element)); }
           });
         },
         onController: function onController(controller) {
@@ -4178,7 +4178,7 @@
       };
       comp.cardRender = function (object, element, card) {
         renderTvTypeBadge(card, element);
-        card.onMenu = function() { openRecommendationActions(object, element); };
+        card.onMenu = function() { watchlist.openManagerByCard(element, makeRecMenuOptions(object, element)); };
         card.onEnter = function () {
           Lampa.Activity.push({ url: '', component: 'full', id: element.id, method: element.method, card: card, source: 'tmdb' });
         };
@@ -4547,13 +4547,11 @@
       });
     } catch(e) {}
   }
-  function openRecommendationActions(object, element) {
-    if (!Api$2 || !element) return;
-    Lampa.Select.show({
-      title: t$3('trakt_hide_recommendation_title', 'Рекомендация'),
-      items: [{ title: t$3('trakt_hide_recommendation_action', 'Скрыть рекомендацию'), action: 'hide' }],
-      onSelect: function(item) {
-        if (item.action !== 'hide') return;
+  function makeRecMenuOptions(object, element) {
+    return {
+      appendItems: [{ title: t$3('trakt_hide_recommendation_action', 'Скрыть рекомендацию'), action: 'trakt_hide_rec' }],
+      onAppendSelect: function() {
+        if (!Api$2 || !element) return;
         Api$2.hideRecommendation(element)
           .then(function() {
             clearRecommendationsRowCache();
@@ -4563,7 +4561,7 @@
           ['catch'](function(err) { showApiError(err, 'trakt_hide_recommendation_error'); });
       },
       onBack: function() { Lampa.Controller.toggle('content'); }
-    });
+    };
   }
   function renderWideListCard(card, element) {
     var root = card.render();
@@ -7485,6 +7483,8 @@
     var onBack = typeof options.onBack === 'function' ? options.onBack : function () {
       Lampa.Controller.toggle('content');
     };
+    var appendItems = (Array.isArray(options.appendItems)) ? options.appendItems : [];
+    var onAppendSelect = (typeof options.onAppendSelect === 'function') ? options.onAppendSelect : null;
     Promise.all([api$1.inWatchlist(params)["catch"](function () {
       return false;
     }), api$1.myLists({
@@ -7502,8 +7502,12 @@
       loadMyListsMembership(params, lists).then(function (withMembership) {
         Lampa.Select.show({
           title: t$2('trakt_manage_lists_title', 'Manage lists'),
-          items: buildManagerItems(!!watchlistState, withMembership),
+          items: buildManagerItems(!!watchlistState, withMembership).concat(appendItems),
           onSelect: function onSelect(item) {
+            if (onAppendSelect && appendItems.indexOf(item) >= 0) {
+              onAppendSelect(item);
+              return;
+            }
             handleSelectAction(item, params, function () {
               return refreshButtonState(button, textNode, params);
             });
@@ -16390,7 +16394,6 @@
 
     Main();
     registerContextListAction();
-    registerHideRecommendationAction();
 
     events.init();
     watching.init();
@@ -16421,45 +16424,24 @@
         };
       },
       onContextLauch: function onContextLauch(object) {
+        var extraOptions = {};
+        if (object && object._trakt_from_recommendations) {
+          extraOptions.appendItems = [{
+            title: Lampa.Lang.translate('trakt_hide_recommendation_action') || 'Скрыть рекомендацию',
+            action: 'trakt_hide_rec'
+          }];
+          extraOptions.onAppendSelect = function() {
+            Api$2.hideRecommendation(object)
+              .then(function() {
+                clearRecommendationsRowCache();
+                Lampa.Noty.show(Lampa.Lang.translate('trakt_recommendation_hidden') || 'Рекомендация скрыта');
+              })
+              ['catch'](function(err) { showApiError(err, 'trakt_hide_recommendation_error'); });
+          };
+        }
         setTimeout(function () {
-          watchlist.openManagerByCard(object, {
-            onBack: function onBack() {
-              Lampa.Controller.toggle('content');
-            }
-          });
+          watchlist.openManagerByCard(object, Object.assign({ onBack: function() { Lampa.Controller.toggle('content'); } }, extraOptions));
         }, 0);
-      }
-    };
-  }
-  function registerHideRecommendationAction() {
-    if (typeof Lampa === 'undefined' || !Lampa.Manifest) return;
-    var exists = Array.isArray(Lampa.Manifest.plugins) &&
-      Lampa.Manifest.plugins.some(function(p) { return p && p.component === 'trakt_hide_recommendation'; });
-    if (exists) return;
-    Lampa.Manifest.plugins = {
-      type: 'video',
-      version: '1.0.0',
-      name: Lampa.Lang.translate('trakt_hide_recommendation_action') || 'Скрыть рекомендацию',
-      component: 'trakt_hide_recommendation',
-      onContextMenu: function() {
-        var act = Lampa.Activity && typeof Lampa.Activity.active === 'function' ? Lampa.Activity.active() : null;
-        var comp = act && act.component;
-        if (comp === 'main' || comp === 'trakttv_recommendations') {
-          return { name: Lampa.Lang.translate('trakt_hide_recommendation_action') || 'Скрыть рекомендацию', description: '' };
-        }
-        return null;
-      },
-      onContextLauch: function(object) {
-        if (!object || !object._trakt_from_recommendations) {
-          Lampa.Noty.show(Lampa.Lang.translate('trakt_not_a_recommendation') || 'Не является рекомендацией Trakt');
-          return;
-        }
-        Api$2.hideRecommendation(object)
-          .then(function() {
-            clearRecommendationsRowCache();
-            Lampa.Noty.show(Lampa.Lang.translate('trakt_recommendation_hidden') || 'Рекомендация скрыта');
-          })
-          ['catch'](function(err) { showApiError(err, 'trakt_hide_recommendation_error'); });
       }
     };
   }
