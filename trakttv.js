@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.0.40';
+  var PLUGIN_VERSION = '3.0.41';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -3788,6 +3788,7 @@
   function prefetchWatchlistDigitalDates(results, timeoutMs) {
     if (!Array.isArray(results) || !Lampa.TMDB || !Lampa.Reguest) return Promise.resolve();
     var today = new Date(); today.setHours(0, 0, 0, 0);
+    var todayStr = today.toISOString().slice(0, 10);
     var MAX_AGE_DAYS = 270;
     var datesMap = getUpcomingMovieDates();
     var candidates = [];
@@ -3795,7 +3796,9 @@
       var isMovie = item.method === 'movie' || item.card_type === 'movie';
       if (!isMovie || !item.id) return;
       var tmdbId = String(item.id);
-      if (_digitalDateFetchDone.has(tmdbId) || datesMap[tmdbId]) return;
+      if (_digitalDateFetchDone.has(tmdbId)) return;
+      var existingDateNorm = datesMap[tmdbId] ? String(datesMap[tmdbId]).slice(0, 10) : null;
+      if (existingDateNorm && existingDateNorm >= todayStr) return;
       var rel = item.trakt_released;
       if (!rel || !/^\d{4}-\d{2}-\d{2}/.test(String(rel))) return;
       var relDate = new Date(String(rel).slice(0, 10) + 'T00:00:00');
