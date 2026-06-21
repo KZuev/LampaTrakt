@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.0.41';
+  var PLUGIN_VERSION = '3.0.38';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -3785,83 +3785,6 @@
     div.textContent = label;
     firstUpcoming.parentNode.insertBefore(div, firstUpcoming);
   }
-  function prefetchWatchlistDigitalDates(results, timeoutMs) {
-    if (!Array.isArray(results) || !Lampa.TMDB || !Lampa.Reguest) return Promise.resolve();
-    var today = new Date(); today.setHours(0, 0, 0, 0);
-    var todayStr = today.toISOString().slice(0, 10);
-    var MAX_AGE_DAYS = 270;
-    var datesMap = getUpcomingMovieDates();
-    var candidates = [];
-    results.forEach(function(item) {
-      var isMovie = item.method === 'movie' || item.card_type === 'movie';
-      if (!isMovie || !item.id) return;
-      var tmdbId = String(item.id);
-      if (_digitalDateFetchDone.has(tmdbId)) return;
-      var existingDateNorm = datesMap[tmdbId] ? String(datesMap[tmdbId]).slice(0, 10) : null;
-      if (existingDateNorm && existingDateNorm >= todayStr) return;
-      var rel = item.trakt_released;
-      if (!rel || !/^\d{4}-\d{2}-\d{2}/.test(String(rel))) return;
-      var relDate = new Date(String(rel).slice(0, 10) + 'T00:00:00');
-      if (isNaN(relDate.getTime())) return;
-      var ageDays = Math.round((today - relDate) / 86400000);
-      if (ageDays < 0 || ageDays > MAX_AGE_DAYS) return;
-      candidates.push(tmdbId);
-    });
-    if (!candidates.length) return Promise.resolve();
-    var fetches = candidates.map(function(tmdbId) {
-      return new Promise(function(resolve) { fetchAndCacheDigitalDate(tmdbId, function() { resolve(); }); });
-    });
-    var all = Promise.all(fetches);
-    if (!timeoutMs) return all;
-    return Promise.race([all, new Promise(function(resolve) { setTimeout(resolve, timeoutMs); })]);
-  }
-  function rearrangeWatchlistAllUpcoming(data) {
-    if (!data || !Array.isArray(data.results)) return data;
-    var today = new Date(); today.setHours(0, 0, 0, 0);
-    var todayStr = today.toISOString().slice(0, 10);
-    var currentYear = today.getFullYear();
-    var datesMap = getUpcomingMovieDates();
-    var soonIds = getSoonMovieIds();
-    var released = [], upcoming = [];
-    data.results.forEach(function(item) {
-      var isMovie = item.method === 'movie' || item.card_type === 'movie';
-      var tmdbId = item.id ? String(item.id) : null;
-      var theatricalDate = null;
-      var rel = item.trakt_released;
-      if (rel && /^\d{4}-\d{2}-\d{2}/.test(String(rel))) {
-        if (String(rel).slice(0, 10) > todayStr) theatricalDate = String(rel).slice(0, 10);
-      } else if ((parseInt(item.release_date, 10) || 0) > currentYear) {
-        theatricalDate = String(item.release_date || (currentYear + 1));
-      }
-      var digitalDate = null, isSoon = false;
-      if (isMovie && tmdbId && !theatricalDate) {
-        var ds = datesMap[tmdbId];
-        var dsNorm = ds ? String(ds).slice(0, 10) : null;
-        if (dsNorm && new Date(dsNorm + 'T00:00:00') >= today) { digitalDate = dsNorm; }
-        else if (!dsNorm && soonIds.has(tmdbId)) { isSoon = true; }
-      }
-      var sortDate = theatricalDate || digitalDate || null;
-      if (sortDate) {
-        upcoming.push({ item: item, tier: 0, key: sortDate });
-      } else if (isSoon) {
-        var soonKey = rel && /^\d{4}-\d{2}-\d{2}/.test(String(rel)) ? String(rel).slice(0, 10) : '';
-        upcoming.push({ item: item, tier: 1, key: soonKey });
-      } else {
-        released.push(item);
-      }
-    });
-    if (!upcoming.length) return data;
-    upcoming.sort(function(a, b) {
-      if (a.tier !== b.tier) return a.tier - b.tier;
-      if (!a.key && !b.key) return 0;
-      if (!a.key) return 1;
-      if (!b.key) return -1;
-      return a.key < b.key ? -1 : a.key > b.key ? 1 : 0;
-    });
-    var upcomingItems = upcoming.map(function(x) { return x.item; });
-    upcomingItems[0]._trakt_upcoming_first = true;
-    return Object.assign({}, data, { results: released.concat(upcomingItems) });
-  }
   function rearrangeWatchlistUpcoming(data) {
     if (!data || !Array.isArray(data.results)) return data;
     var today = new Date();
@@ -3943,24 +3866,17 @@
           Api$2[type](params).then(function (data) {
             if (typeof _savedStart === 'function') _this.start = _savedStart;
             if (data && data.total_pages) total_pages = data.total_pages;
-            var pre = Promise.resolve();
-            if (type === 'watchlist') {
-              data = applyWatchlistClientFilters(data, object);
-              pre = prefetchWatchlistDigitalDates(data.results, 4000);
+            if (type === 'watchlist') { data = applyWatchlistClientFilters(data, object); data = rearrangeWatchlistUpcoming(data); }
+            if (type === 'upnext') data = rearrangeUpnextNotStarted(data);
+            var buildData = data && _typeof(data) === 'object' && Array.isArray(data.results) ? data : { results: [] };
+            try { _listLogAdd('bC.build type=' + type + ' n=' + buildData.results.length + ' pages=' + total_pages); } catch(e) {}
+            _this.build(buildData);
+            if (buildData.results.length > 0 && _emptyInstance) {
+              try { var _el = typeof _emptyInstance.render === 'function' ? _emptyInstance.render(true) : null; if (_el) _el.style.display = 'none'; } catch(e) {}
             }
-            pre.then(function() {
-              if (type === 'watchlist') data = rearrangeWatchlistAllUpcoming(data);
-              if (type === 'upnext') data = rearrangeUpnextNotStarted(data);
-              var buildData = data && _typeof(data) === 'object' && Array.isArray(data.results) ? data : { results: [] };
-              try { _listLogAdd('bC.build type=' + type + ' n=' + buildData.results.length + ' pages=' + total_pages); } catch(e) {}
-              _this.build(buildData);
-              if (buildData.results.length > 0 && _emptyInstance) {
-                try { var _el = typeof _emptyInstance.render === 'function' ? _emptyInstance.render(true) : null; if (_el) _el.style.display = 'none'; } catch(e) {}
-              }
-              setTimeout(function() { _captureHeightSnapshot('TRAKT-' + type); }, 500);
-              if (type === 'watchlist') setTimeout(function () { try { insertUpcomingDivider(_this); } catch(e) {} }, 0);
-              if (type === 'upnext') setTimeout(function () { try { insertUpnextNotStartedDivider(_this); } catch(e) {} }, 0);
-            });
+            setTimeout(function() { _captureHeightSnapshot('TRAKT-' + type); }, 500);
+            if (type === 'watchlist') setTimeout(function () { try { insertUpcomingDivider(_this); } catch(e) {} }, 0);
+            if (type === 'upnext') setTimeout(function () { try { insertUpnextNotStartedDivider(_this); } catch(e) {} }, 0);
           })["catch"](function () { _this.empty(); });
         },
         onNext: function onNext(resolve, reject) {
@@ -4074,19 +3990,12 @@
         if (!Api$2) { logApiMissing$1(); return; }
         Api$2[type](params).then(function (data) {
           if (data && data.total_pages) total_pages = data.total_pages;
-          var pre = Promise.resolve();
-          if (type === 'watchlist') {
-            data = applyWatchlistClientFilters(data, object);
-            pre = prefetchWatchlistDigitalDates(data.results, 4000);
-          }
-          pre.then(function() {
-            if (type === 'watchlist') data = rearrangeWatchlistAllUpcoming(data);
-            if (type === 'upnext') data = rearrangeUpnextNotStarted(data);
-            _this3.build(data && _typeof(data) === 'object' && Array.isArray(data.results) ? data : { results: [] });
-            if (total_pages > 1 && _this3.activity && _this3.activity.scroll) _this3.activity.scroll.onEnd = _this3.next.bind(_this3);
-            if (type === 'watchlist') setTimeout(function () { try { insertUpcomingDivider(_this3); } catch(e) {} }, 0);
-            if (type === 'upnext') setTimeout(function () { try { insertUpnextNotStartedDivider(_this3); } catch(e) {} }, 0);
-          });
+          if (type === 'watchlist') { data = applyWatchlistClientFilters(data, object); data = rearrangeWatchlistUpcoming(data); }
+          if (type === 'upnext') data = rearrangeUpnextNotStarted(data);
+          _this3.build(data && _typeof(data) === 'object' && Array.isArray(data.results) ? data : { results: [] });
+          if (total_pages > 1 && _this3.activity && _this3.activity.scroll) _this3.activity.scroll.onEnd = _this3.next.bind(_this3);
+          if (type === 'watchlist') setTimeout(function () { try { insertUpcomingDivider(_this3); } catch(e) {} }, 0);
+          if (type === 'upnext') setTimeout(function () { try { insertUpnextNotStartedDivider(_this3); } catch(e) {} }, 0);
         })["catch"](function () { _this3.empty(); });
       };
       comp.next = function () {
@@ -13367,12 +13276,11 @@
       _digitalDateFetchDone.add(tmdbId);
       _digitalDateActive--;
       if (chosen) {
-        chosen = String(chosen).slice(0, 10);
         var map = getUpcomingMovieDates();
         map[tmdbId] = chosen;
         saveUpcomingMovieDates(map);
         var today = new Date(); today.setHours(0, 0, 0, 0);
-        var release = new Date(chosen + 'T00:00:00'); release.setHours(0, 0, 0, 0);
+        var release = new Date(chosen); release.setHours(0, 0, 0, 0);
         if (release >= today) { _digitalDatesAvailable = true; scheduleRefreshDigitalBadgesDOM(); }
       }
       if (callback) callback(chosen || null);
@@ -14834,11 +14742,10 @@
         var todayStr = new Date().toISOString().slice(0, 10);
         var currentYear = new Date().getFullYear();
         var upcomingIds = getUpcomingMovieIds();
-        var soonIds = getSoonMovieIds();
         return results.filter(function(item) {
           if (item.card_type === 'movie') {
-            // Скрыть фильмы с предстоящим цифровым релизом (бейдж с датой или «Скоро»)
-            if (item.id && (upcomingIds.has(String(item.id)) || soonIds.has(String(item.id)))) return false;
+            // v2.1.9: Show movies with upcoming digital releases in watchlist row (with badge)
+            if (item.id && upcomingIds.has(String(item.id))) return true;
             // Hide movies with no known release date (unreleased or untracked)
             if (!item.trakt_released) return false;
           }
