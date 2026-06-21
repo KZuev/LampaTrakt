@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.0.38';
+  var PLUGIN_VERSION = '3.0.40';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -3833,8 +3833,9 @@
       var digitalDate = null, isSoon = false;
       if (isMovie && tmdbId && !theatricalDate) {
         var ds = datesMap[tmdbId];
-        if (ds && new Date(ds + 'T00:00:00') >= today) { digitalDate = ds; }
-        else if (!ds && soonIds.has(tmdbId)) { isSoon = true; }
+        var dsNorm = ds ? String(ds).slice(0, 10) : null;
+        if (dsNorm && new Date(dsNorm + 'T00:00:00') >= today) { digitalDate = dsNorm; }
+        else if (!dsNorm && soonIds.has(tmdbId)) { isSoon = true; }
       }
       var sortDate = theatricalDate || digitalDate || null;
       if (sortDate) {
@@ -13363,11 +13364,12 @@
       _digitalDateFetchDone.add(tmdbId);
       _digitalDateActive--;
       if (chosen) {
+        chosen = String(chosen).slice(0, 10);
         var map = getUpcomingMovieDates();
         map[tmdbId] = chosen;
         saveUpcomingMovieDates(map);
         var today = new Date(); today.setHours(0, 0, 0, 0);
-        var release = new Date(chosen); release.setHours(0, 0, 0, 0);
+        var release = new Date(chosen + 'T00:00:00'); release.setHours(0, 0, 0, 0);
         if (release >= today) { _digitalDatesAvailable = true; scheduleRefreshDigitalBadgesDOM(); }
       }
       if (callback) callback(chosen || null);
