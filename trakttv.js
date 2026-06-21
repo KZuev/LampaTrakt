@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.0.37';
+  var PLUGIN_VERSION = '3.0.38';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -2595,6 +2595,7 @@
         var total_pages = Math.max(1, Math.ceil(total / limit));
         var offset = (page - 1) * limit;
         var paginatedResults = combinedResults.slice(offset, offset + limit);
+        paginatedResults.forEach(function(item) { item._trakt_from_recommendations = true; });
         return applyMultiwatchFilter(Promise.resolve(enrichWithTmdbLocale({
           results: paginatedResults,
           total: total,
@@ -2906,6 +2907,11 @@
         }
       }
       return requestApi('POST', '/sync/history/remove', body);
+    },
+    hideRecommendation: function(element) {
+      if (!element || !element.ids || !element.ids.trakt) return Promise.reject(new Error('no trakt id'));
+      var type = element.method === 'movie' ? 'movies' : 'shows';
+      return requestApi('DELETE', '/recommendations/' + type + '/' + element.ids.trakt);
     },
     collection: function(params) {
       var page = Math.max(1, parseInt(params && params.page, 10) || 1);
@@ -4112,10 +4118,16 @@
         onInstance: function onInstance(card, element) {
           renderTvTypeBadge(card, element);
           card.use({
+            onCreate: function() {
+              card.onMenu = function() { openRecommendationActions(object, element); };
+            }
+          });
+          card.use({
             onlyMenu: false,
             onlyEnter: function onlyEnter() {
               Lampa.Activity.push({ url: '', component: 'full', id: element.id, method: element.method, card: this.data, source: 'tmdb' });
-            }
+            },
+            onLong: function() { openRecommendationActions(object, element); }
           });
         },
         onController: function onController(controller) {
@@ -4166,7 +4178,7 @@
       };
       comp.cardRender = function (object, element, card) {
         renderTvTypeBadge(card, element);
-        card.onMenu = false;
+        card.onMenu = function() { openRecommendationActions(object, element); };
         card.onEnter = function () {
           Lampa.Activity.push({ url: '', component: 'full', id: element.id, method: element.method, card: card, source: 'tmdb' });
         };
@@ -4524,6 +4536,33 @@
       onBack: function onBack() {
         Lampa.Controller.toggle('content');
       }
+    });
+  }
+  function clearRecommendationsRowCache() {
+    try {
+      Object.keys(localStorage).forEach(function(k) {
+        if (k.indexOf('trakttv_row_cache_v1_') === 0 && k.indexOf('TraktRecommendationsRow') >= 0) {
+          localStorage.removeItem(k);
+        }
+      });
+    } catch(e) {}
+  }
+  function openRecommendationActions(object, element) {
+    if (!Api$2 || !element) return;
+    Lampa.Select.show({
+      title: t$3('trakt_hide_recommendation_title', 'Рекомендация'),
+      items: [{ title: t$3('trakt_hide_recommendation_action', 'Скрыть рекомендацию'), action: 'hide' }],
+      onSelect: function(item) {
+        if (item.action !== 'hide') return;
+        Api$2.hideRecommendation(element)
+          .then(function() {
+            clearRecommendationsRowCache();
+            notify$1(t$3('trakt_recommendation_hidden', 'Рекомендация скрыта'));
+            refreshActivity(object, 'trakttv_recommendations');
+          })
+          ['catch'](function(err) { showApiError(err, 'trakt_hide_recommendation_error'); });
+      },
+      onBack: function() { Lampa.Controller.toggle('content'); }
     });
   }
   function renderWideListCard(card, element) {
@@ -6763,6 +6802,21 @@
       },
       trakt_not_set: {
         ru: "не задан",
+      },
+      trakt_hide_recommendation_title: {
+        ru: "Рекомендация",
+      },
+      trakt_hide_recommendation_action: {
+        ru: "Скрыть рекомендацию",
+      },
+      trakt_recommendation_hidden: {
+        ru: "Рекомендация скрыта",
+      },
+      trakt_hide_recommendation_error: {
+        ru: "Не удалось скрыть рекомендацию",
+      },
+      trakt_not_a_recommendation: {
+        ru: "Не является рекомендацией Trakt",
       }
     });
   }
@@ -16336,6 +16390,7 @@
 
     Main();
     registerContextListAction();
+    registerHideRecommendationAction();
 
     events.init();
     watching.init();
@@ -16373,6 +16428,38 @@
             }
           });
         }, 0);
+      }
+    };
+  }
+  function registerHideRecommendationAction() {
+    if (typeof Lampa === 'undefined' || !Lampa.Manifest) return;
+    var exists = Array.isArray(Lampa.Manifest.plugins) &&
+      Lampa.Manifest.plugins.some(function(p) { return p && p.component === 'trakt_hide_recommendation'; });
+    if (exists) return;
+    Lampa.Manifest.plugins = {
+      type: 'video',
+      version: '1.0.0',
+      name: Lampa.Lang.translate('trakt_hide_recommendation_action') || 'Скрыть рекомендацию',
+      component: 'trakt_hide_recommendation',
+      onContextMenu: function() {
+        var act = Lampa.Activity && typeof Lampa.Activity.active === 'function' ? Lampa.Activity.active() : null;
+        var comp = act && act.component;
+        if (comp === 'main' || comp === 'trakttv_recommendations') {
+          return { name: Lampa.Lang.translate('trakt_hide_recommendation_action') || 'Скрыть рекомендацию', description: '' };
+        }
+        return null;
+      },
+      onContextLauch: function(object) {
+        if (!object || !object._trakt_from_recommendations) {
+          Lampa.Noty.show(Lampa.Lang.translate('trakt_not_a_recommendation') || 'Не является рекомендацией Trakt');
+          return;
+        }
+        Api$2.hideRecommendation(object)
+          .then(function() {
+            clearRecommendationsRowCache();
+            Lampa.Noty.show(Lampa.Lang.translate('trakt_recommendation_hidden') || 'Рекомендация скрыта');
+          })
+          ['catch'](function(err) { showApiError(err, 'trakt_hide_recommendation_error'); });
       }
     };
   }
