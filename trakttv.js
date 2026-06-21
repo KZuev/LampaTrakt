@@ -3785,6 +3785,45 @@
     div.textContent = label;
     firstUpcoming.parentNode.insertBefore(div, firstUpcoming);
   }
+  function rearrangeWatchlistAllUpcoming(data) {
+    if (!data || !Array.isArray(data.results)) return data;
+    var today = new Date(); today.setHours(0, 0, 0, 0);
+    var todayStr = today.toISOString().slice(0, 10);
+    var currentYear = today.getFullYear();
+    var datesMap = getUpcomingMovieDates();
+    var soonIds = getSoonMovieIds();
+    var released = [], upcoming = [];
+    data.results.forEach(function(item) {
+      var isMovie = item.method === 'movie' || item.card_type === 'movie';
+      var tmdbId = item.id ? String(item.id) : null;
+      var theatricalDate = null;
+      var rel = item.trakt_released;
+      if (rel && /^\d{4}-\d{2}-\d{2}/.test(String(rel))) {
+        if (String(rel).slice(0, 10) > todayStr) theatricalDate = String(rel).slice(0, 10);
+      } else if ((parseInt(item.release_date, 10) || 0) > currentYear) {
+        theatricalDate = String(item.release_date || (currentYear + 1));
+      }
+      var digitalDate = null, isSoon = false;
+      if (isMovie && tmdbId && !theatricalDate) {
+        var ds = datesMap[tmdbId];
+        if (ds && new Date(ds + 'T00:00:00') >= today) { digitalDate = ds; }
+        else if (!ds && soonIds.has(tmdbId)) { isSoon = true; }
+      }
+      var sortDate = theatricalDate || digitalDate || null;
+      if (sortDate || isSoon) { upcoming.push({ item: item, sortDate: sortDate }); }
+      else { released.push(item); }
+    });
+    if (!upcoming.length) return data;
+    upcoming.sort(function(a, b) {
+      if (!a.sortDate && !b.sortDate) return 0;
+      if (!a.sortDate) return 1;
+      if (!b.sortDate) return -1;
+      return a.sortDate < b.sortDate ? -1 : a.sortDate > b.sortDate ? 1 : 0;
+    });
+    var upcomingItems = upcoming.map(function(x) { return x.item; });
+    upcomingItems[0]._trakt_upcoming_first = true;
+    return Object.assign({}, data, { results: released.concat(upcomingItems) });
+  }
   function rearrangeWatchlistUpcoming(data) {
     if (!data || !Array.isArray(data.results)) return data;
     var today = new Date();
@@ -3866,7 +3905,7 @@
           Api$2[type](params).then(function (data) {
             if (typeof _savedStart === 'function') _this.start = _savedStart;
             if (data && data.total_pages) total_pages = data.total_pages;
-            if (type === 'watchlist') { data = applyWatchlistClientFilters(data, object); data = rearrangeWatchlistUpcoming(data); }
+            if (type === 'watchlist') { data = applyWatchlistClientFilters(data, object); data = rearrangeWatchlistAllUpcoming(data); }
             if (type === 'upnext') data = rearrangeUpnextNotStarted(data);
             var buildData = data && _typeof(data) === 'object' && Array.isArray(data.results) ? data : { results: [] };
             try { _listLogAdd('bC.build type=' + type + ' n=' + buildData.results.length + ' pages=' + total_pages); } catch(e) {}
@@ -3990,7 +4029,7 @@
         if (!Api$2) { logApiMissing$1(); return; }
         Api$2[type](params).then(function (data) {
           if (data && data.total_pages) total_pages = data.total_pages;
-          if (type === 'watchlist') { data = applyWatchlistClientFilters(data, object); data = rearrangeWatchlistUpcoming(data); }
+          if (type === 'watchlist') { data = applyWatchlistClientFilters(data, object); data = rearrangeWatchlistAllUpcoming(data); }
           if (type === 'upnext') data = rearrangeUpnextNotStarted(data);
           _this3.build(data && _typeof(data) === 'object' && Array.isArray(data.results) ? data : { results: [] });
           if (total_pages > 1 && _this3.activity && _this3.activity.scroll) _this3.activity.scroll.onEnd = _this3.next.bind(_this3);
@@ -14742,10 +14781,11 @@
         var todayStr = new Date().toISOString().slice(0, 10);
         var currentYear = new Date().getFullYear();
         var upcomingIds = getUpcomingMovieIds();
+        var soonIds = getSoonMovieIds();
         return results.filter(function(item) {
           if (item.card_type === 'movie') {
-            // v2.1.9: Show movies with upcoming digital releases in watchlist row (with badge)
-            if (item.id && upcomingIds.has(String(item.id))) return true;
+            // Скрыть фильмы с предстоящим цифровым релизом (бейдж с датой или «Скоро»)
+            if (item.id && (upcomingIds.has(String(item.id)) || soonIds.has(String(item.id)))) return false;
             // Hide movies with no known release date (unreleased or untracked)
             if (!item.trakt_released) return false;
           }
