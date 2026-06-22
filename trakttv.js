@@ -10765,6 +10765,10 @@
         onSelect: function(item) {
           if (item._iphone) {
             Lampa.Input.edit({ title: 'Лог отметок (10 последних)', value: item._iphone, free: true, nosave: true }, function() {});
+            setTimeout(function() {
+              var inp = document.getElementById('orsay-keyboard');
+              if (inp) { try { inp.select(); } catch(e2) {} }
+            }, 100);
             return;
           }
           if (item._copy)  _copyToClipboard(item._copy);
