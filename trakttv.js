@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.1.5';
+  var PLUGIN_VERSION = '3.1.4';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -10747,29 +10747,12 @@
                 e.minProg != null ? 'min:'+e.minProg : '',
                 e.extra || ''].join('\t');
       }).join('\n');
-      // Реверс: старые записи первыми, свежие — в конец к курсору (iPhone Remote стоит в конце)
-      var allText = log.slice(0, 10).reverse().map(function(e) {
-        var t = e.ts ? e.ts.slice(5, 10) + ' ' + e.ts.slice(11, 19) : '?';
-        var who = e.type === 'movie' ? (e.title || '?') : ((e.show || '?') + (e.season != null ? ' S' + e.season : '') + (e.episode != null ? 'E' + e.episode : ''));
-        return t + ' ' + e.trigger + (e.percent != null ? ' ' + Math.round(e.percent) + '%' : '') + (e.extra ? ' ' + e.extra : '') + ' ' + who;
-      }).join(' | ');
-      if (Lampa.Platform.tv()) {
-        items.push({ title: '[ Открыть для копирования (iPhone, 10 зап.) ]', _iphone: allText });
-      }
       items.push({ title: '[ Скопировать лог ]', _copy: fullText });
       items.push({ title: '[ Очистить лог ]',    _clear: true });
       Lampa.Select.show({
         title: 'История отметок (' + log.length + ')',
         items: items,
         onSelect: function(item) {
-          if (item._iphone) {
-            Lampa.Input.edit({ title: 'Лог отметок (10 последних)', value: item._iphone, free: true, nosave: true }, function() {});
-            setTimeout(function() {
-              var inp = document.getElementById('orsay-keyboard');
-              if (inp) { try { inp.setSelectionRange(0, 0); } catch(e2) {} }
-            }, 100);
-            return;
-          }
           if (item._copy)  _copyToClipboard(item._copy);
           if (item._clear) { _watchMarkLog.length = 0; try { Lampa.Storage.set('trakt_watch_log', []); } catch(e) {} Lampa.Noty.show('Лог очищен'); }
         },
