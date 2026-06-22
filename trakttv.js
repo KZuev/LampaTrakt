@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.1.3';
+  var PLUGIN_VERSION = '3.1.4';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -7955,6 +7955,8 @@
         ? element.object.activity.render() : null;
       if (!renderRoot) return;
 
+      _fullCardItemId = String(itemId);
+
       function buildProgressElement() {
         var el = document.createElement('div');
         el.className = 'full-start-new__details trakt selector trakt-status-clickable';
@@ -8134,64 +8136,81 @@
         }, 0);
       }
 
-      if (isShow) {
-        getShowProgressData(itemId).then(function(result) {
-          var progressData = result.progress || {};
-          var aired = progressData.aired || 0;
-          var watchedCount = progressData.completed || 0;
-          var lastEp = progressData.last_episode;
-          var season = lastEp && lastEp.season;
-          var ep = lastEp && lastEp.number;
+      function renderProgressData() {
+        if (isShow) {
+          getShowProgressData(itemId).then(function(result) {
+            var progressData = result.progress || {};
+            var aired = progressData.aired || 0;
+            var watchedCount = progressData.completed || 0;
+            var lastEp = progressData.last_episode;
+            var season = lastEp && lastEp.season;
+            var ep = lastEp && lastEp.number;
 
-          if (hasApplecation) {
-            var tryInsertApplecation = function() {
-              var rootNode = renderRoot && renderRoot.get ? renderRoot.get(0) : null;
-              var cardRoot = (rootNode && rootNode.querySelector && rootNode.querySelector('.full-start-new.applecation')) || document.querySelector('.full-start-new.applecation');
-              var applecationInfo = cardRoot && cardRoot.querySelector && cardRoot.querySelector('.applecation__info');
-              if (!applecationInfo) return false;
-              var existing = applecationInfo.querySelector('.trakt-applecation-progress');
-              if (existing) existing.remove();
-              renderRoot.find('.full-start-new__details.trakt').remove();
-              if (season && ep) {
-                var span = document.createElement('span');
-                span.className = 'trakt-applecation-progress';
-                span.innerHTML = '<span class="trakt-icon">' + icons.TRAKT_ICON + '</span><span class="trakt-applecation-progress__text">S' + season + ' · E' + ep + '</span>';
-                var badges = applecationInfo.querySelector('.applecation__quality-badges');
-                if (badges) badges.before(span); else applecationInfo.append(span);
+            if (hasApplecation) {
+              var tryInsertApplecation = function() {
+                var rootNode = renderRoot && renderRoot.get ? renderRoot.get(0) : null;
+                var cardRoot = (rootNode && rootNode.querySelector && rootNode.querySelector('.full-start-new.applecation')) || document.querySelector('.full-start-new.applecation');
+                var applecationInfo = cardRoot && cardRoot.querySelector && cardRoot.querySelector('.applecation__info');
+                if (!applecationInfo) return false;
+                var existing = applecationInfo.querySelector('.trakt-applecation-progress');
+                if (existing) existing.remove();
+                renderRoot.find('.full-start-new__details.trakt').remove();
+                if (season && ep) {
+                  var span = document.createElement('span');
+                  span.className = 'trakt-applecation-progress';
+                  span.innerHTML = '<span class="trakt-icon">' + icons.TRAKT_ICON + '</span><span class="trakt-applecation-progress__text">S' + season + ' · E' + ep + '</span>';
+                  var badges = applecationInfo.querySelector('.applecation__quality-badges');
+                  if (badges) badges.before(span); else applecationInfo.append(span);
+                }
+                return true;
+              };
+              if (!tryInsertApplecation()) {
+                var attempts2 = 0;
+                var retry = function() { if (tryInsertApplecation()) return; if (++attempts2 < 10) setTimeout(retry, 200); };
+                retry();
               }
-              return true;
-            };
-            if (!tryInsertApplecation()) {
-              var attempts2 = 0;
-              var retry = function() { if (tryInsertApplecation()) return; if (++attempts2 < 10) setTimeout(retry, 200); };
-              retry();
+              return;
             }
-            return;
-          }
 
-          var isCompleted = aired > 0 && aired === watchedCount;
-          var labelType;
-          if (isCompleted) {
-            labelType = 'completed';
-          } else if (watchedCount > 0 && season) {
-            labelType = 'watching';
-          } else {
-            labelType = 'not_watched';
-          }
-          if (progress) progress.updateVisual(labelType, season, ep, labelType !== 'not_watched', progressData.last_watched_at);
-        }).catch(function(error) {
-          logWarn('Failed to load show progress', error, { debugOnly: true });
-        });
+            var isCompleted = aired > 0 && aired === watchedCount;
+            var labelType;
+            if (isCompleted) {
+              labelType = 'completed';
+            } else if (watchedCount > 0 && season) {
+              labelType = 'watching';
+            } else {
+              labelType = 'not_watched';
+            }
+            if (progress) progress.updateVisual(labelType, season, ep, labelType !== 'not_watched', progressData.last_watched_at);
+          }).catch(function(error) {
+            logWarn('Failed to load show progress', error, { debugOnly: true });
+          });
 
-      } else {
-        ensureWatchedCache().then(function(cache) {
-          var isWatched = cache.movies.has(String(itemId));
-          var watchedAt = isWatched && cache.moviesWatchedAt ? cache.moviesWatchedAt.get(String(itemId)) : null;
-          if (progress) progress.updateVisual('movie', null, null, isWatched, watchedAt);
-        }).catch(function() {
-          if (progress) progress.updateVisual('movie', null, null, false, null);
-        });
+        } else {
+          ensureWatchedCache().then(function(cache) {
+            var isWatched = cache.movies.has(String(itemId));
+            var watchedAt = isWatched && cache.moviesWatchedAt ? cache.moviesWatchedAt.get(String(itemId)) : null;
+            if (progress) progress.updateVisual('movie', null, null, isWatched, watchedAt);
+          }).catch(function() {
+            if (progress) progress.updateVisual('movie', null, null, false, null);
+          });
+        }
       }
+
+      renderProgressData();
+
+      // Сохраняем ссылку для реалтайм-обновления статуса после своей отметки
+      // (onOwnMarkSucceeded). Перерисовывает только визуал на месте — без
+      // переинсерта элемента и без setTimeout(0)-сброса фокуса выше.
+      _fullCardRefreshFn = function() {
+        var node = renderRoot && renderRoot.get ? renderRoot.get(0) : null;
+        if (!node || !document.body.contains(node)) {
+          _fullCardRefreshFn = null;
+          _fullCardItemId = null;
+          return;
+        }
+        renderProgressData();
+      };
     },
     addHistoryButton: function addHistoryButton(data) {
       var button = document.createElement('div');
@@ -12342,6 +12361,8 @@
   var _upnextLineRef = null;             // ссылка на Line-инстанс строки Up Next на главной
   var _pendingMainRefresh = false;       // нужно обновить Up Next при следующем входе на главную
   var _ownMarkReconcileTimer = null;     // дебаунс-таймер реконсиляции бейджей после отметки
+  var _fullCardRefreshFn = null;         // перерисовывает статус на открытой странице описания
+  var _fullCardItemId = null;            // tmdb id текущей открытой страницы описания
 
   /**
    * Модуль отслеживания просмотра в Trakt.TV
@@ -13252,6 +13273,7 @@
         _renderedCardInstances.forEach(renderWatchedBadge);
         _renderedCardInstances.forEach(renderWatchingBadge);
         _renderedCardInstances.forEach(renderWatchlistBadge);
+        try { refreshFullCardProgress(); } catch(e) {}
         try { _watchLogAdd('own_mark_reconcile_done', {}); } catch(e) {}
       }).catch(function() {});
     }, 5000);
@@ -13291,6 +13313,14 @@
     } catch(ex) {}
   }
 
+  function refreshFullCardProgress(tmdbId) {
+    try {
+      if (!_fullCardRefreshFn) return;
+      if (tmdbId != null && String(tmdbId) !== _fullCardItemId) return;
+      _fullCardRefreshFn();
+    } catch(e) {}
+  }
+
   function onOwnMarkSucceeded(data, mode) {
     var tmdbId = data && data.id;
     if (!tmdbId) return;
@@ -13302,6 +13332,7 @@
     } catch(e) {}
     setTimeout(function() {
       try { rebuildUpnextLineInPlace(); } catch(e) {}
+      try { refreshFullCardProgress(tmdbId); } catch(e) {}
     }, 1500);
   }
 
