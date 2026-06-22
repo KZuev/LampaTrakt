@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.1.4';
+  var PLUGIN_VERSION = '3.1.5';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -13283,6 +13283,7 @@
     try {
       if (!readBooleanStorage$1('trakt_realtime_upnext', true)) return;
       if (!_upnextLineRef || !isLineAlive(_upnextLineRef)) {
+        try { _watchLogAdd('upnext_rebuild_skip', { extra: !_upnextLineRef ? 'null_ref' : 'not_alive' }); } catch(e) {}
         _pendingMainRefresh = true;
         return;
       }
@@ -13796,6 +13797,12 @@
       Lampa.Listener.follow('activity', function(e) {
         if (e && e.type === 'destroy' && e.component === 'torrents' && _atSelectPending && !_atRetrying) {
           _atCancel();
+        }
+        // Lampa вызывает stop() у главной страницы когда открывается детальная — слайд убирается
+        // из DOM, isLineAlive() → false, pendingMainRefresh = true. При возврате назад слайд
+        // переприкрепляется и стреляет 'archive'. Здесь ловим этот момент и запускаем rebuild.
+        if (e && e.type === 'archive' && _pendingMainRefresh) {
+          setTimeout(function() { try { rebuildUpnextLineInPlace(); } catch(ex) {} }, 300);
         }
       });
       Lampa.Listener.follow('line', function (e) {
