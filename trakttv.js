@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.1.2';
+  var PLUGIN_VERSION = '3.1.3';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -12334,6 +12334,7 @@
   var isAddingShowToWatching = false;
   var isInitialized$1 = false;
   var _isPlayerActive = false;
+  var _sessionFirstObservedPct = null;   // первый % в сессии плеера; гард от ложных отметок
   var _externalPlayerActive = false;     // между запуском 'external' и его отметкой
   var _externalActiveUntil = 0;          // метка времени для корректного перезапуска
   var _externalClearTimer = null;        // резервный таймер сброса
@@ -12499,6 +12500,7 @@
      */
     onPlayerStart: function onPlayerStart(data) {
       _isPlayerActive = true;
+      _sessionFirstObservedPct = null;
       _atOverlayHide();
       var activityCard = Lampa.Activity && Lampa.Activity.active && Lampa.Activity.active() &&
         (Lampa.Activity.active().card_data || Lampa.Activity.active().card || Lampa.Activity.active().movie);
@@ -12628,7 +12630,19 @@
       slog('Checking if should finish with idempotency, percent:', percent, 'minProgress:', minProgress);
       var watchedByPercent = (typeof percent === 'number' ? percent : 0) >= minProgress;
       var watchedByTime = road && road.time && road.duration ? road.time / road.duration * 100 >= minProgress : false;
+      // Capture first observed % for this internal-player session (before threshold check)
+      if (_isPlayerActive && !_externalPlayerActive && _sessionFirstObservedPct === null) {
+        _sessionFirstObservedPct = percent;
+      }
       if ((watchedByPercent || watchedByTime) && _isPlayerActive) {
+        // Guard: skip if progress didn't advance beyond what was already stored.
+        // Prevents false marks when the player briefly opens with stored ≥80% progress
+        // (e.g. video fails to load, or user immediately closes with prior 100% stored).
+        // External player is exempt — it has only one timeline event (on return to Lampa).
+        if (!_externalPlayerActive && _sessionFirstObservedPct !== null && !(percent > _sessionFirstObservedPct)) {
+          try { _watchLogAdd('timeline_stored_only', { percent: percent, extra: 'first:' + _sessionFirstObservedPct }); } catch(e) {}
+          return;
+        }
         var media = Object.assign({}, card, {
           hash: hash
         });

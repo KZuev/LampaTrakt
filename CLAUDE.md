@@ -10,7 +10,7 @@
 
 ## Текущая версия
 
-**v3.1.2** — Фикс: Up Next не обновлялся при возврате с внешнего плеера — `_pendingMainRefresh` теперь потребляется в 'line' listener.
+**v3.1.3** — Фикс ложной отметки: `_sessionFirstObservedPct` отслеживает первый % в сессии плеера; если прогресс не вырос — это хранимый прогресс, а не новый просмотр.
 
 ## История фиксов
 
@@ -73,6 +73,7 @@
 | v3.1.0 | TBD | Реалтайм главная: оптимистичные бейджи → реконсиляция 5с → live-rebuild Up Next; настройка `trakt_realtime_upnext`; хук в `addToHistory$1` |
 | v3.1.1 | TBD | Фикс `finish_skip`: `'finishing'` от убитой сессии → `'intent'`; при `already_finished` — UI rebuild (Up Next + бейджи) |
 | v3.1.2 | TBD | Фикс Up Next при внешнем плеере: `_pendingMainRefresh` потребляется в 'line' listener; `rebuildUpnextLineInPlace` сбрасывает флаг перед API-вызовом |
+| v3.1.3 | TBD | Фикс ложной отметки: `_sessionFirstObservedPct` — если прогресс не вырос за сессию плеера, это хранимый прогресс (не новый просмотр); внешний плеер исключён из гарда |
 
 ## Архитектура scrobbling
 
