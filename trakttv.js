@@ -11736,12 +11736,14 @@
           k = _ref6[0],
           v = _ref6[1];
         if (v && now - v.ts <= ttl) {
-          // 'finishing' от убитой сессии — исход неизвестен, разрешаем повтор
           if (v.status === 'finishing') {
+            // Убитая сессия — исход неизвестен, разрешаем повтор
             completionCache.set(k, _objectSpread2({}, v, { status: 'intent' }));
-          } else {
+          } else if (v.status === 'intent') {
             completionCache.set(k, v);
           }
+          // 'finished' намеренно не восстанавливается: POST /sync/history идемпотентен,
+          // а пользователь мог вручную удалить отметку из Trakt между сессиями.
         }
       });
     }
