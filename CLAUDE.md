@@ -10,7 +10,7 @@
 
 ## Текущая версия
 
-**v3.1.0** — Реалтайм-обновление главной после своей отметки: оптимистичные бейджи + реконсиляция + live-rebuild строки Up Next + опция отключения в настройках «Отладка».
+**v3.1.1** — Фикс `finish_skip` из-за кросс-сессионного кеша: `'finishing'` от убитой сессии даунгрейдится до `'intent'`; при `already_finished` обновляется UI (Up Next rebuild).
 
 ## История фиксов
 
@@ -71,6 +71,7 @@
 | v3.0.38 | TBD | «Скрыть рекомендацию»: `DELETE /recommendations/{type}/{id}` из хаба и с главной |
 | v3.0.39 | TBD | Отметка просмотра для внешнего плеера: слушатель `'external'` + onPlayerExternal + двухуровневый сброс `_isPlayerActive` |
 | v3.1.0 | TBD | Реалтайм главная: оптимистичные бейджи → реконсиляция 5с → live-rebuild Up Next; настройка `trakt_realtime_upnext`; хук в `addToHistory$1` |
+| v3.1.1 | TBD | Фикс `finish_skip`: `'finishing'` от убитой сессии → `'intent'`; при `already_finished` — UI rebuild (Up Next + бейджи) |
 
 ## Архитектура scrobbling
 

@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.1.0';
+  var PLUGIN_VERSION = '3.1.1';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -11736,7 +11736,12 @@
           k = _ref6[0],
           v = _ref6[1];
         if (v && now - v.ts <= ttl) {
-          completionCache.set(k, v);
+          // 'finishing' от убитой сессии — исход неизвестен, разрешаем повтор
+          if (v.status === 'finishing') {
+            completionCache.set(k, _objectSpread2({}, v, { status: 'intent' }));
+          } else {
+            completionCache.set(k, v);
+          }
         }
       });
     }
@@ -12655,7 +12660,14 @@
         // Mark intent quickly so event-driven finishes coalesce
         markFinishIntent(key);
         // Fire idempotent finish
-        finish(media)["catch"](function (e) {
+        finish(media).then(function(result) {
+          if (result && result.reason === 'already_finished') {
+            try {
+              var _fstMode = getContentType$1(media) === 'movie' ? 'movie' : 'episode';
+              onOwnMarkSucceeded({ id: media && media.id }, _fstMode);
+            } catch(e) {}
+          }
+        })["catch"](function (e) {
           return slog('finish error', e);
         });
         // Внешний плеер не вызывает Player.destroy() → routeFinishIntent флаг не
