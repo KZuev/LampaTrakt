@@ -10747,13 +10747,7 @@
                 e.minProg != null ? 'min:'+e.minProg : '',
                 e.extra || ''].join('\t');
       }).join('\n');
-      var allText = log.slice(0, 10).map(function(e) {
-        var time = e.ts ? (e.ts.slice(5, 10) + ' ' + e.ts.slice(11, 19)) : '?';
-        var who  = e.type === 'movie' ? (e.title || '?') : ((e.show || '?') + (e.season != null ? ' S' + e.season : '') + (e.episode != null ? 'E' + e.episode : ''));
-        var pct  = e.percent != null ? ' ' + Math.round(e.percent) + '%' : '';
-        var xtra = e.extra ? ' [' + e.extra + ']' : '';
-        return time + ' ' + e.trigger + pct + xtra + ' ' + who;
-      }).join(' | ');
+      var allText = fullText.replace(/\t/g, ' ').replace(/\n/g, ' | ');
       if (Lampa.Platform.tv()) {
         items.push({ title: '[ Открыть для копирования (iPhone) ]', _iphone: allText });
       }
