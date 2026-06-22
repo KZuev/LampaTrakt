@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.0.39';
+  var PLUGIN_VERSION = '3.1.0';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -961,7 +961,7 @@
           })
         }]
       });
-      return requestApi('POST', '/sync/history', body);
+      return requestApi('POST', '/sync/history', body).then(function(res) { try { onOwnMarkSucceeded(data, 'episode'); } catch(e) {} return res; });
     }
 
     if (data.method === 'movie') {
@@ -974,7 +974,7 @@
         },
         watched_at: ('watched_at' in data) ? data.watched_at : new Date().toISOString()
       });
-      return requestApi('POST', '/sync/history', body);
+      return requestApi('POST', '/sync/history', body).then(function(res) { try { onOwnMarkSucceeded(data, 'movie'); } catch(e) {} return res; });
     }
     else if (data.method === 'show' || data.method === 'tv') {
       if (!data.id) {
@@ -10417,6 +10417,12 @@
     });
     Lampa.SettingsApi.addParam({
       component: 'trakt',
+      param: { name: 'trakt_realtime_upnext', type: 'select', values: { 'true': 'Да', 'false': 'Нет' }, 'default': 'true' },
+      field: { name: 'Обновлять Up Next в реальном времени', description: 'После отметки просмотра перестраивает строку Up Next на главной без перезагрузки' },
+      onRender: function(item) { item.show(); }
+    });
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
       param: { name: 'trakt_debug_menu', type: 'button' },
       field: {
         name: 'Отладка',
@@ -12325,6 +12331,9 @@
   var _externalActiveUntil = 0;          // метка времени для корректного перезапуска
   var _externalClearTimer = null;        // резервный таймер сброса
   var EXTERNAL_ACTIVE_WINDOW_MS = 6 * 60 * 60 * 1000; // макс. длина сессии внешнего плеера
+  var _upnextLineRef = null;             // ссылка на Line-инстанс строки Up Next на главной
+  var _pendingMainRefresh = false;       // нужно обновить Up Next при следующем входе на главную
+  var _ownMarkReconcileTimer = null;     // дебаунс-таймер реконсиляции бейджей после отметки
 
   /**
    * Модуль отслеживания просмотра в Trakt.TV
@@ -13187,6 +13196,85 @@
 
   function invalidateWatchlistBadgeCache() { _watchlistBadgeCache = null; _watchlistBadgeCachePromise = null; }
 
+  function isLineAlive(line) {
+    try { return !!(line && typeof line.render === 'function' && line.render(true).isConnected); } catch(e) { return false; }
+  }
+
+  function applyOptimisticWatched(tmdbId, mode) {
+    if (!_watchedCache || !tmdbId) return;
+    var s = String(tmdbId);
+    if (mode === 'movie') {
+      if (_watchedCache.movies) _watchedCache.movies.add(s);
+    } else if (mode === 'episode') {
+      if (_watchedCache.shows) _watchedCache.shows.add(s);
+      if (_watchedCache.watchingShows) _watchedCache.watchingShows.add(s);
+    }
+    _renderedCardInstances.forEach(renderWatchedBadge);
+    _renderedCardInstances.forEach(renderWatchingBadge);
+    _renderedCardInstances.forEach(renderWatchlistBadge);
+  }
+
+  function scheduleOwnMarkReconcile() {
+    if (_ownMarkReconcileTimer) clearTimeout(_ownMarkReconcileTimer);
+    _ownMarkReconcileTimer = setTimeout(function() {
+      _ownMarkReconcileTimer = null;
+      invalidateWatchedCache();
+      invalidateWatchlistBadgeCache();
+      ensureWatchedCache().then(function() {
+        _renderedCardInstances.forEach(renderWatchedBadge);
+        _renderedCardInstances.forEach(renderWatchingBadge);
+        _renderedCardInstances.forEach(renderWatchlistBadge);
+        try { _watchLogAdd('own_mark_reconcile_done', {}); } catch(e) {}
+      }).catch(function() {});
+    }, 5000);
+  }
+
+  function rebuildUpnextLineInPlace() {
+    try {
+      if (!readBooleanStorage$1('trakt_realtime_upnext', true)) return;
+      if (!_upnextLineRef || !isLineAlive(_upnextLineRef)) {
+        _pendingMainRefresh = true;
+        return;
+      }
+      var lineData = _upnextLineRef.data;
+      if (lineData && lineData.total_pages > 1) {
+        _pendingMainRefresh = true;
+        return;
+      }
+      var _a = typeof api$1 !== 'undefined' ? api$1 : null;
+      if (!_a || typeof _a.upnext !== 'function') return;
+      _a.upnext({ limit: 36, page: 1 }).then(function(freshData) {
+        var results = freshData && Array.isArray(freshData.results) ? freshData.results : [];
+        var normalItems = normalizeContentData(results.slice(0, 20));
+        if (!isLineAlive(_upnextLineRef)) return;
+        try {
+          if (Array.isArray(_upnextLineRef.items)) {
+            _upnextLineRef.items.forEach(function(item) { try { item.destroy && item.destroy(); } catch(e) {} });
+            _upnextLineRef.items.length = 0;
+          }
+        } catch(e) {}
+        try { _upnextLineRef.scroll.clear(); } catch(e) {}
+        normalItems.forEach(function(item) {
+          try { _upnextLineRef.emit('createAndAppend', item); } catch(e) {}
+        });
+        try { _watchLogAdd('upnext_live_rebuilt', { extra: normalItems.length + ' items' }); } catch(e) {}
+      }).catch(function() {});
+    } catch(ex) {}
+  }
+
+  function onOwnMarkSucceeded(data, mode) {
+    var tmdbId = data && data.id;
+    if (!tmdbId) return;
+    try { applyOptimisticWatched(tmdbId, mode); } catch(e) {}
+    scheduleOwnMarkReconcile();
+    try {
+      var upnextCacheKey = buildRowCacheKey({ name: 'TraktUpNextRow' }, {}, 'main');
+      clearRowCache(upnextCacheKey);
+    } catch(e) {}
+    setTimeout(function() {
+      try { rebuildUpnextLineInPlace(); } catch(e) {}
+    }, 1500);
+  }
 
   function isWatchedFromCache(tmdbId, type) {
     if (!_watchedCache || !tmdbId) return false;
@@ -13677,6 +13765,7 @@
               if (cv && !cv.getAttribute('data-trakt-movie-id')) cv.setAttribute('data-trakt-movie-id', String(d.id));
             });
             var _isUpnextRow = e.data && e.data.trakt_row === 'upnext';
+            if (_isUpnextRow && e.line) _upnextLineRef = e.line;
             e.items.forEach(function(ci) {
               if (_isUpnextRow && ci.data && ci.data.method !== 'movie') return;
               renderWatchedBadge(ci);
