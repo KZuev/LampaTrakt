@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.0.38';
+  var PLUGIN_VERSION = '3.0.39';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -12321,6 +12321,10 @@
   var isAddingShowToWatching = false;
   var isInitialized$1 = false;
   var _isPlayerActive = false;
+  var _externalPlayerActive = false;     // между запуском 'external' и его отметкой
+  var _externalActiveUntil = 0;          // метка времени для корректного перезапуска
+  var _externalClearTimer = null;        // резервный таймер сброса
+  var EXTERNAL_ACTIVE_WINDOW_MS = 6 * 60 * 60 * 1000; // макс. длина сессии внешнего плеера
 
   /**
    * Модуль отслеживания просмотра в Trakt.TV
@@ -12355,6 +12359,7 @@
 
       if (window.Lampa && Lampa.Player && Lampa.Player.listener) {
         Lampa.Player.listener.follow('start', this.onPlayerStart.bind(this));
+        Lampa.Player.listener.follow('external', this.onPlayerExternal.bind(this));
         slog('Player listener attached');
       }
 
@@ -12507,6 +12512,31 @@
       }
     },
     /**
+     * Обработчик запуска ВНЕШНЕГО плеера (infuse, tvOS Pro, MX Player и т.д.).
+     * Lampa шлёт 'external' (а не 'start') и НЕ вызывает Player.destroy() при
+     * возврате, поэтому routeFinishIntent не отрабатывает. Прогресс возвращается
+     * единственным финальным Timeline 'update' при возврате в Lampa.
+     * Переиспользуем onPlayerStart (флаг + hash-meta), затем ставим одноразовый
+     * авто-сброс флага, чтобы он не залип навсегда.
+     */
+    onPlayerExternal: function onPlayerExternal(data) {
+      try { _watchLogAdd('external_start', { extra: 'hash:' + String(data && data.timeline && data.timeline.hash || '?').slice(0, 12) }); } catch(e) {}
+      this.onPlayerStart(data);
+      _externalPlayerActive = true;
+      var clearAt = Date.now() + EXTERNAL_ACTIVE_WINDOW_MS;
+      _externalActiveUntil = clearAt;
+      if (_externalClearTimer) clearTimeout(_externalClearTimer);
+      _externalClearTimer = setTimeout(function() {
+        if (_externalActiveUntil <= clearAt) {
+          _isPlayerActive = false;
+          _externalPlayerActive = false;
+          _externalActiveUntil = 0;
+          _externalClearTimer = null;
+          try { _watchLogAdd('external_flag_cleared', { extra: 'safety_window_elapsed' }); } catch(e) {}
+        }
+      }, EXTERNAL_ACTIVE_WINDOW_MS);
+    },
+    /**
      * Обробник оновлень Timeline
      * @param {Object} data - Данные события
      */
@@ -12619,6 +12649,17 @@
         finish(media)["catch"](function (e) {
           return slog('finish error', e);
         });
+        // Внешний плеер не вызывает Player.destroy() → routeFinishIntent флаг не
+        // снимет. Снимаем здесь, как только отметка отправлена, чтобы поздний
+        // ложный 'update' (открытие списка файлов торрента) не переиспользовал
+        // залипший флаг.
+        if (_externalPlayerActive) {
+          _isPlayerActive = false;
+          _externalPlayerActive = false;
+          _externalActiveUntil = 0;
+          if (_externalClearTimer) { clearTimeout(_externalClearTimer); _externalClearTimer = null; }
+          try { _watchLogAdd('external_flag_cleared', { extra: 'mark_consumed' }); } catch(e) {}
+        }
       } else {
         slog('Below minProgress, no finish');
         if ((watchedByPercent || watchedByTime) && !_isPlayerActive) {

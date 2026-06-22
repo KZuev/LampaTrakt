@@ -10,7 +10,7 @@
 
 ## Текущая версия
 
-**v3.0.38** — «Скрыть рекомендацию»: кнопка в меню карточки в хабе рекомендаций и через контекстное меню на главной.
+**v3.0.39** — Отметка просмотра для ВНЕШНЕГО плеера (infuse, tvOS Pro и др.): слушатель события `'external'` + безопасный сброс `_isPlayerActive`.
 
 ## История фиксов
 
@@ -69,17 +69,21 @@
 | v3.0.36 | TBD | При совместном просмотре иконка в шапке показывает пару людей вместо «1+2» |
 | v3.0.37 | TBD | Опция «Использовать аватар профиля Trakt.TV» в настройках каждого аккаунта |
 | v3.0.38 | TBD | «Скрыть рекомендацию»: `DELETE /recommendations/{type}/{id}` из хаба и с главной |
+| v3.0.39 | TBD | Отметка просмотра для внешнего плеера: слушатель `'external'` + onPlayerExternal + двухуровневый сброс `_isPlayerActive` |
 
 ## Архитектура scrobbling
 
 **Пути отметки:**
 - **Path A (основной)**: `Lampa.Timeline.listener 'update'` → `processTimelineUpdate` → при `progress >= threshold && _isPlayerActive` → `finish(media)` → `addToHistory`
 - **Path B (резервный)**: `Lampa.Player.listener 'destroy'` → `setTimeout(500ms)` → `routeFinishIntent` (только если Path A не сработал)
+- **Внешний плеер (v3.0.39)**: `Lampa.Player.listener 'external'` (infuse/tvOS Pro/MX и т.д. — встроенный плеер не запускается, `'start'`/`'destroy'` НЕ шлются) → `onPlayerExternal` → `onPlayerStart(data)` (флаг + hash-meta) → при возврате в Lampa приходит финальный Timeline `'update'` → Path A отмечает
 
 **`_isPlayerActive` guard** — НЕ ТРОГАТЬ:
 - Защищает от ложных отметок когда `Lampa.Timeline` шлёт `'update'` при открытии списка файлов торрента (с сохранённым прогрессом ≥ порога)
-- Снимается в `routeFinishIntent` (при `'destroy'`)
+- Снимается в `routeFinishIntent` (при `'destroy'`) для встроенного плеера
 - 500 мс задержка в Path B нужна для Apple TV: `destroy` → `_isPlayerActive=false` → Timeline `'update'` 100% приходит ПОСЛЕ; задержка позволяет Timeline сработать пока флаг ещё true
+
+**Внешний плеер — сброс флага (v3.0.39):** т.к. `'destroy'` не приходит, `_isPlayerActive` снимается двухуровнево: (1) основной — сразу после `finish()` в `processTimelineUpdate` при `_externalPlayerActive`; (2) резервный — таймер `EXTERNAL_ACTIVE_WINDOW_MS` (6ч) на случай прерывания ниже порога. `_externalActiveUntil` защищает от сброса при повторном запуске. `'external'` шлётся только при реальном `Player.play`, не при просмотре списка файлов торрента → защита от ложных отметок сохранена.
 
 **`_watchMarkLog`**: массив до 50 записей, хранится в `Lampa.Storage('trakt_watch_log')`, восстанавливается при `watching.init` до первого вызова `_watchLogAdd`. Просматривается через Настройки → Trakt.TV → Отладка → История отметок.
 
