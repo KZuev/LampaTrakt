@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.1.1';
+  var PLUGIN_VERSION = '3.1.2';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -13257,6 +13257,7 @@
       }
       var _a = typeof api$1 !== 'undefined' ? api$1 : null;
       if (!_a || typeof _a.upnext !== 'function') return;
+      _pendingMainRefresh = false;
       _a.upnext({ limit: 36, page: 1 }).then(function(freshData) {
         var results = freshData && Array.isArray(freshData.results) ? freshData.results : [];
         var normalItems = normalizeContentData(results.slice(0, 20));
@@ -13779,7 +13780,13 @@
               if (cv && !cv.getAttribute('data-trakt-movie-id')) cv.setAttribute('data-trakt-movie-id', String(d.id));
             });
             var _isUpnextRow = e.data && e.data.trakt_row === 'upnext';
-            if (_isUpnextRow && e.line) _upnextLineRef = e.line;
+            if (_isUpnextRow && e.line) {
+              _upnextLineRef = e.line;
+              if (_pendingMainRefresh) {
+                _pendingMainRefresh = false;
+                setTimeout(function() { try { rebuildUpnextLineInPlace(); } catch(e2) {} }, 300);
+              }
+            }
             e.items.forEach(function(ci) {
               if (_isUpnextRow && ci.data && ci.data.method !== 'movie') return;
               renderWatchedBadge(ci);

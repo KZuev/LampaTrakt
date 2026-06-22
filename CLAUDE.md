@@ -10,7 +10,7 @@
 
 ## Текущая версия
 
-**v3.1.1** — Фикс `finish_skip` из-за кросс-сессионного кеша: `'finishing'` от убитой сессии даунгрейдится до `'intent'`; при `already_finished` обновляется UI (Up Next rebuild).
+**v3.1.2** — Фикс: Up Next не обновлялся при возврате с внешнего плеера — `_pendingMainRefresh` теперь потребляется в 'line' listener.
 
 ## История фиксов
 
@@ -72,6 +72,7 @@
 | v3.0.39 | TBD | Отметка просмотра для внешнего плеера: слушатель `'external'` + onPlayerExternal + двухуровневый сброс `_isPlayerActive` |
 | v3.1.0 | TBD | Реалтайм главная: оптимистичные бейджи → реконсиляция 5с → live-rebuild Up Next; настройка `trakt_realtime_upnext`; хук в `addToHistory$1` |
 | v3.1.1 | TBD | Фикс `finish_skip`: `'finishing'` от убитой сессии → `'intent'`; при `already_finished` — UI rebuild (Up Next + бейджи) |
+| v3.1.2 | TBD | Фикс Up Next при внешнем плеере: `_pendingMainRefresh` потребляется в 'line' listener; `rebuildUpnextLineInPlace` сбрасывает флаг перед API-вызовом |
 
 ## Архитектура scrobbling
 
