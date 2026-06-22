@@ -10747,7 +10747,8 @@
                 e.minProg != null ? 'min:'+e.minProg : '',
                 e.extra || ''].join('\t');
       }).join('\n');
-      var allText = log.slice(0, 10).map(function(e) {
+      // Реверс: старые записи первыми, свежие — в конец к курсору (iPhone Remote стоит в конце)
+      var allText = log.slice(0, 10).reverse().map(function(e) {
         var t = e.ts ? e.ts.slice(5, 10) + ' ' + e.ts.slice(11, 19) : '?';
         var who = e.type === 'movie' ? (e.title || '?') : ((e.show || '?') + (e.season != null ? ' S' + e.season : '') + (e.episode != null ? 'E' + e.episode : ''));
         return t + ' ' + e.trigger + (e.percent != null ? ' ' + Math.round(e.percent) + '%' : '') + (e.extra ? ' ' + e.extra : '') + ' ' + who;
