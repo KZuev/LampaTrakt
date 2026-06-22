@@ -10752,8 +10752,8 @@
         var who  = e.type === 'movie' ? (e.title || '?') : ((e.show || '?') + (e.season != null ? ' S' + e.season : '') + (e.episode != null ? 'E' + e.episode : ''));
         var pct  = e.percent != null ? ' ' + Math.round(e.percent) + '%' : '';
         var xtra = e.extra ? ' [' + e.extra + ']' : '';
-        return '[' + time + '] ' + e.trigger + pct + xtra + ' | ' + who;
-      }).join('\n');
+        return time + ' ' + e.trigger + pct + xtra + ' ' + who;
+      }).join(' / ');
       if (Lampa.Platform.tv()) {
         items.push({ title: '[ Открыть для копирования (iPhone) ]', _iphone: iPhoneText });
       }
@@ -10763,41 +10763,15 @@
         title: 'История отметок (' + log.length + ')',
         items: items,
         onSelect: function(item) {
-          if (item._iphone) { _showLogCopyField(item._iphone); return; }
+          if (item._iphone) {
+            Lampa.Input.edit({ title: 'Лог отметок (10 последних)', value: item._iphone, free: true, nosave: true }, function() {});
+            return;
+          }
           if (item._copy)  _copyToClipboard(item._copy);
           if (item._clear) { _watchMarkLog.length = 0; try { Lampa.Storage.set('trakt_watch_log', []); } catch(e) {} Lampa.Noty.show('Лог очищен'); }
         },
         onBack: function() { Lampa.Controller.toggle('settings_component'); }
       });
-    }
-
-    function _showLogCopyField(text) {
-      var overlay = document.createElement('div');
-      overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.9);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:5vw;box-sizing:border-box';
-
-      var hint = document.createElement('div');
-      hint.style.cssText = 'color:#aaa;font-size:1em;margin-bottom:1em;text-align:center';
-      hint.textContent = 'Выделите всё и скопируйте через клавиатуру iPhone Remote';
-
-      var ta = document.createElement('textarea');
-      ta.value = text;
-      ta.style.cssText = 'width:100%;height:60vh;font-size:0.75em;font-family:monospace;padding:12px;box-sizing:border-box;background:#111;color:#ddd;border:1px solid #444;border-radius:6px;resize:none';
-
-      var close = function() {
-        if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
-        try { Lampa.Controller.toggle('settings_component'); } catch(e2) {}
-      };
-
-      overlay.addEventListener('keydown', function(ev) {
-        if (ev.keyCode === 27 || ev.keyCode === 461 || (ev.keyCode === 8 && ev.target !== ta)) close();
-      });
-
-      overlay.appendChild(hint);
-      overlay.appendChild(ta);
-      document.body.appendChild(overlay);
-
-      ta.focus();
-      ta.select();
     }
 
     function _showDebugListLog() {
