@@ -10747,15 +10747,15 @@
                 e.minProg != null ? 'min:'+e.minProg : '',
                 e.extra || ''].join('\t');
       }).join('\n');
-      var iPhoneText = log.slice(0, 10).map(function(e) {
-        var time = e.ts ? e.ts.slice(5, 19) : '?';
+      var allText = log.slice(0, 10).map(function(e) {
+        var time = e.ts ? (e.ts.slice(5, 10) + ' ' + e.ts.slice(11, 19)) : '?';
         var who  = e.type === 'movie' ? (e.title || '?') : ((e.show || '?') + (e.season != null ? ' S' + e.season : '') + (e.episode != null ? 'E' + e.episode : ''));
         var pct  = e.percent != null ? ' ' + Math.round(e.percent) + '%' : '';
         var xtra = e.extra ? ' [' + e.extra + ']' : '';
         return time + ' ' + e.trigger + pct + xtra + ' ' + who;
-      }).join(' / ');
+      }).join(' | ');
       if (Lampa.Platform.tv()) {
-        items.push({ title: '[ Открыть для копирования (iPhone) ]', _iphone: iPhoneText });
+        items.push({ title: '[ Открыть для копирования (iPhone) ]', _iphone: allText });
       }
       items.push({ title: '[ Скопировать лог ]', _copy: fullText });
       items.push({ title: '[ Очистить лог ]',    _clear: true });
@@ -10767,7 +10767,7 @@
             Lampa.Input.edit({ title: 'Лог отметок (10 последних)', value: item._iphone, free: true, nosave: true }, function() {});
             setTimeout(function() {
               var inp = document.getElementById('orsay-keyboard');
-              if (inp) { try { inp.select(); } catch(e2) {} }
+              if (inp) { try { inp.setSelectionRange(0, 0); } catch(e2) {} }
             }, 100);
             return;
           }
