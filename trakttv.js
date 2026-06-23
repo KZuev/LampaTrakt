@@ -3957,6 +3957,7 @@
             }
             var buildData = data && _typeof(data) === 'object' && Array.isArray(data.results) ? data : { results: [] };
             try { _listLogAdd('bC.build type=' + type + ' n=' + buildData.results.length + ' pages=' + total_pages); } catch(e) {}
+            if (typeof object.onData === 'function') { try { object.onData(buildData.results); } catch(e) {} }
             _this.build(buildData);
             if (buildData.results.length > 0 && _emptyInstance) {
               try { var _el = typeof _emptyInstance.render === 'function' ? _emptyInstance.render(true) : null; if (_el) _el.style.display = 'none'; } catch(e) {}
@@ -4947,9 +4948,11 @@
   function openSharedSortMenu(opts) {
     var baseFields = (opts.fields && opts.fields.length) ? opts.fields : getWatchlistSortFields();
     var fields = baseFields.filter(function(f) { return f !== 'random'; });
-    var items = [
-      { title: opts.randomLabel || 'Случайно', field: 'random', selected: opts.activeField === 'random' }
-    ];
+    var items = [];
+    if (opts.topAction && opts.topAction.title) {
+      items.push({ title: opts.topAction.title, is_top_action: true });
+    }
+    items.push({ title: opts.randomLabel || 'Случайно', field: 'random', selected: opts.activeField === 'random' });
     fields.forEach(function(field) {
       var vipOnly = isWatchlistVipSortField(field);
       var isAct = field === opts.activeField;
@@ -4966,6 +4969,7 @@
       title: opts.title || 'Сортировка',
       items: items,
       onSelect: function(item) {
+        if (item && item.is_top_action) { if (opts.topAction && typeof opts.topAction.onSelect === 'function') opts.topAction.onSelect(); return; }
         if (!item || !item.field) { if (opts.onBack) opts.onBack(); return; }
         opts.onSelect(item.field);
       },
@@ -5569,6 +5573,7 @@
     var activeSortField = object.listSortField || 'rank';
     var activeSortOrder = object.listSortOrder || 'asc';
     var typeBtn, yearBtn, genreBtn, countryBtn, sortBtn;
+    var lastResults = [];
 
     function tr(key, fallback) {
       try { return Lampa.Lang.translate(key) || fallback || key; } catch(e) { return fallback || key; }
@@ -5614,6 +5619,7 @@
         listFilterCountry: activeFilters.country,
         listSortField: activeSortField,
         listSortOrder: activeSortOrder,
+        onData: function(results) { lastResults = Array.isArray(results) ? results : []; },
         onHead: function() { Lampa.Controller.toggle(LD_CTRL); }
       });
       currentView = new baseComponent(viewObject, type);
@@ -5707,6 +5713,17 @@
       updateBtn(sortBtn, getSortLabel(), true);
       rebuildView(); restoreFilters();
     }
+    function openRandomItem() {
+      var pool = (lastResults && lastResults.length) ? lastResults : [];
+      if (!pool.length) {
+        try { Lampa.Noty.show(tr('trakttv_list_empty', 'Список пуст')); } catch(e) {}
+        restoreFilters();
+        return;
+      }
+      var item = pool[Math.floor(Math.random() * pool.length)];
+      if (item) Lampa.Activity.push(item);
+      else restoreFilters();
+    }
     function openSortMenu() {
       openSharedSortMenu({
         fields: LIST_SORT_FIELDS,
@@ -5716,6 +5733,10 @@
         title: tr('trakttv_watchlist_sort_more_title', 'Сортировка'),
         randomLabel: tr('trakttv_watchlist_sort_random', 'Случайно'),
         vipLabel: tr('trakttv_vip_status', 'VIP'),
+        topAction: {
+          title: tr('trakttv_list_open_random', 'Открыть случайный'),
+          onSelect: function() { openRandomItem(); }
+        },
         onSelect: function(field) { switchSort(field); },
         onBack: restoreFilters
       });

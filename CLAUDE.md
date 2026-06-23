@@ -10,7 +10,7 @@
 
 ## Текущая версия
 
-**v3.2.0** — Русские названия и постеры в детальных страницах Моих и Понравившихся списков: локализация через `enrichWithTmdbLocale` (как в watchlist) в `Api.list()`/`Api.myListItems()`. Фильтры (Тип/Год/Жанр/Страна) и сортировка через новый `listDetailHub` — обёртка по образцу `watchlistHub`, переиспользует то же меню `openSharedSortMenu`. Сортировка списков клиентская (Trakt не сортирует списки на сервере): рабочие поля `LIST_SORT_FIELDS` = rank/added/title/released/runtime/votes/percentage + random; VIP-поля исключены (нет данных у элементов).
+**v3.2.0** — Русские названия и постеры в детальных страницах Моих и Понравившихся списков: локализация через `enrichWithTmdbLocale` (как в watchlist) в `Api.list()`/`Api.myListItems()`. Фильтры (Тип/Год/Жанр/Страна) и сортировка через новый `listDetailHub` — обёртка по образцу `watchlistHub`, переиспользует то же меню `openSharedSortMenu`. Сортировка списков клиентская (Trakt не сортирует списки на сервере): рабочие поля `LIST_SORT_FIELDS` = rank/added/title/released/runtime/votes/percentage + random; VIP-поля исключены (нет данных у элементов). В верху меню сортировки — пункт «Открыть случайный» (`topAction` в `openSharedSortMenu`): открывает карточку случайного элемента из текущего отфильтрованного списка (`lastResults` через `onData`-хук baseComponent).
 
 ## История фиксов
 
