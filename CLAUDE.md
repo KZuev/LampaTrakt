@@ -10,7 +10,7 @@
 
 ## Текущая версия
 
-**v3.2.0** — Русские названия и постеры в детальных страницах Моих и Понравившихся списков: TMDB-обогащение через `enrichCardsWithTmdb` после Trakt API-фетча. Фильтры (Тип/Год/Жанр) и сортировка (Порядок/Название/Год/Рейтинг) через новый `listDetailHub` — обёртка по образцу `watchlistHub`.
+**v3.2.0** — Русские названия и постеры в детальных страницах Моих и Понравившихся списков: локализация через `enrichWithTmdbLocale` (как в watchlist) в `Api.list()`/`Api.myListItems()`. Фильтры (Тип/Год/Жанр/Страна) и сортировка через новый `listDetailHub` — обёртка по образцу `watchlistHub`, переиспользует то же меню `openSharedSortMenu`. Сортировка списков клиентская (Trakt не сортирует списки на сервере): рабочие поля `LIST_SORT_FIELDS` = rank/added/title/released/runtime/votes/percentage + random; VIP-поля исключены (нет данных у элементов).
 
 ## История фиксов
 
@@ -77,7 +77,7 @@
 | v3.1.4 | TBD | Реалтайм-статус страницы описания: `_fullCardRefreshFn` / `refreshFullCardProgress` перерисовывают `S.. · E..` / «Просмотрено» на месте после отметки (рефактор `renderProgressData`) |
 | v3.1.5 | TBD | Фикс Up Next на главной: `activity 'archive'` → rebuild; диагностический лог `upnext_rebuild_skip` с причиной (`null_ref`/`not_alive`) |
 | v3.1.6 | TBD | Фикс `isLineAlive`: jQuery vs DOM — `el.jquery !== undefined ? el[0] : el` перед `.isConnected`; без этого rebuild всегда видел `not_alive` |
-| v3.2.0 | TBD | Русские названия/постеры в списках: `enrichCardsWithTmdb` + `listDetailHub` с фильтрами Тип/Год/Жанр и сортировкой Порядок/Название/Год/Рейтинг |
+| v3.2.0 | TBD | Русские названия/постеры в списках: `enrichWithTmdbLocale` в `Api.list/myListItems` + `listDetailHub` с фильтрами Тип/Год/Жанр/Страна и тем же меню сортировки `openSharedSortMenu` (клиентская, рабочие поля `LIST_SORT_FIELDS`) |
 
 ## Архитектура scrobbling
 

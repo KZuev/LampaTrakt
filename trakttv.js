@@ -2079,7 +2079,10 @@
           card_type: item.movie ? 'movie' : 'tv',
           trakt_released: item.movie ? (media.released || null) : (media.first_aired ? media.first_aired.split('T')[0] : null),
           trakt_genres: Array.isArray(media.genres) ? media.genres : [],
-          trakt_country: typeof media.country === 'string' ? media.country.toLowerCase() : ''
+          trakt_country: typeof media.country === 'string' ? media.country.toLowerCase() : '',
+          runtime: Number(media.runtime || 0),
+          votes: Number(media.votes || 0),
+          trakt_listed_at: item.listed_at || ''
         };
       }).filter(Boolean)
     };
@@ -3870,10 +3873,25 @@
     }
     return Object.assign({}, data, { results: results });
   }
+  // Поля сортировки, поддерживаемые для списков клиентски (Trakt не сортирует
+  // элементы списков на сервере). Подмножество watchlist-полей — те, для которых
+  // у элементов есть данные. VIP-поля (imdb_rating/rt_*/metascore и т.п.) исключены.
+  var LIST_SORT_FIELDS = ['rank', 'added', 'title', 'released', 'runtime', 'votes', 'percentage'];
   function sortListItems(results, field, order) {
-    if (!field || field === 'rank') return results;
-    var sorted = results.slice();
+    if (!field) return results;
     var asc = (order === 'asc');
+    if (field === 'rank') {
+      return asc ? results : results.slice().reverse();
+    }
+    if (field === 'random') {
+      var arr = results.slice();
+      for (var i = arr.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+      }
+      return arr;
+    }
+    var sorted = results.slice();
     sorted.sort(function(a, b) {
       var va, vb;
       if (field === 'title') {
@@ -3881,15 +3899,18 @@
         vb = (b.title || '').toLowerCase();
         return asc ? va.localeCompare(vb, undefined, {sensitivity: 'base'}) : vb.localeCompare(va, undefined, {sensitivity: 'base'});
       }
-      if (field === 'released') {
-        va = parseInt(a.release_date, 10) || 0;
-        vb = parseInt(b.release_date, 10) || 0;
-      } else if (field === 'percentage') {
-        va = Number(a.vote_average) || 0;
-        vb = Number(b.vote_average) || 0;
-      } else {
+      if (field === 'added') {
+        va = a.trakt_listed_at || '';
+        vb = b.trakt_listed_at || '';
+        if (va < vb) return asc ? -1 : 1;
+        if (va > vb) return asc ? 1 : -1;
         return 0;
       }
+      if (field === 'released') { va = parseInt(a.release_date, 10) || 0; vb = parseInt(b.release_date, 10) || 0; }
+      else if (field === 'runtime') { va = Number(a.runtime) || 0; vb = Number(b.runtime) || 0; }
+      else if (field === 'votes') { va = Number(a.votes) || 0; vb = Number(b.votes) || 0; }
+      else if (field === 'percentage') { va = Number(a.vote_average) || 0; vb = Number(b.vote_average) || 0; }
+      else { return 0; }
       return asc ? va - vb : vb - va;
     });
     return sorted;
@@ -4924,7 +4945,8 @@
     return t$3('trakttv_watchlist_tab_movies', 'Movies');
   }
   function openSharedSortMenu(opts) {
-    var fields = getWatchlistSortFields().filter(function(f) { return f !== 'random'; });
+    var baseFields = (opts.fields && opts.fields.length) ? opts.fields : getWatchlistSortFields();
+    var fields = baseFields.filter(function(f) { return f !== 'random'; });
     var items = [
       { title: opts.randomLabel || 'Случайно', field: 'random', selected: opts.activeField === 'random' }
     ];
@@ -5569,15 +5591,9 @@
       return c ? c.ru : activeFilters.country;
     }
     function getSortLabel() {
-      var labels = {
-        rank: tr('trakttv_watchlist_sort_rank', 'Порядок'),
-        title: tr('trakttv_watchlist_sort_title', 'Название'),
-        released: tr('trakttv_watchlist_sort_released', 'Год'),
-        percentage: tr('trakttv_watchlist_sort_percentage', 'Рейтинг')
-      };
-      var lbl = labels[activeSortField] || activeSortField;
-      if (activeSortField !== 'rank') lbl += ' ' + (activeSortOrder === 'asc' ? '↑' : '↓');
-      return lbl;
+      var f = activeSortField;
+      if (!f || f === 'random') return formatWatchlistSortLabel('random');
+      return formatWatchlistSortLabel(f) + ' ' + formatWatchlistSortArrow(activeSortOrder);
     }
     function updateBtn(btn, label, active) {
       if (!btn) return;
@@ -5681,32 +5697,26 @@
       });
     }
 
+    function switchSort(field) {
+      if (field === activeSortField && field !== 'random') {
+        activeSortOrder = activeSortOrder === 'desc' ? 'asc' : 'desc';
+      } else {
+        activeSortField = field;
+        activeSortOrder = field === 'rank' ? 'asc' : 'desc';
+      }
+      updateBtn(sortBtn, getSortLabel(), true);
+      rebuildView(); restoreFilters();
+    }
     function openSortMenu() {
-      var fields = ['rank', 'title', 'released', 'percentage'];
-      var labels = {
-        rank: tr('trakttv_watchlist_sort_rank', 'Порядок списка'),
-        title: tr('trakttv_watchlist_sort_title', 'Название'),
-        released: tr('trakttv_watchlist_sort_released', 'Год выхода'),
-        percentage: tr('trakttv_watchlist_sort_percentage', 'Рейтинг')
-      };
-      Lampa.Select.show({
+      openSharedSortMenu({
+        fields: LIST_SORT_FIELDS,
+        activeField: activeSortField,
+        activeOrder: activeSortOrder,
+        vipEnabled: true,
         title: tr('trakttv_watchlist_sort_more_title', 'Сортировка'),
-        items: fields.map(function(field) {
-          var isAct = field === activeSortField;
-          var arrow = (isAct && field !== 'rank') ? ' ' + (activeSortOrder === 'asc' ? '↑' : '↓') : '';
-          return { title: labels[field] + arrow, field: field, selected: isAct };
-        }),
-        onSelect: function(item) {
-          if (!item || !item.field) { restoreFilters(); return; }
-          if (item.field === activeSortField && item.field !== 'rank') {
-            activeSortOrder = activeSortOrder === 'desc' ? 'asc' : 'desc';
-          } else {
-            activeSortField = item.field;
-            activeSortOrder = item.field === 'rank' ? 'asc' : 'desc';
-          }
-          updateBtn(sortBtn, getSortLabel(), true);
-          rebuildView(); restoreFilters();
-        },
+        randomLabel: tr('trakttv_watchlist_sort_random', 'Случайно'),
+        vipLabel: tr('trakttv_vip_status', 'VIP'),
+        onSelect: function(field) { switchSort(field); },
         onBack: restoreFilters
       });
     }
