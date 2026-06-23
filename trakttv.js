@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.1.6';
+  var PLUGIN_VERSION = '3.2.0';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -2083,6 +2083,27 @@
         };
       }).filter(Boolean)
     };
+  }
+  function enrichCardsWithTmdb(cards) {
+    if (!cards || !cards.length) return Promise.resolve(cards || []);
+    var tmdb = Lampa.Api && Lampa.Api.sources && Lampa.Api.sources.tmdb;
+    if (!tmdb || typeof tmdb.full !== 'function') return Promise.resolve(cards);
+    return Promise.all(cards.map(function(card) {
+      if (!card || !card.ids || !card.ids.tmdb) return Promise.resolve(card);
+      var method = card.method === 'movie' ? 'movie' : 'tv';
+      return new Promise(function(resolve) {
+        try {
+          tmdb.full({id: card.ids.tmdb, method: method}, function(data) {
+            if (data) {
+              var loc = method === 'movie' ? data.title : data.name;
+              if (loc) card.title = loc;
+              if (data.poster_path) card.poster_path = data.poster_path;
+            }
+            resolve(card);
+          }, function() { resolve(card); });
+        } catch(e) { resolve(card); }
+      });
+    }));
   }
   function mapUpNextNitroItem() {
     var item = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
@@ -3833,6 +3854,59 @@
     }
     return Object.assign({}, data, { results: results });
   }
+  function applyListClientFilters(data, options) {
+    if (!data || !Array.isArray(data.results)) return data;
+    var results = data.results;
+    if (options.listFilterType && options.listFilterType !== 'all') {
+      var ft = options.listFilterType;
+      results = results.filter(function(x) {
+        var m = x.method || x.card_type || '';
+        if (ft === 'movies') return m === 'movie';
+        if (ft === 'shows') return m === 'tv';
+        return true;
+      });
+    }
+    if (options.listFilterYear) {
+      var fy = String(options.listFilterYear);
+      if (fy.indexOf('-') > 0) {
+        var parts = fy.split('-');
+        var yA = parseInt(parts[0], 10), yB = parseInt(parts[1], 10);
+        var yFrom = Math.min(yA, yB), yTo = Math.max(yA, yB);
+        results = results.filter(function(x) { var y = parseInt(x.release_date, 10); return y >= yFrom && y <= yTo; });
+      } else {
+        results = results.filter(function(x) { return String(x.release_date).slice(0, 4) === fy; });
+      }
+    }
+    if (options.listFilterGenre) {
+      var fg = String(options.listFilterGenre);
+      results = results.filter(function(x) { return Array.isArray(x.trakt_genres) && x.trakt_genres.indexOf(fg) >= 0; });
+    }
+    return Object.assign({}, data, { results: results });
+  }
+  function sortListItems(results, field, order) {
+    if (!field || field === 'rank') return results;
+    var sorted = results.slice();
+    var asc = (order === 'asc');
+    sorted.sort(function(a, b) {
+      var va, vb;
+      if (field === 'title') {
+        va = (a.title || '').toLowerCase();
+        vb = (b.title || '').toLowerCase();
+        return asc ? va.localeCompare(vb, undefined, {sensitivity: 'base'}) : vb.localeCompare(va, undefined, {sensitivity: 'base'});
+      }
+      if (field === 'released') {
+        va = parseInt(a.release_date, 10) || 0;
+        vb = parseInt(b.release_date, 10) || 0;
+      } else if (field === 'percentage') {
+        va = Number(a.vote_average) || 0;
+        vb = Number(b.vote_average) || 0;
+      } else {
+        return 0;
+      }
+      return asc ? va - vb : vb - va;
+    });
+    return sorted;
+  }
   function baseComponent(object, type) {
     var comp;
     var total_pages = 0;
@@ -3860,14 +3934,26 @@
           } else if ((type === 'list' || type === 'myListItems') && object.list_id) {
             params.id = object.list_id;
           }
-          params.limit = (type === 'watchlist' || type === 'collection') ? 500 : 36;
+          params.limit = (type === 'watchlist' || type === 'collection' || type === 'list' || type === 'myListItems') ? 500 : 36;
           params.page = params.page || 1;
           if (!Api$2) { logApiMissing$1(); return; }
           Api$2[type](params).then(function (data) {
             if (typeof _savedStart === 'function') _this.start = _savedStart;
             if (data && data.total_pages) total_pages = data.total_pages;
+            if (type === 'list' || type === 'myListItems') {
+              return enrichCardsWithTmdb(data && data.results ? data.results : []).then(function(enriched) {
+                return Object.assign({}, data, {results: enriched});
+              });
+            }
+            return data;
+          }).then(function(data) {
             if (type === 'watchlist') { data = applyWatchlistClientFilters(data, object); data = rearrangeWatchlistUpcoming(data); }
             if (type === 'upnext') data = rearrangeUpnextNotStarted(data);
+            if (type === 'list' || type === 'myListItems') {
+              data = applyListClientFilters(data, object);
+              var _sortedR = sortListItems(data && data.results ? data.results : [], object.listSortField, object.listSortOrder);
+              data = Object.assign({}, data, {results: _sortedR});
+            }
             var buildData = data && _typeof(data) === 'object' && Array.isArray(data.results) ? data : { results: [] };
             try { _listLogAdd('bC.build type=' + type + ' n=' + buildData.results.length + ' pages=' + total_pages); } catch(e) {}
             _this.build(buildData);
@@ -3881,16 +3967,12 @@
         },
         onNext: function onNext(resolve, reject) {
           var _this2 = this;
+          if (type === 'list' || type === 'myListItems') { reject.call(this); return; }
           if (waitload) { try { _listLogAdd('bC.onNext type=' + type + ' busy→reject'); } catch(e) {} reject.call(this); return; }
           try { _listLogAdd('bC.onNext type=' + type + ' pg=' + object.page + '/' + total_pages); } catch(e) {}
           if (object.page <= total_pages) {
             waitload = true;
             var params = _objectSpread2({}, object);
-            if ((type === 'list' || type === 'myListItems') && object.id) {
-              params.id = object.id;
-            } else if ((type === 'list' || type === 'myListItems') && object.list_id) {
-              params.id = object.list_id;
-            }
             params.limit = (type === 'watchlist' || type === 'collection') ? 500 : 36;
             if (!Api$2) { waitload = false; reject.call(this); return; }
             Api$2[type](params).then(function (data) {
@@ -3907,7 +3989,7 @@
           } else { try { _listLogAdd('bC.onNext end→reject type=' + type + ' pg=' + object.page + '/' + total_pages); } catch(e) {} reject.call(this); }
         },
         onController: function onController(controller) {
-          if ((type === 'watchlist' || type === 'watching' || type === 'history' || type === 'collection') && object && typeof object.onHead === 'function') {
+          if ((type === 'watchlist' || type === 'watching' || type === 'history' || type === 'collection' || type === 'list' || type === 'myListItems') && object && typeof object.onHead === 'function') {
             controller.up = function () {
               if (Navigator.canmove('up')) Navigator.move('up'); else object.onHead();
             };
@@ -3916,7 +3998,7 @@
         onEmpty: function onEmpty() {
           try { _listLogAdd('bC.onEmpty type=' + type); } catch(e) {}
           _emptyInstance = this.empty_class || null;
-          if ((type !== 'watchlist' && type !== 'watching' && type !== 'history' && type !== 'collection') || !object || typeof object.onHead !== 'function') return;
+          if ((type !== 'watchlist' && type !== 'watching' && type !== 'history' && type !== 'collection' && type !== 'list' && type !== 'myListItems') || !object || typeof object.onHead !== 'function') return;
           if (!this.empty_class || typeof this.empty_class.use !== 'function') return;
           this.empty_class.use({ onController: function (controller) {
             controller.up = function () { if (Navigator.canmove('up')) Navigator.move('up'); else object.onHead(); };
@@ -5471,23 +5553,234 @@
       addCreateAction: true
     });
   }
+  function listDetailHub(object, type) {
+    var LD_CTRL = 'trakt_list_detail_ctrl';
+    var activity, html, controls, filtersRow, body;
+    var currentView = null;
+    var lastFilterFocus = null;
+    var activeFilters = {
+      type: object.listFilterType || 'all',
+      year: object.listFilterYear || '',
+      genre: object.listFilterGenre || ''
+    };
+    var activeSortField = object.listSortField || 'rank';
+    var activeSortOrder = object.listSortOrder || 'asc';
+    var typeBtn, yearBtn, genreBtn, sortBtn;
+
+    function tr(key, fallback) {
+      try { return Lampa.Lang.translate(key) || fallback || key; } catch(e) { return fallback || key; }
+    }
+    function getTypeLabel() {
+      if (activeFilters.type === 'movies') return tr('trakttv_watchlist_tab_movies', 'Фильмы');
+      if (activeFilters.type === 'shows') return tr('trakttv_watchlist_tab_shows', 'Сериалы');
+      return tr('trakttv_filter_all', 'Все');
+    }
+    function getYearLabel() {
+      return yearFilterLabel(activeFilters.year, tr('trakttv_filter_any_year', 'Год'));
+    }
+    function getGenreLabel() {
+      if (!activeFilters.genre) return tr('trakttv_filter_any_genre', 'Жанр');
+      return (typeof TRAKT_GENRE_NAMES_RU !== 'undefined' && TRAKT_GENRE_NAMES_RU[activeFilters.genre]) || activeFilters.genre;
+    }
+    function getSortLabel() {
+      var labels = {
+        rank: tr('trakttv_watchlist_sort_rank', 'Порядок'),
+        title: tr('trakttv_watchlist_sort_title', 'Название'),
+        released: tr('trakttv_watchlist_sort_released', 'Год'),
+        percentage: tr('trakttv_watchlist_sort_percentage', 'Рейтинг')
+      };
+      var lbl = labels[activeSortField] || activeSortField;
+      if (activeSortField !== 'rank') lbl += ' ' + (activeSortOrder === 'asc' ? '↑' : '↓');
+      return lbl;
+    }
+    function updateBtn(btn, label, active) {
+      if (!btn) return;
+      btn.find('.trakt-watchlist__sort-label').text(label);
+      btn.toggleClass('trakt-watchlist__sort--active', !!active);
+      btn.css({ 'background': active ? 'rgba(155,89,208,.18)' : '', 'box-shadow': active ? 'inset 0 0 0 1px rgba(155,89,208,.3)' : '', 'border-bottom': active ? '3px solid #9b59d0' : '' });
+    }
+    function restoreFilters() { Lampa.Controller.toggle(LD_CTRL); }
+
+    function rebuildView() {
+      if (currentView && currentView.destroy) currentView.destroy();
+      body.empty();
+      var viewObject = Object.assign({}, object, {
+        page: 1,
+        listFilterType: activeFilters.type,
+        listFilterYear: activeFilters.year,
+        listFilterGenre: activeFilters.genre,
+        listSortField: activeSortField,
+        listSortOrder: activeSortOrder,
+        onHead: function() { Lampa.Controller.toggle(LD_CTRL); }
+      });
+      currentView = new baseComponent(viewObject, type);
+      currentView.activity = activity;
+      currentView.create();
+      body.append(currentView.render());
+      if (currentView.start) currentView.start();
+    }
+
+    function makeBtn(label) {
+      var btn = $('<div class="simple-button simple-button--filter selector trakt-watchlist__sort">' +
+        '<div class="trakt-watchlist__sort-label">' + label + '</div></div>');
+      btn.css({ 'justify-content': 'center', 'align-items': 'center', 'height': 'auto', 'border-radius': '1.1em', 'padding': '.7em .9em', 'flex': '1 1 auto', 'box-sizing': 'border-box' });
+      btn.find('.trakt-watchlist__sort-label').css({ 'width': '100%', 'text-align': 'center', 'white-space': 'normal', 'word-break': 'break-word', 'line-height': '1.3', 'margin-left': '0', 'overflow': 'visible' });
+      return btn;
+    }
+
+    function openTypeFilter() {
+      Lampa.Select.show({
+        title: tr('trakttv_filter_type_title', 'Тип контента'),
+        items: [
+          { title: tr('trakttv_filter_all', 'Все'), value: 'all', selected: activeFilters.type === 'all' },
+          { title: tr('trakttv_watchlist_tab_movies', 'Фильмы'), value: 'movies', selected: activeFilters.type === 'movies' },
+          { title: tr('trakttv_watchlist_tab_shows', 'Сериалы'), value: 'shows', selected: activeFilters.type === 'shows' }
+        ],
+        onSelect: function(item) {
+          activeFilters.type = item.value || 'all';
+          updateBtn(typeBtn, getTypeLabel(), true);
+          rebuildView(); restoreFilters();
+        },
+        onBack: restoreFilters
+      });
+    }
+
+    function openYearFilter() {
+      var items = buildYearFilterItems(new Date().getFullYear(), activeFilters.year, tr);
+      Lampa.Select.show({
+        title: tr('trakttv_filter_year_title', 'Год выпуска'),
+        items: items,
+        onSelect: function(item) {
+          activeFilters.year = item.value;
+          updateBtn(yearBtn, getYearLabel(), !!activeFilters.year);
+          rebuildView(); restoreFilters();
+        },
+        onBack: restoreFilters
+      });
+    }
+
+    function openGenreFilter() {
+      var genres = typeof TRAKT_GENRE_NAMES_RU !== 'undefined' ? Object.keys(TRAKT_GENRE_NAMES_RU) : [];
+      var items = [{ title: tr('trakttv_filter_all', 'Любой'), value: '', selected: !activeFilters.genre }];
+      genres.forEach(function(g) {
+        items.push({ title: (TRAKT_GENRE_NAMES_RU[g] || g), value: g, selected: activeFilters.genre === g });
+      });
+      Lampa.Select.show({
+        title: tr('trakttv_filter_genre_title', 'Жанр'),
+        items: items,
+        onSelect: function(item) {
+          activeFilters.genre = item.value;
+          updateBtn(genreBtn, getGenreLabel(), !!activeFilters.genre);
+          rebuildView(); restoreFilters();
+        },
+        onBack: restoreFilters
+      });
+    }
+
+    function openSortMenu() {
+      var fields = ['rank', 'title', 'released', 'percentage'];
+      var labels = {
+        rank: tr('trakttv_watchlist_sort_rank', 'Порядок списка'),
+        title: tr('trakttv_watchlist_sort_title', 'Название'),
+        released: tr('trakttv_watchlist_sort_released', 'Год выхода'),
+        percentage: tr('trakttv_watchlist_sort_percentage', 'Рейтинг')
+      };
+      Lampa.Select.show({
+        title: tr('trakttv_watchlist_sort_more_title', 'Сортировка'),
+        items: fields.map(function(field) {
+          var isAct = field === activeSortField;
+          var arrow = (isAct && field !== 'rank') ? ' ' + (activeSortOrder === 'asc' ? '↑' : '↓') : '';
+          return { title: labels[field] + arrow, field: field, selected: isAct };
+        }),
+        onSelect: function(item) {
+          if (!item || !item.field) { restoreFilters(); return; }
+          if (item.field === activeSortField && item.field !== 'rank') {
+            activeSortOrder = activeSortOrder === 'desc' ? 'asc' : 'desc';
+          } else {
+            activeSortField = item.field;
+            activeSortOrder = item.field === 'rank' ? 'asc' : 'desc';
+          }
+          updateBtn(sortBtn, getSortLabel(), true);
+          rebuildView(); restoreFilters();
+        },
+        onBack: restoreFilters
+      });
+    }
+
+    return {
+      create: function create() {
+        activity = this.activity;
+        html = $('<div class="trakt-watchlist-hub"></div>');
+        controls = $('<div class="trakt-watchlist-hub__controls"></div>');
+        body = $('<div class="trakt-watchlist-hub__body"></div>');
+
+        filtersRow = $('<div class="trakt-watchlist-hub__sorts trakt-recs-hub__sorts"></div>');
+        typeBtn = makeBtn(getTypeLabel());
+        updateBtn(typeBtn, getTypeLabel(), true);
+        typeBtn.on('hover:enter', function() { lastFilterFocus = typeBtn[0]; openTypeFilter(); });
+        yearBtn = makeBtn(getYearLabel());
+        updateBtn(yearBtn, getYearLabel(), !!activeFilters.year);
+        yearBtn.on('hover:enter', function() { lastFilterFocus = yearBtn[0]; openYearFilter(); });
+        genreBtn = makeBtn(getGenreLabel());
+        updateBtn(genreBtn, getGenreLabel(), !!activeFilters.genre);
+        genreBtn.on('hover:enter', function() { lastFilterFocus = genreBtn[0]; openGenreFilter(); });
+        sortBtn = makeBtn(getSortLabel());
+        updateBtn(sortBtn, getSortLabel(), true);
+        sortBtn.on('hover:enter', function() { lastFilterFocus = sortBtn[0]; openSortMenu(); });
+        filtersRow.append(typeBtn, yearBtn, genreBtn, sortBtn);
+        controls.append(filtersRow);
+        html.append(controls, body);
+
+        Lampa.Controller.add(LD_CTRL, {
+          toggle: function toggle() {
+            Lampa.Controller.collectionSet(controls);
+            var focus = lastFilterFocus && document.body && document.body.contains(lastFilterFocus) ? lastFilterFocus : filtersRow.find('.selector')[0];
+            Lampa.Controller.collectionFocus(focus || false, controls);
+          },
+          right: function right() { if (typeof Navigator !== 'undefined') Navigator.move('right'); },
+          left: function left() {
+            if (typeof Navigator !== 'undefined' && Navigator.canmove('left')) Navigator.move('left');
+            else Lampa.Controller.toggle('menu');
+          },
+          down: function down() {
+            if (typeof Navigator !== 'undefined' && Navigator.canmove('down')) Navigator.move('down');
+            else Lampa.Controller.toggle('content');
+          },
+          up: function up() {
+            if (typeof Navigator !== 'undefined' && Navigator.canmove('up')) Navigator.move('up');
+            else Lampa.Controller.toggle('head');
+          },
+          back: function back() { Lampa.Activity.backward(); }
+        });
+
+        rebuildView();
+
+        return this.render();
+      },
+      render: function render(js) { return js ? html[0] : html; },
+      start: function start() { if (currentView && currentView.start) currentView.start(); },
+      pause: function pause() {},
+      stop: function stop() {},
+      destroy: function destroy() {
+        if (currentView && currentView.destroy) currentView.destroy();
+        if (html) html.remove();
+        currentView = null;
+      }
+    };
+  }
   function list_detail(object) {
     if (!object.page) object.page = 1;
-    return new baseComponent(object, 'list');
+    return new listDetailHub(object, 'list');
   }
   function my_list_detail(object) {
     if (!object.page) object.page = 1;
     object.can_manage = true;
-    return new baseComponent(object, 'myListItems');
+    return new listDetailHub(object, 'myListItems');
   }
   function trakt_list_detail(object) {
     if (!object.page) object.page = 1;
-    var paramsForBaseComponent = _objectSpread2(_objectSpread2({}, object), {}, {
-      id: object.id || object.list_id,
-      page: object.page,
-      limit: object.limit
-    });
-    return new baseComponent(paramsForBaseComponent, 'list');
+    var p = Object.assign({}, object, {id: object.id || object.list_id});
+    return new listDetailHub(p, 'list');
   }
   function historyHub(object) {
     var HH_CTRL = 'trakt_history_hub_ctrl';
