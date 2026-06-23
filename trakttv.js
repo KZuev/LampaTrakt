@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.0';
+  var PLUGIN_VERSION = '3.2.1';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -6425,6 +6425,18 @@
         ru: "Авто-торрент отменён",
         en: "Auto torrent cancelled",
       },
+      trakt_at_random_episode_button: {
+        ru: "Авто-торрент (случайная серия)",
+        en: "Auto-torrent (random episode)",
+      },
+      trakt_at_status_random_api: {
+        ru: "Выбираем случайный эпизод…",
+        en: "Picking a random episode…",
+      },
+      trakt_at_no_random: {
+        ru: "Не найдено доступных серий",
+        en: "No available episodes found",
+      },
       trakt_at_cancel_btn: {
         ru: "Прервать автозапуск",
         en: "Stop auto-launch",
@@ -8263,6 +8275,43 @@
     Lampa.Activity.push({ url: '', title: Lampa.Lang.translate('title_torrents') || 'Торренты', component: 'torrents', search: _atSearchString(card), search_one: _atCardTitle(card), search_two: _atCardOriginalTitle(card), movie: card, page: 1 });
   }
 
+  function launchAtRandomShow(btn, card) {
+    card = _atNormalizeCard(card);
+    if (btn) {
+      btn.classList.add('trakt-magic-loading');
+      var sp = btn.querySelector('span');
+      if (sp) sp.textContent = t$2('trakt_at_searching', 'Ищем...');
+    }
+    _atOverlayShow(t$2('trakt_at_status_random_api', 'Выбираем случайный эпизод…'));
+    var tmdbId = card && card.id;
+    if (!tmdbId) { _atBtnReset(btn); _atOverlayHide(); return; }
+
+    requestApi('GET', '/search/tmdb/' + tmdbId + '?type=show').then(function(res) {
+      var traktId = res && res[0] && res[0].show && res[0].show.ids && res[0].show.ids.trakt;
+      if (!traktId) throw new Error('no trakt id');
+      return requestApi('GET', '/shows/' + traktId + '/progress/watched');
+    }).then(function(prog) {
+      var validSeasons = (prog && prog.seasons || []).filter(function(s) {
+        return s.number > 0 && s.aired > 0;
+      });
+      if (!validSeasons.length) throw new Error('no valid seasons');
+      var rSeason = validSeasons[Math.floor(Math.random() * validSeasons.length)];
+      var rEpisode = Math.floor(Math.random() * rSeason.aired) + 1;
+      _atSelectPending = { type: 'show', season: rSeason.number, episode: rEpisode };
+      _atOverlaySetStatus(t$2('trakt_at_status_torrent', 'Ищем торрент…'));
+      _atBtnReset(btn);
+      _atSaveAndClearTorrentFilter();
+      Lampa.Activity.push({ url: '', title: Lampa.Lang.translate('title_torrents') || 'Торренты', component: 'torrents', search: _atSearchString(card), search_one: _atCardTitle(card), search_two: _atCardOriginalTitle(card), movie: card, page: 1 });
+    }).catch(function() {
+      _atResetState();
+      _atBtnReset(btn);
+      _atOverlayHide();
+      _atRestoreTorrentFilter();
+      _atControllerDisable();
+      notify(t$2('trakt_at_no_random', 'Не найдено доступных серий'));
+    });
+  }
+
   function addAtButton(card, method) {
     var btn = document.createElement('div');
     btn.className = 'full-start__button selector trakt-magic-button';
@@ -8273,6 +8322,14 @@
       if (method === 'tv') launchAtShow(btn, card);
       else launchAtMovie(btn, card);
     });
+    return btn;
+  }
+
+  function addAtRandomEpisodeButton(card) {
+    var btn = document.createElement('div');
+    btn.className = 'full-start__button selector trakt-magic-button';
+    btn.innerHTML = '<svg><use xlink:href="#sprite-torrent"></use></svg><span>' + t$2('trakt_at_random_episode_button', 'Авто-торрент (случайная серия)') + '</span>';
+    $(btn).on('hover:enter', function() { launchAtRandomShow(btn, card); });
     return btn;
   }
 
@@ -14597,7 +14654,10 @@
         if (magicRoot) {
           var atBtn = addAtButton(e.data, e.object.method);
           var btnsContainer = magicRoot.find('.buttons--container');
-          if (btnsContainer.length) btnsContainer.append(atBtn);
+          if (btnsContainer.length) {
+            btnsContainer.append(atBtn);
+            if (e.object.method === 'tv') btnsContainer.append(addAtRandomEpisodeButton(e.data));
+          }
         }
       }
     }
