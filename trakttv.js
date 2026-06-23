@@ -2084,27 +2084,6 @@
       }).filter(Boolean)
     };
   }
-  function enrichCardsWithTmdb(cards) {
-    if (!cards || !cards.length) return Promise.resolve(cards || []);
-    var tmdb = Lampa.Api && Lampa.Api.sources && Lampa.Api.sources.tmdb;
-    if (!tmdb || typeof tmdb.full !== 'function') return Promise.resolve(cards);
-    return Promise.all(cards.map(function(card) {
-      if (!card || !card.ids || !card.ids.tmdb) return Promise.resolve(card);
-      var method = card.method === 'movie' ? 'movie' : 'tv';
-      return new Promise(function(resolve) {
-        try {
-          tmdb.full({id: card.ids.tmdb, method: method}, function(data) {
-            if (data) {
-              var loc = method === 'movie' ? data.title : data.name;
-              if (loc) card.title = loc;
-              if (data.poster_path) card.poster_path = data.poster_path;
-            }
-            resolve(card);
-          }, function() { resolve(card); });
-        } catch(e) { resolve(card); }
-      });
-    }));
-  }
   function mapUpNextNitroItem() {
     var item = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
     var show = item.show || {};
@@ -3318,10 +3297,12 @@
         var raw = Array.isArray(response) ? response : [];
         var formatted = formatTraktResults(raw);
         var pageMeta = makePaginationMeta(raw, page, limit);
-        formatted.total = pageMeta.total;
-        formatted.total_pages = pageMeta.total_pages;
-        formatted.page = page;
-        return formatted;
+        return enrichWithTmdbLocale({
+          results: formatted.results || [],
+          total: pageMeta.total,
+          total_pages: pageMeta.total_pages,
+          page: page
+        });
       });
     },
     inList: function inList() {
@@ -3366,10 +3347,12 @@
         var raw = Array.isArray(response) ? response : [];
         var formatted = formatTraktResults(raw);
         var pageMeta = makePaginationMeta(raw, page, limit);
-        formatted.total = pageMeta.total;
-        formatted.total_pages = pageMeta.total_pages;
-        formatted.page = page;
-        return formatted;
+        return enrichWithTmdbLocale({
+          results: formatted.results || [],
+          total: pageMeta.total,
+          total_pages: pageMeta.total_pages,
+          page: page
+        });
       });
     },
     getMediaLists: function getMediaLists(params) {
@@ -3881,6 +3864,10 @@
       var fg = String(options.listFilterGenre);
       results = results.filter(function(x) { return Array.isArray(x.trakt_genres) && x.trakt_genres.indexOf(fg) >= 0; });
     }
+    if (options.listFilterCountry) {
+      var fc = String(options.listFilterCountry).toLowerCase();
+      results = results.filter(function(x) { return x.trakt_country === fc; });
+    }
     return Object.assign({}, data, { results: results });
   }
   function sortListItems(results, field, order) {
@@ -3940,13 +3927,6 @@
           Api$2[type](params).then(function (data) {
             if (typeof _savedStart === 'function') _this.start = _savedStart;
             if (data && data.total_pages) total_pages = data.total_pages;
-            if (type === 'list' || type === 'myListItems') {
-              return enrichCardsWithTmdb(data && data.results ? data.results : []).then(function(enriched) {
-                return Object.assign({}, data, {results: enriched});
-              });
-            }
-            return data;
-          }).then(function(data) {
             if (type === 'watchlist') { data = applyWatchlistClientFilters(data, object); data = rearrangeWatchlistUpcoming(data); }
             if (type === 'upnext') data = rearrangeUpnextNotStarted(data);
             if (type === 'list' || type === 'myListItems') {
@@ -5561,11 +5541,12 @@
     var activeFilters = {
       type: object.listFilterType || 'all',
       year: object.listFilterYear || '',
-      genre: object.listFilterGenre || ''
+      genre: object.listFilterGenre || '',
+      country: object.listFilterCountry || ''
     };
     var activeSortField = object.listSortField || 'rank';
     var activeSortOrder = object.listSortOrder || 'asc';
-    var typeBtn, yearBtn, genreBtn, sortBtn;
+    var typeBtn, yearBtn, genreBtn, countryBtn, sortBtn;
 
     function tr(key, fallback) {
       try { return Lampa.Lang.translate(key) || fallback || key; } catch(e) { return fallback || key; }
@@ -5581,6 +5562,11 @@
     function getGenreLabel() {
       if (!activeFilters.genre) return tr('trakttv_filter_any_genre', 'Жанр');
       return (typeof TRAKT_GENRE_NAMES_RU !== 'undefined' && TRAKT_GENRE_NAMES_RU[activeFilters.genre]) || activeFilters.genre;
+    }
+    function getCountryLabel() {
+      if (!activeFilters.country) return tr('trakttv_filter_any_country', 'Страна');
+      var c = TRAKT_RECS_COUNTRIES.find(function(x) { return x.slug === activeFilters.country; });
+      return c ? c.ru : activeFilters.country;
     }
     function getSortLabel() {
       var labels = {
@@ -5609,6 +5595,7 @@
         listFilterType: activeFilters.type,
         listFilterYear: activeFilters.year,
         listFilterGenre: activeFilters.genre,
+        listFilterCountry: activeFilters.country,
         listSortField: activeSortField,
         listSortOrder: activeSortOrder,
         onHead: function() { Lampa.Controller.toggle(LD_CTRL); }
@@ -5677,6 +5664,23 @@
       });
     }
 
+    function openCountryFilter() {
+      var items = [{ title: tr('trakttv_filter_all', 'Любая'), value: '', selected: !activeFilters.country }];
+      TRAKT_RECS_COUNTRIES.forEach(function(c) {
+        items.push({ title: c.ru, value: c.slug, selected: activeFilters.country === c.slug });
+      });
+      Lampa.Select.show({
+        title: tr('trakttv_filter_country_title', 'Страна'),
+        items: items,
+        onSelect: function(item) {
+          activeFilters.country = item.value;
+          updateBtn(countryBtn, getCountryLabel(), !!activeFilters.country);
+          rebuildView(); restoreFilters();
+        },
+        onBack: restoreFilters
+      });
+    }
+
     function openSortMenu() {
       var fields = ['rank', 'title', 'released', 'percentage'];
       var labels = {
@@ -5724,10 +5728,13 @@
         genreBtn = makeBtn(getGenreLabel());
         updateBtn(genreBtn, getGenreLabel(), !!activeFilters.genre);
         genreBtn.on('hover:enter', function() { lastFilterFocus = genreBtn[0]; openGenreFilter(); });
+        countryBtn = makeBtn(getCountryLabel());
+        updateBtn(countryBtn, getCountryLabel(), !!activeFilters.country);
+        countryBtn.on('hover:enter', function() { lastFilterFocus = countryBtn[0]; openCountryFilter(); });
         sortBtn = makeBtn(getSortLabel());
         updateBtn(sortBtn, getSortLabel(), true);
         sortBtn.on('hover:enter', function() { lastFilterFocus = sortBtn[0]; openSortMenu(); });
-        filtersRow.append(typeBtn, yearBtn, genreBtn, sortBtn);
+        filtersRow.append(typeBtn, yearBtn, genreBtn, countryBtn, sortBtn);
         controls.append(filtersRow);
         html.append(controls, body);
 
