@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.1.5';
+  var PLUGIN_VERSION = '3.1.6';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -13246,7 +13246,15 @@
   function invalidateWatchlistBadgeCache() { _watchlistBadgeCache = null; _watchlistBadgeCachePromise = null; }
 
   function isLineAlive(line) {
-    try { return !!(line && typeof line.render === 'function' && line.render(true).isConnected); } catch(e) { return false; }
+    try {
+      if (!line || typeof line.render !== 'function') return false;
+      var el = line.render(true);
+      if (!el) return false;
+      // render(true) возвращает jQuery когда Template.js компилированной Lampa
+      // оборачивает результат в jQuery; берём el[0] для получения DOM-элемента
+      var domEl = (el.jquery !== undefined) ? el[0] : el;
+      return !!(domEl && domEl.isConnected);
+    } catch(e) { return false; }
   }
 
   function applyOptimisticWatched(tmdbId, mode) {

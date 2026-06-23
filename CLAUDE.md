@@ -10,7 +10,7 @@
 
 ## Текущая версия
 
-**v3.1.5** — Фикс обновления Up Next на главной: Lampa вызывает `stop()` у главной страницы при открытии детальной, слайд убирается из DOM → `isLineAlive = false` → `_pendingMainRefresh = true`. При возврате (событие `'archive'`) rebuild запускается заново и обновляет строку.
+**v3.1.6** — Фикс `isLineAlive`: в скомпилированной Lampa `line.render(true)` возвращает jQuery-объект, у которого нет `.isConnected` → `undefined` → всегда false. Исправлено через `el.jquery !== undefined ? el[0] : el` перед проверкой `.isConnected`.
 
 ## История фиксов
 
@@ -76,6 +76,7 @@
 | v3.1.3 | TBD | Фикс ложной отметки: `_sessionFirstObservedPct` — если прогресс не вырос за сессию плеера, это хранимый прогресс (не новый просмотр); внешний плеер исключён из гарда |
 | v3.1.4 | TBD | Реалтайм-статус страницы описания: `_fullCardRefreshFn` / `refreshFullCardProgress` перерисовывают `S.. · E..` / «Просмотрено» на месте после отметки (рефактор `renderProgressData`) |
 | v3.1.5 | TBD | Фикс Up Next на главной: `activity 'archive'` → rebuild; диагностический лог `upnext_rebuild_skip` с причиной (`null_ref`/`not_alive`) |
+| v3.1.6 | TBD | Фикс `isLineAlive`: jQuery vs DOM — `el.jquery !== undefined ? el[0] : el` перед `.isConnected`; без этого rebuild всегда видел `not_alive` |
 
 ## Архитектура scrobbling
 
