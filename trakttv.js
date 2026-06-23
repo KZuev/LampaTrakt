@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.1';
+  var PLUGIN_VERSION = '3.2.2';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -2967,13 +2967,16 @@
             var j = Math.floor(Math.random() * (i + 1));
             var tmp = mapped[i]; mapped[i] = mapped[j]; mapped[j] = tmp;
           }
+        } else if (sortField === 'rank') {
+          if (sortOrder !== 'asc') mapped = mapped.slice().reverse();
         } else {
           var dir = sortOrder === 'asc' ? 1 : -1;
           mapped.sort(function(a, b) {
             var av, bv;
             if (sortField === 'title') { av = (a.title || '').toLowerCase(); bv = (b.title || '').toLowerCase(); return av < bv ? -dir : av > bv ? dir : 0; }
             if (sortField === 'released') { av = parseInt(a.release_date, 10) || 0; bv = parseInt(b.release_date, 10) || 0; return (av - bv) * dir; }
-            if (sortField === 'rating') { av = Number(a.vote_average) || 0; bv = Number(b.vote_average) || 0; return (av - bv) * dir; }
+            if (sortField === 'rating' || sortField === 'percentage') { av = Number(a.vote_average) || 0; bv = Number(b.vote_average) || 0; return (av - bv) * dir; }
+            if (sortField === 'runtime') { av = Number(a.runtime) || 0; bv = Number(b.runtime) || 0; return (av - bv) * dir; }
             av = a.trakt_listed_at || ''; bv = b.trakt_listed_at || '';
             return av < bv ? -dir : av > bv ? dir : 0;
           });
@@ -3876,7 +3879,7 @@
   // Поля сортировки, поддерживаемые для списков клиентски (Trakt не сортирует
   // элементы списков на сервере). Подмножество watchlist-полей — те, для которых
   // у элементов есть данные. VIP-поля (imdb_rating/rt_*/metascore и т.п.) исключены.
-  var LIST_SORT_FIELDS = ['rank', 'added', 'title', 'released', 'runtime', 'votes', 'percentage'];
+  var LIST_SORT_FIELDS = ['rank', 'added', 'title', 'released', 'runtime', 'percentage'];
   function sortListItems(results, field, order) {
     if (!field) return results;
     var asc = (order === 'asc');
@@ -5946,7 +5949,13 @@
     };
     var typeBtn, yearBtn, genreBtn, countryBtn, sortBtn;
     var activeSort = { field: object.sortField || 'added', order: object.sortOrder || 'desc' };
+    var lastResults = [];
 
+    function openRandomItem() {
+      var pool = lastResults;
+      if (!pool || !pool.length) return;
+      Lampa.Activity.push(pool[Math.floor(Math.random() * pool.length)]);
+    }
     function tr(key, fallback) {
       try { return Lampa.Lang.translate(key) || fallback || key; } catch(e) { return fallback || key; }
     }
@@ -5987,7 +5996,8 @@
         sortField: activeSort.field,
         sortOrder: activeSort.order,
         sort: activeSort.field + '/' + activeSort.order,
-        onHead: function() { Lampa.Controller.toggle(COL_FILTER_CTRL); }
+        onHead: function() { Lampa.Controller.toggle(COL_FILTER_CTRL); },
+        onData: function(results) { lastResults = results || []; }
       });
       currentView = new baseComponent(viewObject, 'collection');
       currentView.activity = activity;
@@ -6066,24 +6076,16 @@
       });
     }
     function openSortMenu() {
-      var SORT_OPTIONS = [
-        { field: 'added',    label: tr('trakttv_watchlist_sort_added', 'По добавлению') },
-        { field: 'title',    label: tr('trakttv_watchlist_sort_title', 'По названию') },
-        { field: 'released', label: tr('trakttv_watchlist_sort_released', 'По году') },
-        { field: 'rating',   label: tr('trakttv_watchlist_sort_rating', 'По рейтингу') },
-        { field: 'random',   label: tr('trakttv_watchlist_sort_random', 'Случайно') }
-      ];
-      var items = SORT_OPTIONS.map(function(opt) {
-        var isCurrent = activeSort.field === opt.field;
-        var arrow = isCurrent ? (' ' + formatWatchlistSortArrow(activeSort.order)) : '';
-        return { title: opt.label + arrow, value: opt.field, selected: isCurrent };
-      });
-      Lampa.Select.show({
+      openSharedSortMenu({
+        fields: LIST_SORT_FIELDS,
+        activeField: activeSort.field,
+        activeOrder: activeSort.order,
+        vipEnabled: false,
+        topAction: { title: tr('trakttv_list_open_random', 'Открыть случайный'), onSelect: openRandomItem },
         title: tr('trakttv_recs_sort_menu_title', 'Сортировка'),
-        items: items,
-        onSelect: function(item) {
-          var nextOrder = item.value === activeSort.field ? (activeSort.order === 'desc' ? 'asc' : 'desc') : 'desc';
-          activeSort.field = item.value;
+        onSelect: function(field) {
+          var nextOrder = field === activeSort.field && field !== 'random' ? (activeSort.order === 'desc' ? 'asc' : 'desc') : 'desc';
+          activeSort.field = field;
           activeSort.order = nextOrder;
           updateBtn(sortBtn, getSortLabel(), true);
           rebuildView(); restoreFilters();

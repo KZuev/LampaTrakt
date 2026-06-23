@@ -10,7 +10,7 @@
 
 ## Текущая версия
 
-**v3.2.1** — Кнопка «Авто-торрент (случайная серия)» на карточках сериалов: выбирает случайный сезон (исключая specials) и случайный вышедший эпизод, затем запускает стандартный авто-торрент поиск с этим сезоном/эпизодом. Новые функции: `launchAtRandomShow`, `addAtRandomEpisodeButton`.
+**v3.2.2** — Убран `votes` (Голоса Trakt VIP) из меню сортировки списков (`LIST_SORT_FIELDS`). Избранное (`collectionHub`) переведено на `openSharedSortMenu` с теми же полями что у Мои списки (rank/added/title/released/runtime/percentage), плюс «Открыть случайный» через `lastResults`/`onData`.
 
 ## История фиксов
 
@@ -79,6 +79,7 @@
 | v3.1.6 | TBD | Фикс `isLineAlive`: jQuery vs DOM — `el.jquery !== undefined ? el[0] : el` перед `.isConnected`; без этого rebuild всегда видел `not_alive` |
 | v3.2.0 | TBD | Русские названия/постеры в списках: `enrichWithTmdbLocale` в `Api.list/myListItems` + `listDetailHub` с фильтрами Тип/Год/Жанр/Страна и тем же меню сортировки `openSharedSortMenu` (клиентская, рабочие поля `LIST_SORT_FIELDS`) |
 | v3.2.1 | TBD | «Авто-торрент (случайная серия)»: кнопка только на сериалах, `launchAtRandomShow` → случайный сезон (>0, aired>0) + случайный эпизод ≤ aired → стандартный поиск торрента |
+| v3.2.2 | TBD | Убран `votes` из `LIST_SORT_FIELDS`; `collectionHub` (Избранное) → `openSharedSortMenu` с теми же полями + «Открыть случайный»; `Api.collection()` sort расширен: `rank`, `runtime`, `percentage` |
 
 ## Архитектура scrobbling
 
