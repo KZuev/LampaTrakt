@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.2';
+  var PLUGIN_VERSION = '3.2.3';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -8052,11 +8052,11 @@
     return combinations[key] || title;
   }
 
-  function _atBtnReset(btn) {
+  function _atBtnReset(btn, label) {
     if (!btn) return;
     btn.classList.remove('trakt-magic-loading');
     var sp = btn.querySelector('span');
-    if (sp) sp.textContent = t$2('trakt_at_button', 'Авто-торрент');
+    if (sp) sp.textContent = label !== undefined ? label : t$2('trakt_at_button', 'Авто-торрент');
   }
 
   var AT_ATTEMPT_MS = 30000;   // жёсткий лимит на одну попытку (медленная загрузка торрента)
@@ -8286,7 +8286,8 @@
     }
     _atOverlayShow(t$2('trakt_at_status_random_api', 'Выбираем случайный эпизод…'));
     var tmdbId = card && card.id;
-    if (!tmdbId) { _atBtnReset(btn); _atOverlayHide(); return; }
+    var _randLabel = t$2('trakt_at_random_episode_button', 'Авто-торрент (случайная серия)');
+    if (!tmdbId) { _atBtnReset(btn, _randLabel); _atOverlayHide(); return; }
 
     requestApi('GET', '/search/tmdb/' + tmdbId + '?type=show').then(function(res) {
       var traktId = res && res[0] && res[0].show && res[0].show.ids && res[0].show.ids.trakt;
@@ -8301,12 +8302,12 @@
       var rEpisode = Math.floor(Math.random() * rSeason.aired) + 1;
       _atSelectPending = { type: 'show', season: rSeason.number, episode: rEpisode };
       _atOverlaySetStatus(t$2('trakt_at_status_torrent', 'Ищем торрент…'));
-      _atBtnReset(btn);
+      _atBtnReset(btn, _randLabel);
       _atSaveAndClearTorrentFilter();
       Lampa.Activity.push({ url: '', title: Lampa.Lang.translate('title_torrents') || 'Торренты', component: 'torrents', search: _atSearchString(card), search_one: _atCardTitle(card), search_two: _atCardOriginalTitle(card), movie: card, page: 1 });
     }).catch(function() {
       _atResetState();
-      _atBtnReset(btn);
+      _atBtnReset(btn, _randLabel);
       _atOverlayHide();
       _atRestoreTorrentFilter();
       _atControllerDisable();

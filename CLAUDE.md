@@ -10,7 +10,7 @@
 
 ## Текущая версия
 
-**v3.2.2** — Убран `votes` (Голоса Trakt VIP) из меню сортировки списков (`LIST_SORT_FIELDS`). Избранное (`collectionHub`) переведено на `openSharedSortMenu` с теми же полями что у Мои списки (rank/added/title/released/runtime/percentage), плюс «Открыть случайный» через `lastResults`/`onData`.
+**v3.2.3** — Фикс `_atBtnReset`: добавлен параметр `label`; `launchAtRandomShow` передаёт правильный лейбл — кнопка «Авто-торрент (случайная серия)» больше не сбрасывается в «Авто-торрент» после возврата с экрана торрентов.
 
 ## История фиксов
 
@@ -80,6 +80,7 @@
 | v3.2.0 | TBD | Русские названия/постеры в списках: `enrichWithTmdbLocale` в `Api.list/myListItems` + `listDetailHub` с фильтрами Тип/Год/Жанр/Страна и тем же меню сортировки `openSharedSortMenu` (клиентская, рабочие поля `LIST_SORT_FIELDS`) |
 | v3.2.1 | TBD | «Авто-торрент (случайная серия)»: кнопка только на сериалах, `launchAtRandomShow` → случайный сезон (>0, aired>0) + случайный эпизод ≤ aired → стандартный поиск торрента |
 | v3.2.2 | TBD | Убран `votes` из `LIST_SORT_FIELDS`; `collectionHub` (Избранное) → `openSharedSortMenu` с теми же полями + «Открыть случайный»; `Api.collection()` sort расширен: `rank`, `runtime`, `percentage` |
+| v3.2.3 | TBD | Фикс `_atBtnReset(btn, label?)`: кнопка «Авто-торрент (случайная серия)» теперь сохраняет правильный текст после возврата с экрана торрентов |
 
 ## Архитектура scrobbling
 
