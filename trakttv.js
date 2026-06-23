@@ -5570,8 +5570,8 @@
       genre: object.listFilterGenre || '',
       country: object.listFilterCountry || ''
     };
-    var activeSortField = object.listSortField || 'rank';
-    var activeSortOrder = object.listSortOrder || 'asc';
+    var activeSortField = object.listSortField || 'added';
+    var activeSortOrder = object.listSortOrder || 'desc';
     var typeBtn, yearBtn, genreBtn, countryBtn, sortBtn;
     var lastResults = [];
 
@@ -6829,6 +6829,12 @@
       },
       trakttv_watchlist_sort_random: {
         ru: "Случайно",
+      },
+      trakttv_list_open_random: {
+        ru: "Открыть случайный",
+      },
+      trakttv_list_empty: {
+        ru: "Список пуст",
       },
       trakttv_watchlist_sort_percentage: {
         ru: "Процент",
