@@ -15252,6 +15252,10 @@
     return payload;
   }
   function createRowPayload(config, data, normalizedResults) {
+    var apiTotalPages = data && data.total_pages ? data.total_pages : 1;
+    var apiTotal = data && data.total ? data.total : 0;
+    var displayLimit = config && config.displayLimit > 0 ? config.displayLimit : 0;
+    var totalPages = displayLimit > 0 && apiTotal > displayLimit ? Math.max(apiTotalPages, 2) : apiTotalPages;
     var payload = {
       title: config.displayTitle,
       component: config.component || undefined,
@@ -15262,7 +15266,7 @@
       trakt_row: config.traktRow || '',
       source: 'tmdb',
       page: data && data.page ? data.page : 1,
-      total_pages: data && data.total_pages ? data.total_pages : 1,
+      total_pages: totalPages,
       results: normalizedResults
     };
     return payload;
