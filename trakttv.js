@@ -2623,14 +2623,19 @@
           self.watchlist(sParams).catch(function() { return { results: [], total: 0, total_pages: 1, page: page, limit: half }; })
         ]).then(function(res) {
           var combined = (res[0].results || []).concat(res[1].results || []);
-          var sf = sort && sort.field || 'added';
-          var dir = (sort && sort.order === 'asc') ? 1 : -1;
+          var _sp = (sort || 'added/desc').split('/');
+          var sf = _sp[0] || 'added';
+          var dir = _sp[1] === 'asc' ? 1 : -1;
           if (sf === 'title') {
             combined.sort(function(a, b) { var va = (a.title || '').toLowerCase(), vb = (b.title || '').toLowerCase(); return va < vb ? -dir : va > vb ? dir : 0; });
           } else if (sf === 'added') {
             combined.sort(function(a, b) { var va = a.trakt_listed_at || '', vb = b.trakt_listed_at || ''; return va < vb ? -dir : va > vb ? dir : 0; });
           } else if (sf === 'released') {
-            combined.sort(function(a, b) { return ((parseInt(a.release_date, 10) || 0) - (parseInt(b.release_date, 10) || 0)) * dir; });
+            combined.sort(function(a, b) {
+              var va = a.trakt_released ? String(a.trakt_released).slice(0, 10) : String(parseInt(a.release_date, 10) || 0);
+              var vb = b.trakt_released ? String(b.trakt_released).slice(0, 10) : String(parseInt(b.release_date, 10) || 0);
+              return va < vb ? -dir : va > vb ? dir : 0;
+            });
           } else if (sf === 'runtime') {
             combined.sort(function(a, b) { return (Number(a.runtime || 0) - Number(b.runtime || 0)) * dir; });
           } else if (sf === 'percentage') {
