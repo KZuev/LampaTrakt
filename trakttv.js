@@ -15121,7 +15121,7 @@
     // .items-line__head, and more.onVisible crashes on null head when total_pages > 1.
     if (checkUpNextPermissions()) {
       configs.push({ name: 'TraktUpNextRow', apiMethod: 'upnext', limit: 36, displayLimit: 20, traktRow: 'upnext', displayTitle: Lampa.Lang.translate('trakttv_upnext'), component: 'trakt_upnext' });
-      configs.push({ name: 'TraktWatchlistRow', apiMethod: 'watchlist', limit: 36, displayLimit: 20, displayTitle: Lampa.Lang.translate('trakttv_watchlist'), component: 'trakt_watchlist' });
+      configs.push({ name: 'TraktWatchlistRow', apiMethod: 'watchlist', limit: 36, displayLimit: 20, displayTitle: Lampa.Lang.translate('trakttv_watchlist'), component: 'trakt_watchlist', apiParams: function() { var s = getDefaultListSort(); return { sort: s.field + '/' + s.order, watchlistSort: s.field + '/' + s.order }; } });
     }
     if (checkRecommendationsPermissions()) {
       configs.push({ name: 'TraktRecommendationsRow', apiMethod: 'recommendations', limit: 36, displayLimit: 20, displayTitle: Lampa.Lang.translate('trakttv_recommendations'), component: 'trakttv_recommendations' });
@@ -15130,7 +15130,8 @@
       if (typeof Api[config.apiMethod] !== 'function') return;
       var cacheKey = buildRowCacheKey(config, {}, 'main');
       if (loadRowFromCache(cacheKey)) return;
-      Api[config.apiMethod]({ limit: config.limit, page: 1 }).then(function (data) {
+      var _pfExtraParams = typeof config.apiParams === 'function' ? config.apiParams() : (config.apiParams || {});
+      Api[config.apiMethod](Object.assign({ limit: config.limit, page: 1 }, _pfExtraParams)).then(function (data) {
         var results = data && Array.isArray(data.results) ? data.results : [];
         if (!results.length) return;
         var limited = config.displayLimit > 0 ? results.slice(0, config.displayLimit) : results;
@@ -15361,10 +15362,8 @@
         timeoutId = setTimeout(function () {
           finish(staleLine);
         }, deadline);
-        Api[config.apiMethod]({
-          limit: rowLimit,
-          page: 1
-        }).then(function (data) {
+        var _rowExtraParams = typeof config.apiParams === 'function' ? config.apiParams() : (config.apiParams || {});
+        Api[config.apiMethod](Object.assign({ limit: rowLimit, page: 1 }, _rowExtraParams)).then(function (data) {
           var results = data && Array.isArray(data.results) ? data.results : [];
           var filtered = typeof config.filter === 'function' ? config.filter(results, params, screen) : results;
           if (!filtered || !filtered.length) {
@@ -15421,6 +15420,7 @@
       limit: 36,
       displayLimit: 20,
       checkPermission: checkUpNextPermissions,
+      apiParams: function() { var s = getDefaultListSort(); return { sort: s.field + '/' + s.order, watchlistSort: s.field + '/' + s.order }; },
       visibleOn: function visibleOn() {
         return true;
       },
