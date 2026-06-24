@@ -10,7 +10,7 @@
 
 ## Текущая версия
 
-**v3.2.6** — Фикс реалтайм Up Next на главной: убран ошибочный guard `total_pages>1` в `rebuildUpnextLineInPlace`, который блокировал обновление при непустом списке (строка на главной всегда показывает только 1-ю страницу — «Ещё» открывает отдельную Activity). После rebuild синхронизируются `data.results`/`active`.
+**v3.2.7** — Фикс постеров и рамки фокуса после live-rebuild Up Next: вызов `Line.visible()` после `createAndAppend` заставляет `Layer.visible()` переобойти новые карточки → `card.visible()` грузит изображения. Если пользователь был сфокусирован на строке — вызывается `toggle()` для восстановления рамки навигации.
 
 ## История фиксов
 
@@ -84,6 +84,7 @@
 | v3.2.4 | TBD | Бейдж «СКОРО» скрыт для элементов раздела «Ожидаемые» (`_trakt_is_upcoming` флаг в `rearrangeWatchlistUpcoming` + guard в `renderDigitalReleaseBadge`) |
 | v3.2.5 | TBD | Раздел настроек «Списки» + `trakt_default_list_sort`; раздел «Отладка и сброс» → «Остальное»; `getDefaultListSort()` применяется в watchlistHub/listDetailHub/collectionHub |
 | v3.2.6 | TBD | Фикс реалтайм Up Next: убран guard `total_pages>1` в `rebuildUpnextLineInPlace` (блокировал live-rebuild при непустом списке); синхронизация `data.results`/`active` после перестроения. Также: default-сортировка на главной (`apiParams` в row-конфиге), кнопка «Ещё» при `total>displayLimit`, фикс combined watchlist sort (строка `sort` парсилась как объект) |
+| v3.2.7 | TBD | Фикс постеров и рамки фокуса после live-rebuild Up Next: `Line.visible()` после rebuild → `Layer.visible(scroll)` → `card.visible()` грузит постеры; `toggle()` восстанавливает рамку если пользователь был на строке |
 
 ## Архитектура scrobbling
 

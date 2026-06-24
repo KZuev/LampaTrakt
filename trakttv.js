@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.6';
+  var PLUGIN_VERSION = '3.2.7';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -13795,6 +13795,22 @@
         normalItems.forEach(function(item) {
           try { _upnextLineRef.emit('createAndAppend', item); } catch(e) {}
         });
+        // Trigger lazy image loading for newly created cards: Line.visible() →
+        // Layer.visible(scroll) → dispatches 'visible' DOM event on each card →
+        // card.visible() sets img.src. Without this call posters stay blank
+        // because Layer never re-scans the scroll after DOM replacement.
+        try {
+          if (typeof _upnextLineRef.visible === 'function') _upnextLineRef.visible();
+        } catch(e) {}
+        // If the user is currently focused on this line, re-establish focus:
+        // destroying old cards clears the controller collection and the focus
+        // frame disappears. toggle() calls Controller.collectionSet + collectionFocus
+        // which rediscovers the new cards and restores navigation.
+        try {
+          if (Lampa && Lampa.Controller && Lampa.Controller.own(_upnextLineRef) && typeof _upnextLineRef.toggle === 'function') {
+            _upnextLineRef.toggle();
+          }
+        } catch(e) {}
         try { _watchLogAdd('upnext_live_rebuilt', { extra: normalItems.length + ' items' }); } catch(e) {}
       }).catch(function() {});
     } catch(ex) {}
