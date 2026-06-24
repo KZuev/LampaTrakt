@@ -10,7 +10,7 @@
 
 ## Текущая версия
 
-**v3.2.10** — Фикс «Смотреть дальше» для внешнего плеера: внешний плеер не шлёт `'destroy'` → `routeFinishIntent` (где жила пауза) не срабатывал, прогресс ниже порога никуда не уходил. Теперь `scrobblePause` вызывается прямо из ветки `timeline_low_pct` в `processTimelineUpdate` (гард `_isPlayerActive`, тротлинг `_lastScrobblePauseKey` по hash+%). Покрывает и встроенный, и внешний плеер.
+**v3.2.11** — Live-rebuild Up Next после паузы: успешный `scrobblePause` (добавление фильма/сериала в «Смотреть дальше» ниже порога) теперь запускает `rebuildUpnextLineInPlace()` (как после отметки). Если строка не жива — выставляется `_pendingMainRefresh`, обновление на возврате на главную (`'archive'`). Раньше rebuild дёргался только из `onOwnMarkSucceeded`, и фильм после паузы появлялся только после полного перезагруза страницы.
 
 ## История фиксов
 
@@ -88,6 +88,7 @@
 | v3.2.8 | TBD | Live-rebuild строки «Хочу посмотреть» на главной после отметки фильма как просмотренного: `rebuildWatchlistLineInPlace()` + `_watchlistLineRef` + `_pendingWatchlistRefresh`; вызов только при `mode==='movie'` |
 | v3.2.9 | TBD | Фикс «Смотреть дальше» для фильмов: `scrobblePause` восстанавливает `ids.tmdb` из `media.id` (у карточки Lampa нет `.ids`) → Trakt создаёт запись прогресса. Диагностика `scrobble_pause_sent/error/skip` в «Историю отметок» |
 | v3.2.10 | TBD | Фикс «Смотреть дальше» для внешнего плеера: `scrobblePause` вызывается из ветки `timeline_low_pct` в `processTimelineUpdate` (гард `_isPlayerActive`, тротлинг `_lastScrobblePauseKey`), т.к. внешний плеер не шлёт `'destroy'` и `routeFinishIntent` не отрабатывает |
+| v3.2.11 | TBD | Live-rebuild Up Next после успешного `scrobblePause`: вызов `rebuildUpnextLineInPlace()` в success-хендлере паузы → фильм/сериал появляется в «Смотреть дальше» без полного перезагруза (раньше только из `onOwnMarkSucceeded`) |
 
 ## Архитектура scrobbling
 

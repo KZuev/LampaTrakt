@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.10';
+  var PLUGIN_VERSION = '3.2.11';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -13383,6 +13383,12 @@
           });
         } catch(e) {}
         try { _watchLogAdd('scrobble_pause_sent', { type: contentType, title: media && (media.title || media.name), percent: Math.round(percent), season: media.season_number || media.season, episode: media.episode_number || media.episode, extra: 'tmdb:' + (ids.tmdb || '?') }); } catch(e) {}
+        // Пауза создала/обновила запись прогресса в Trakt → элемент должен
+        // появиться в «Смотреть дальше». Запускаем тот же live-rebuild, что и
+        // после отметки. Если строка ещё не жива (пользователь в плеере или на
+        // карточке) — rebuildUpnextLineInPlace выставит _pendingMainRefresh, и
+        // обновление произойдёт при возврате на главную (событие 'archive').
+        try { setTimeout(function() { try { rebuildUpnextLineInPlace(); } catch(e) {} }, 1500); } catch(e) {}
       }).catch(function(err) {
         try {
           Lampa.Storage.set('trakt_debug_scrobble', {
