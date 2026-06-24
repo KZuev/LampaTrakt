@@ -10,7 +10,7 @@
 
 ## Текущая версия
 
-**v3.2.7** — Фикс постеров и рамки фокуса после live-rebuild Up Next: вызов `Line.visible()` после `createAndAppend` заставляет `Layer.visible()` переобойти новые карточки → `card.visible()` грузит изображения. Если пользователь был сфокусирован на строке — вызывается `toggle()` для восстановления рамки навигации.
+**v3.2.8** — Live-rebuild строки «Хочу посмотреть» на главной: при отметке фильма как просмотренного (Trakt автоматически удаляет его из вотчлиста) строка перестраивается на месте через `rebuildWatchlistLineInPlace()`. Аналогичная механика Up Next: `traktRow:'watchlist'` в конфиге, `_watchlistLineRef`, `_pendingWatchlistRefresh`. Вызов только при `mode==='movie'`.
 
 ## История фиксов
 
@@ -85,6 +85,7 @@
 | v3.2.5 | TBD | Раздел настроек «Списки» + `trakt_default_list_sort`; раздел «Отладка и сброс» → «Остальное»; `getDefaultListSort()` применяется в watchlistHub/listDetailHub/collectionHub |
 | v3.2.6 | TBD | Фикс реалтайм Up Next: убран guard `total_pages>1` в `rebuildUpnextLineInPlace` (блокировал live-rebuild при непустом списке); синхронизация `data.results`/`active` после перестроения. Также: default-сортировка на главной (`apiParams` в row-конфиге), кнопка «Ещё» при `total>displayLimit`, фикс combined watchlist sort (строка `sort` парсилась как объект) |
 | v3.2.7 | TBD | Фикс постеров и рамки фокуса после live-rebuild Up Next: `Line.visible()` после rebuild → `Layer.visible(scroll)` → `card.visible()` грузит постеры; `toggle()` восстанавливает рамку если пользователь был на строке |
+| v3.2.8 | TBD | Live-rebuild строки «Хочу посмотреть» на главной после отметки фильма как просмотренного: `rebuildWatchlistLineInPlace()` + `_watchlistLineRef` + `_pendingWatchlistRefresh`; вызов только при `mode==='movie'` |
 
 ## Архитектура scrobbling
 

@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.7';
+  var PLUGIN_VERSION = '3.2.8';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -12831,6 +12831,8 @@
   var EXTERNAL_ACTIVE_WINDOW_MS = 6 * 60 * 60 * 1000; // макс. длина сессии внешнего плеера
   var _upnextLineRef = null;             // ссылка на Line-инстанс строки Up Next на главной
   var _pendingMainRefresh = false;       // нужно обновить Up Next при следующем входе на главную
+  var _watchlistLineRef = null;          // ссылка на Line-инстанс строки «Хочу посмотреть» на главной
+  var _pendingWatchlistRefresh = false;  // нужно обновить Watchlist при следующем входе на главную
   var _ownMarkReconcileTimer = null;     // дебаунс-таймер реконсиляции бейджей после отметки
   var _fullCardRefreshFn = null;         // перерисовывает статус на открытой странице описания
   var _fullCardItemId = null;            // tmdb id текущей открытой страницы описания
@@ -13816,6 +13818,63 @@
     } catch(ex) {}
   }
 
+  function rebuildWatchlistLineInPlace() {
+    try {
+      if (!readBooleanStorage$1('trakt_realtime_upnext', true)) return;
+      if (!_watchlistLineRef || !isLineAlive(_watchlistLineRef)) {
+        _pendingWatchlistRefresh = true;
+        return;
+      }
+      var _a = typeof api$1 !== 'undefined' ? api$1 : null;
+      if (!_a || typeof _a.watchlist !== 'function') return;
+      _pendingWatchlistRefresh = false;
+      var _sp = getDefaultListSort();
+      var _sortStr = _sp.field + '/' + _sp.order;
+      _a.watchlist({ limit: 100, page: 1, sort: _sortStr, watchlistSort: _sortStr }).then(function(freshData) {
+        var results = freshData && Array.isArray(freshData.results) ? freshData.results : [];
+        // Apply same filter as TraktWatchlistRow config (hide unreleased movies, keep upcoming)
+        var todayStr = new Date().toISOString().slice(0, 10);
+        var currentYear = new Date().getFullYear();
+        var upcomingIds = getUpcomingMovieIds();
+        var filtered = results.filter(function(item) {
+          if (item.card_type === 'movie') {
+            if (item.id && upcomingIds.has(String(item.id))) return true;
+            if (!item.trakt_released) return false;
+          }
+          var rel = item.trakt_released;
+          if (rel && /^\d{4}-\d{2}-\d{2}/.test(String(rel))) return String(rel).slice(0, 10) <= todayStr;
+          return (parseInt(item.release_date, 10) || 0) <= currentYear;
+        });
+        var normalItems = normalizeContentData(filtered.slice(0, 20));
+        if (!isLineAlive(_watchlistLineRef)) return;
+        try {
+          if (Array.isArray(_watchlistLineRef.items)) {
+            _watchlistLineRef.items.forEach(function(item) { try { item.destroy && item.destroy(); } catch(e) {} });
+            _watchlistLineRef.items.length = 0;
+          }
+        } catch(e) {}
+        try { _watchlistLineRef.scroll.clear(); } catch(e) {}
+        try {
+          if (_watchlistLineRef.data) _watchlistLineRef.data.results = normalItems;
+          _watchlistLineRef.active = 0;
+          _watchlistLineRef.last = false;
+        } catch(e) {}
+        normalItems.forEach(function(item) {
+          try { _watchlistLineRef.emit('createAndAppend', item); } catch(e) {}
+        });
+        try {
+          if (typeof _watchlistLineRef.visible === 'function') _watchlistLineRef.visible();
+        } catch(e) {}
+        try {
+          if (Lampa && Lampa.Controller && Lampa.Controller.own(_watchlistLineRef) && typeof _watchlistLineRef.toggle === 'function') {
+            _watchlistLineRef.toggle();
+          }
+        } catch(e) {}
+        try { _watchLogAdd('watchlist_live_rebuilt', { extra: normalItems.length + ' items' }); } catch(e) {}
+      }).catch(function() {});
+    } catch(ex) {}
+  }
+
   function refreshFullCardProgress(tmdbId) {
     try {
       if (!_fullCardRefreshFn) return;
@@ -13833,8 +13892,18 @@
       var upnextCacheKey = buildRowCacheKey({ name: 'TraktUpNextRow' }, {}, 'main');
       clearRowCache(upnextCacheKey);
     } catch(e) {}
+    // Watchlist: only movies get auto-removed from watchlist when marked watched
+    if (mode === 'movie') {
+      try {
+        var wlCacheKey = buildRowCacheKey({ name: 'TraktWatchlistRow' }, {}, 'main');
+        clearRowCache(wlCacheKey);
+      } catch(e) {}
+    }
     setTimeout(function() {
       try { rebuildUpnextLineInPlace(); } catch(e) {}
+      if (mode === 'movie') {
+        try { rebuildWatchlistLineInPlace(); } catch(e) {}
+      }
       try { refreshFullCardProgress(tmdbId); } catch(e) {}
     }, 1500);
   }
@@ -14307,6 +14376,9 @@
         if (e && e.type === 'archive' && _pendingMainRefresh) {
           setTimeout(function() { try { rebuildUpnextLineInPlace(); } catch(ex) {} }, 300);
         }
+        if (e && e.type === 'archive' && _pendingWatchlistRefresh) {
+          setTimeout(function() { try { rebuildWatchlistLineInPlace(); } catch(ex) {} }, 300);
+        }
       });
       Lampa.Listener.follow('line', function (e) {
         if (!e || !e.type) return;
@@ -14340,6 +14412,14 @@
               if (_pendingMainRefresh) {
                 _pendingMainRefresh = false;
                 setTimeout(function() { try { rebuildUpnextLineInPlace(); } catch(e2) {} }, 300);
+              }
+            }
+            var _isWatchlistRow = e.data && e.data.trakt_row === 'watchlist';
+            if (_isWatchlistRow && e.line) {
+              _watchlistLineRef = e.line;
+              if (_pendingWatchlistRefresh) {
+                _pendingWatchlistRefresh = false;
+                setTimeout(function() { try { rebuildWatchlistLineInPlace(); } catch(e2) {} }, 300);
               }
             }
             e.items.forEach(function(ci) {
@@ -15446,6 +15526,7 @@
       component: 'trakt_watchlist',
       limit: 100,
       displayLimit: 20,
+      traktRow: 'watchlist',
       checkPermission: checkUpNextPermissions,
       apiParams: function() { var s = getDefaultListSort(); return { sort: s.field + '/' + s.order, watchlistSort: s.field + '/' + s.order }; },
       visibleOn: function visibleOn() {
