@@ -5071,8 +5071,9 @@
     var lastResults = [];
 
     function openRandomItem() {
-      if (!lastResults.length) { try { Lampa.Noty.show(tr('trakttv_list_empty', 'Список пуст')); } catch(e) {} restoreFilters(); return; }
-      var item = lastResults[Math.floor(Math.random() * lastResults.length)];
+      var pool = lastResults.filter(function(item) { return !item._trakt_is_upcoming; });
+      if (!pool.length) { try { Lampa.Noty.show(tr('trakttv_list_empty', 'Список пуст')); } catch(e) {} restoreFilters(); return; }
+      var item = pool[Math.floor(Math.random() * pool.length)];
       if (item) Lampa.Activity.push(item);
       else restoreFilters();
     }
