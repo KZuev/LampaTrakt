@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.11';
+  var PLUGIN_VERSION = '3.2.12';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -8045,7 +8045,7 @@
       return q < targetScore ? q : -q; // ниже целевого лучше, чем выше
     }
     var popularityFirst = _atSetting('trakt_at_popularity', 'quality_first') === 'popularity_first';
-    return pool.slice().sort(function(a, b) {
+    var sorted = pool.slice().sort(function(a, b) {
       var qa = effectiveQuality(a.element.Title || ''), qb = effectiveQuality(b.element.Title || '');
       var pa = (a.element.Seeders || 0) + (a.element.Peers || 0);
       var pb = (b.element.Seeders || 0) + (b.element.Peers || 0);
@@ -8056,6 +8056,23 @@
       if (qb !== qa) return qb - qa;
       return pb - pa;
     });
+    // Торренты, ранее открытые в Lampa (hash есть в torrents_view), идут первыми —
+    // независимо от сортировки по качеству/популярности. Если таких несколько —
+    // их порядок между собой сохраняется из основной сортировки.
+    try {
+      var viewed = Lampa.Storage.get('torrents_view', []);
+      if (Array.isArray(viewed) && viewed.length) {
+        var viewedSet = {};
+        viewed.forEach(function(h) { viewedSet[h] = true; });
+        var prev = [], rest = [];
+        sorted.forEach(function(c) {
+          if (c.element && c.element.hash && viewedSet[c.element.hash]) prev.push(c);
+          else rest.push(c);
+        });
+        if (prev.length) sorted = prev.concat(rest);
+      }
+    } catch(e) {}
+    return sorted;
   }
 
   function pickBestFileFromCollected(collected) {

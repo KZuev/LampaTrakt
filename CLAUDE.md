@@ -10,6 +10,8 @@
 
 ## Текущая версия
 
+**v3.2.12** — Авто-торрент: приоритет ранее открытых торрентов. В `_atSortTorrentCandidates` после основной сортировки кандидаты, чей `element.hash` есть в Lampa `torrents_view`, выдвигаются в начало списка. Работает для обеих кнопок. Сторонних хранилищ не требует — Lampa сама ведёт историю открытых торрентов.
+
 **v3.2.11** — Live-rebuild Up Next после паузы: успешный `scrobblePause` (добавление фильма/сериала в «Смотреть дальше» ниже порога) теперь запускает `rebuildUpnextLineInPlace()` (как после отметки). Если строка не жива — выставляется `_pendingMainRefresh`, обновление на возврате на главную (`'archive'`). Раньше rebuild дёргался только из `onOwnMarkSucceeded`, и фильм после паузы появлялся только после полного перезагруза страницы.
 
 ## История фиксов
@@ -88,6 +90,7 @@
 | v3.2.8 | TBD | Live-rebuild строки «Хочу посмотреть» на главной после отметки фильма как просмотренного: `rebuildWatchlistLineInPlace()` + `_watchlistLineRef` + `_pendingWatchlistRefresh`; вызов только при `mode==='movie'` |
 | v3.2.9 | TBD | Фикс «Смотреть дальше» для фильмов: `scrobblePause` восстанавливает `ids.tmdb` из `media.id` (у карточки Lampa нет `.ids`) → Trakt создаёт запись прогресса. Диагностика `scrobble_pause_sent/error/skip` в «Историю отметок» |
 | v3.2.10 | TBD | Фикс «Смотреть дальше» для внешнего плеера: `scrobblePause` вызывается из ветки `timeline_low_pct` в `processTimelineUpdate` (гард `_isPlayerActive`, тротлинг `_lastScrobblePauseKey`), т.к. внешний плеер не шлёт `'destroy'` и `routeFinishIntent` не отрабатывает |
+| v3.2.12 | TBD | Авто-торрент: приоритет ранее открытых торрентов — `_atSortTorrentCandidates` читает `torrents_view` (Lampa) и выдвигает совпавшие по `hash` в начало; обе кнопки |
 | v3.2.11 | TBD | Live-rebuild Up Next после успешного `scrobblePause`: вызов `rebuildUpnextLineInPlace()` в success-хендлере паузы → фильм/сериал появляется в «Смотреть дальше» без полного перезагруза (раньше только из `onOwnMarkSucceeded`) |
 
 ## Архитектура scrobbling
