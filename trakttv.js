@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.4';
+  var PLUGIN_VERSION = '3.2.5';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -3540,6 +3540,11 @@
   var DEFAULT_WATCHLIST_SORT_FIELDS = ['rank', 'added', 'title', 'released', 'runtime', 'popularity', 'random', 'percentage', 'imdb_rating', 'tmdb_rating', 'rt_tomatometer', 'rt_audience', 'metascore', 'votes', 'imdb_votes', 'tmdb_votes', 'my_rating', 'watched', 'collected'];
   var DEFAULT_WATCHLIST_QUICK_SORT_FIELDS = ['released', 'percentage', 'added'];
   var DEFAULT_WATCHLIST_VIP_SORT_FIELDS = ['imdb_rating', 'tmdb_rating', 'rt_tomatometer', 'rt_audience', 'metascore', 'votes', 'imdb_votes', 'tmdb_votes'];
+  function getDefaultListSort() {
+    var raw = Lampa.Storage.field('trakt_default_list_sort') || 'added/desc';
+    var parts = String(raw).split('/');
+    return { field: parts[0] || 'added', order: parts[1] === 'asc' ? 'asc' : 'desc' };
+  }
   var WATCHLIST_SORT_LABELS = {
     rank: {
       key: 'trakttv_watchlist_sort_rank',
@@ -5049,8 +5054,9 @@
       genre: object.filterGenre || '',
       country: object.filterCountry || ''
     };
+    var _wlDefSort = getDefaultListSort();
     var activeSort = sanitizeWatchlistSortForVip(
-      object.watchlistSort || object.sort || 'added/desc',
+      object.watchlistSort || object.sort || (_wlDefSort.field + '/' + _wlDefSort.order),
       getTraktVipStatusCached()
     );
     var activeSortField = activeSort.field;
@@ -5597,8 +5603,9 @@
       genre: object.listFilterGenre || '',
       country: object.listFilterCountry || ''
     };
-    var activeSortField = object.listSortField || 'added';
-    var activeSortOrder = object.listSortOrder || 'desc';
+    var _ldDefSort = getDefaultListSort();
+    var activeSortField = object.listSortField || _ldDefSort.field;
+    var activeSortOrder = object.listSortOrder || _ldDefSort.order;
     var typeBtn, yearBtn, genreBtn, countryBtn, sortBtn;
     var lastResults = [];
 
@@ -5972,7 +5979,8 @@
       country: object.filterCountry || ''
     };
     var typeBtn, yearBtn, genreBtn, countryBtn, sortBtn;
-    var activeSort = { field: object.sortField || 'added', order: object.sortOrder || 'desc' };
+    var _colDefSort = getDefaultListSort();
+    var activeSort = { field: object.sortField || _colDefSort.field, order: object.sortOrder || _colDefSort.order };
     var lastResults = [];
 
     function openRandomItem() {
@@ -10683,6 +10691,36 @@
           onBack: function() { Lampa.Controller.toggle('settings_component'); }
         });
     }
+    // ── Списки ───────────────────────────────────────────────────────────────────
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: { name: 'trakt_lists_section', type: 'static' },
+      field: { name: '' },
+      onRender: function(item) {
+        item.empty();
+        item.append('<div class="settings-param__name" style="opacity:.55;font-weight:700">Списки</div>');
+      }
+    });
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: {
+        name: 'trakt_default_list_sort',
+        type: 'select',
+        values: {
+          'added/desc':      'По дате добавления',
+          'released/desc':   'По дате выхода',
+          'title/asc':       'По названию',
+          'percentage/desc': 'По рейтингу',
+          'runtime/desc':    'По длительности'
+        },
+        'default': 'added/desc'
+      },
+      field: {
+        name: 'Сортировка по умолчанию',
+        description: 'Применяется при открытии «Хочу посмотреть», «Мои списки» и «Избранное»'
+      },
+      onRender: function(item) { item.show(); }
+    });
     // ── Страница фильма и сериала ─────────────────────────────────────────────────
     Lampa.SettingsApi.addParam({
       component: 'trakt',
@@ -10852,7 +10890,7 @@
       field: { name: '' },
       onRender: function(item) {
         item.empty();
-        item.append('<div class="settings-param__name" style="opacity:.55;font-weight:700">Отладка и сброс</div>');
+        item.append('<div class="settings-param__name" style="opacity:.55;font-weight:700">Остальное</div>');
       }
     });
     Lampa.SettingsApi.addParam({

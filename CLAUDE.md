@@ -10,7 +10,7 @@
 
 ## Текущая версия
 
-**v3.2.4** — Бейдж «СКОРО» скрыт в разделе «Ожидаемые» списка «Хочу посмотреть»: `rearrangeWatchlistUpcoming` помечает элементы флагом `_trakt_is_upcoming`, `renderDigitalReleaseBadge` пропускает бейдж для таких карточек.
+**v3.2.5** — Раздел настроек «Списки» с `trakt_default_list_sort` — выбор сортировки по умолчанию для «Хочу посмотреть», «Мои списки» и «Избранное»; раздел «Отладка и сброс» переименован в «Остальное».
 
 ## История фиксов
 
@@ -82,6 +82,7 @@
 | v3.2.2 | TBD | Убран `votes` из `LIST_SORT_FIELDS`; `collectionHub` (Избранное) → `openSharedSortMenu` с теми же полями + «Открыть случайный»; `Api.collection()` sort расширен: `rank`, `runtime`, `percentage` |
 | v3.2.3 | TBD | Фикс `_atBtnReset(btn, label?)`: кнопка «Авто-торрент (случайная серия)» теперь сохраняет правильный текст после возврата с экрана торрентов |
 | v3.2.4 | TBD | Бейдж «СКОРО» скрыт для элементов раздела «Ожидаемые» (`_trakt_is_upcoming` флаг в `rearrangeWatchlistUpcoming` + guard в `renderDigitalReleaseBadge`) |
+| v3.2.5 | TBD | Раздел настроек «Списки» + `trakt_default_list_sort`; раздел «Отладка и сброс» → «Остальное»; `getDefaultListSort()` применяется в watchlistHub/listDetailHub/collectionHub |
 
 ## Архитектура scrobbling
 
