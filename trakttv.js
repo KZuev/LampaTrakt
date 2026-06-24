@@ -3816,6 +3816,11 @@
         released.push(item);
       }
     });
+    upcoming.sort(function(a, b) {
+      var da = a.trakt_released ? String(a.trakt_released).slice(0, 10) : String(parseInt(a.release_date, 10) || 9999);
+      var db = b.trakt_released ? String(b.trakt_released).slice(0, 10) : String(parseInt(b.release_date, 10) || 9999);
+      return da < db ? -1 : da > db ? 1 : 0;
+    });
     if (upcoming.length > 0) upcoming[0]._trakt_upcoming_first = true;
     return Object.assign({}, data, { results: released.concat(upcoming) });
   }
