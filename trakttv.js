@@ -3548,23 +3548,23 @@
   var WATCHLIST_SORT_LABELS = {
     rank: {
       key: 'trakttv_watchlist_sort_rank',
-      fallback: 'Rank'
+      fallback: 'By position'
     },
     added: {
       key: 'trakttv_watchlist_sort_added',
-      fallback: 'Added'
+      fallback: 'By date added'
     },
     title: {
       key: 'trakttv_watchlist_sort_title',
-      fallback: 'Title'
+      fallback: 'By title'
     },
     released: {
       key: 'trakttv_watchlist_sort_released',
-      fallback: 'Released'
+      fallback: 'By release date'
     },
     runtime: {
       key: 'trakttv_watchlist_sort_runtime',
-      fallback: 'Runtime'
+      fallback: 'By duration'
     },
     popularity: {
       key: 'trakttv_watchlist_sort_popularity',
@@ -3576,7 +3576,7 @@
     },
     percentage: {
       key: 'trakttv_watchlist_sort_percentage',
-      fallback: 'Percentage'
+      fallback: 'By rating'
     },
     imdb_rating: {
       key: 'trakttv_watchlist_sort_imdb_rating',
@@ -6856,19 +6856,19 @@
         ru: "Сортировка",
       },
       trakttv_watchlist_sort_rank: {
-        ru: "Ранг",
+        ru: "По позиции",
       },
       trakttv_watchlist_sort_added: {
-        ru: "Дата добавления",
+        ru: "По дате добавления",
       },
       trakttv_watchlist_sort_title: {
-        ru: "Название",
+        ru: "По названию",
       },
       trakttv_watchlist_sort_released: {
-        ru: "Релиз",
+        ru: "По дате выхода",
       },
       trakttv_watchlist_sort_runtime: {
-        ru: "Длительность",
+        ru: "По длительности",
       },
       trakttv_watchlist_sort_popularity: {
         ru: "Популярность",
@@ -6883,7 +6883,7 @@
         ru: "Список пуст",
       },
       trakttv_watchlist_sort_percentage: {
-        ru: "Процент",
+        ru: "По рейтингу",
       },
       trakttv_watchlist_sort_imdb_rating: {
         ru: "Рейтинг IMDb",
