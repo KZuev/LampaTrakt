@@ -10,7 +10,7 @@
 
 ## Текущая версия
 
-**v3.2.8** — Live-rebuild строки «Хочу посмотреть» на главной: при отметке фильма как просмотренного (Trakt автоматически удаляет его из вотчлиста) строка перестраивается на месте через `rebuildWatchlistLineInPlace()`. Аналогичная механика Up Next: `traktRow:'watchlist'` в конфиге, `_watchlistLineRef`, `_pendingWatchlistRefresh`. Вызов только при `mode==='movie'`.
+**v3.2.9** — Фикс «Смотреть дальше» для фильмов: `scrobblePause` слал `movie: { ids: media.ids }`, но у карточки Lampa объекта `.ids` нет (только `.id`=tmdb) → Trakt получал пустые ids и не создавал запись прогресса → фильм не появлялся в «Смотреть дальше». Теперь ids восстанавливаются из `media.id` (как в `addToHistory`). Плюс диагностика: `scrobble_pause_sent/error/skip` пишутся в «Историю отметок».
 
 ## История фиксов
 
@@ -86,6 +86,7 @@
 | v3.2.6 | TBD | Фикс реалтайм Up Next: убран guard `total_pages>1` в `rebuildUpnextLineInPlace` (блокировал live-rebuild при непустом списке); синхронизация `data.results`/`active` после перестроения. Также: default-сортировка на главной (`apiParams` в row-конфиге), кнопка «Ещё» при `total>displayLimit`, фикс combined watchlist sort (строка `sort` парсилась как объект) |
 | v3.2.7 | TBD | Фикс постеров и рамки фокуса после live-rebuild Up Next: `Line.visible()` после rebuild → `Layer.visible(scroll)` → `card.visible()` грузит постеры; `toggle()` восстанавливает рамку если пользователь был на строке |
 | v3.2.8 | TBD | Live-rebuild строки «Хочу посмотреть» на главной после отметки фильма как просмотренного: `rebuildWatchlistLineInPlace()` + `_watchlistLineRef` + `_pendingWatchlistRefresh`; вызов только при `mode==='movie'` |
+| v3.2.9 | TBD | Фикс «Смотреть дальше» для фильмов: `scrobblePause` восстанавливает `ids.tmdb` из `media.id` (у карточки Lampa нет `.ids`) → Trakt создаёт запись прогресса. Диагностика `scrobble_pause_sent/error/skip` в «Историю отметок» |
 
 ## Архитектура scrobbling
 

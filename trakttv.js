@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.8';
+  var PLUGIN_VERSION = '3.2.9';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -13330,11 +13330,18 @@
      */
     finish: finish,
     scrobblePause: function scrobblePause(media, percent) {
-      if (!percent || percent <= 0) return Promise.resolve();
+      var contentType = this.getContentType(media);
+      if (!percent || percent <= 0) {
+        try { _watchLogAdd('scrobble_pause_skip', { type: contentType, title: media && (media.title || media.name), percent: percent, extra: 'pct<=0' }); } catch(e) {}
+        return Promise.resolve();
+      }
       var token = Lampa.Storage.get('trakt_token');
       if (!token) return Promise.resolve();
-      var contentType = this.getContentType(media);
-      var ids = media.ids || {};
+      // Карточка Lampa несёт tmdb id в .id, а объекта .ids у неё обычно нет —
+      // как и addToHistory, восстанавливаем ids из media.id, иначе Trakt не
+      // опознаёт элемент и не создаёт запись прогресса (нет в «Смотреть дальше»).
+      var ids = Object.assign({}, media.ids);
+      if (!ids.tmdb && !ids.trakt && !ids.imdb && media.id) ids.tmdb = media.id;
       var body = contentType === 'movie'
         ? { progress: percent, movie: { ids: ids } }
         : { progress: percent,
@@ -13343,6 +13350,7 @@
               season: media.season_number || media.season,
               number: media.episode_number || media.episode
             }};
+      var hasId = !!(ids.tmdb || ids.trakt || ids.imdb);
       return requestApi('POST', '/scrobble/pause', body).then(function() {
         try {
           Lampa.Storage.set('trakt_debug_scrobble', {
@@ -13354,6 +13362,7 @@
             status: 'sent'
           });
         } catch(e) {}
+        try { _watchLogAdd('scrobble_pause_sent', { type: contentType, title: media && (media.title || media.name), percent: Math.round(percent), season: media.season_number || media.season, episode: media.episode_number || media.episode, extra: 'tmdb:' + (ids.tmdb || '?') }); } catch(e) {}
       }).catch(function(err) {
         try {
           Lampa.Storage.set('trakt_debug_scrobble', {
@@ -13364,6 +13373,7 @@
             error: String(err)
           });
         } catch(e2) {}
+        try { _watchLogAdd('scrobble_pause_error', { type: contentType, title: media && (media.title || media.name), percent: Math.round(percent), extra: (hasId ? '' : 'no_id ') + String(err).slice(0, 60) }); } catch(e3) {}
       });
     },
     /**
