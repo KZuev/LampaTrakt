@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.3';
+  var PLUGIN_VERSION = '3.2.4';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -3839,6 +3839,7 @@
       var db = b.trakt_released ? String(b.trakt_released).slice(0, 10) : String(parseInt(b.release_date, 10) || 9999);
       return da < db ? -1 : da > db ? 1 : 0;
     });
+    upcoming.forEach(function(item) { item._trakt_is_upcoming = true; });
     if (upcoming.length > 0) upcoming[0]._trakt_upcoming_first = true;
     return Object.assign({}, data, { results: released.concat(upcoming) });
   }
@@ -13977,6 +13978,7 @@
     if (!data || !data.id) return;
     var type = data.method || data.card_type || data.type || (data.first_air_date ? 'tv' : 'movie');
     if (type !== 'movie') return;
+    if (data._trakt_is_upcoming) return;
     var tmdbId = String(data.id);
     var cardNode = typeof cardInstance.render === 'function' ? cardInstance.render(true) : null;
     var cardView = cardNode && cardNode.querySelector('.card__view');
