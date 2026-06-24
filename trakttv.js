@@ -3789,7 +3789,7 @@
     if (container.querySelector('.trakt-upcoming-section')) return;
     var firstUpcoming = container.querySelector('.trakt-upcoming-first');
     if (!firstUpcoming || !firstUpcoming.parentNode) return;
-    var label = Lampa.Lang && Lampa.Lang.translate ? Lampa.Lang.translate('trakttv_watchlist_upcoming') || 'Скоро' : 'Скоро';
+    var label = Lampa.Lang && Lampa.Lang.translate ? Lampa.Lang.translate('trakttv_watchlist_upcoming') || 'Ожидаемые' : 'Ожидаемые';
     var div = document.createElement('div');
     div.className = 'trakt-upcoming-section';
     div.textContent = label;
@@ -6497,7 +6497,7 @@
         ru: "Хочу посмотреть",
       },
       trakttv_watchlist_upcoming: {
-        ru: "Скоро",
+        ru: "Ожидаемые",
       },
       trakttv_upnext_movies: {
         ru: "Фильмы",
