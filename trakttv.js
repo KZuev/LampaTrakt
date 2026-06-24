@@ -10708,6 +10708,7 @@
         type: 'select',
         values: {
           'added/desc':      'По дате добавления',
+          'rank/asc':        'По позиции',
           'released/desc':   'По дате выхода',
           'title/asc':       'По названию',
           'percentage/desc': 'По рейтингу',
