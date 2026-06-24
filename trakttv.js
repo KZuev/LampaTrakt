@@ -3541,9 +3541,9 @@
   var DEFAULT_WATCHLIST_QUICK_SORT_FIELDS = ['released', 'percentage', 'added'];
   var DEFAULT_WATCHLIST_VIP_SORT_FIELDS = ['imdb_rating', 'tmdb_rating', 'rt_tomatometer', 'rt_audience', 'metascore', 'votes', 'imdb_votes', 'tmdb_votes'];
   function getDefaultListSort() {
-    var raw = Lampa.Storage.field('trakt_default_list_sort') || 'added/desc';
-    var parts = String(raw).split('/');
-    return { field: parts[0] || 'added', order: parts[1] === 'asc' ? 'asc' : 'desc' };
+    var field = Lampa.Storage.field('trakt_default_list_sort') || 'added';
+    var order = (field === 'rank' || field === 'title') ? 'asc' : 'desc';
+    return { field: field, order: order };
   }
   var WATCHLIST_SORT_LABELS = {
     rank: {
@@ -10703,19 +10703,11 @@
     });
     Lampa.SettingsApi.addParam({
       component: 'trakt',
-      param: {
-        name: 'trakt_default_list_sort',
-        type: 'select',
-        values: {
-          'added/desc':      'По дате добавления',
-          'rank/asc':        'По позиции',
-          'released/desc':   'По дате выхода',
-          'title/asc':       'По названию',
-          'percentage/desc': 'По рейтингу',
-          'runtime/desc':    'По длительности'
-        },
-        'default': 'added/desc'
-      },
+      param: (function() {
+        var vals = {};
+        LIST_SORT_FIELDS.forEach(function(f) { vals[f] = formatWatchlistSortLabel(f); });
+        return { name: 'trakt_default_list_sort', type: 'select', values: vals, 'default': 'added' };
+      }()),
       field: {
         name: 'Сортировка по умолчанию',
         description: 'Применяется при открытии «Хочу посмотреть», «Мои списки» и «Избранное»'
