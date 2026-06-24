@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.5';
+  var PLUGIN_VERSION = '3.2.6';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -13766,11 +13766,11 @@
         _pendingMainRefresh = true;
         return;
       }
-      var lineData = _upnextLineRef.data;
-      if (lineData && lineData.total_pages > 1) {
-        _pendingMainRefresh = true;
-        return;
-      }
+      // Строка Up Next на главной всегда показывает только первую страницу: кнопка
+      // «Ещё» (onMore) открывает отдельную Activity, а onScroll доливает лишь из
+      // того же data.results. Поэтому rebuild страницы 1 всегда корректен —
+      // прежний guard на total_pages>1 ошибочно блокировал обновление при
+      // непустом списке. Не трогаем его.
       var _a = typeof api$1 !== 'undefined' ? api$1 : null;
       if (!_a || typeof _a.upnext !== 'function') return;
       _pendingMainRefresh = false;
@@ -13785,6 +13785,13 @@
           }
         } catch(e) {}
         try { _upnextLineRef.scroll.clear(); } catch(e) {}
+        // Синхронизируем data.results и active, иначе onScroll воскресит старые
+        // карточки из устаревшего data.results, а навигация собьётся.
+        try {
+          if (_upnextLineRef.data) _upnextLineRef.data.results = normalItems;
+          _upnextLineRef.active = 0;
+          _upnextLineRef.last = false;
+        } catch(e) {}
         normalItems.forEach(function(item) {
           try { _upnextLineRef.emit('createAndAppend', item); } catch(e) {}
         });

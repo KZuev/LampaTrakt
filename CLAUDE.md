@@ -10,7 +10,7 @@
 
 ## Текущая версия
 
-**v3.2.5** — Раздел настроек «Списки» с `trakt_default_list_sort` — выбор сортировки по умолчанию для «Хочу посмотреть», «Мои списки» и «Избранное»; раздел «Отладка и сброс» переименован в «Остальное».
+**v3.2.6** — Фикс реалтайм Up Next на главной: убран ошибочный guard `total_pages>1` в `rebuildUpnextLineInPlace`, который блокировал обновление при непустом списке (строка на главной всегда показывает только 1-ю страницу — «Ещё» открывает отдельную Activity). После rebuild синхронизируются `data.results`/`active`.
 
 ## История фиксов
 
@@ -83,6 +83,7 @@
 | v3.2.3 | TBD | Фикс `_atBtnReset(btn, label?)`: кнопка «Авто-торрент (случайная серия)» теперь сохраняет правильный текст после возврата с экрана торрентов |
 | v3.2.4 | TBD | Бейдж «СКОРО» скрыт для элементов раздела «Ожидаемые» (`_trakt_is_upcoming` флаг в `rearrangeWatchlistUpcoming` + guard в `renderDigitalReleaseBadge`) |
 | v3.2.5 | TBD | Раздел настроек «Списки» + `trakt_default_list_sort`; раздел «Отладка и сброс» → «Остальное»; `getDefaultListSort()` применяется в watchlistHub/listDetailHub/collectionHub |
+| v3.2.6 | TBD | Фикс реалтайм Up Next: убран guard `total_pages>1` в `rebuildUpnextLineInPlace` (блокировал live-rebuild при непустом списке); синхронизация `data.results`/`active` после перестроения. Также: default-сортировка на главной (`apiParams` в row-конфиге), кнопка «Ещё» при `total>displayLimit`, фикс combined watchlist sort (строка `sort` парсилась как объект) |
 
 ## Архитектура scrobbling
 
