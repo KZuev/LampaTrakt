@@ -10,7 +10,7 @@
 
 ## Текущая версия
 
-**v3.2.9** — Фикс «Смотреть дальше» для фильмов: `scrobblePause` слал `movie: { ids: media.ids }`, но у карточки Lampa объекта `.ids` нет (только `.id`=tmdb) → Trakt получал пустые ids и не создавал запись прогресса → фильм не появлялся в «Смотреть дальше». Теперь ids восстанавливаются из `media.id` (как в `addToHistory`). Плюс диагностика: `scrobble_pause_sent/error/skip` пишутся в «Историю отметок».
+**v3.2.10** — Фикс «Смотреть дальше» для внешнего плеера: внешний плеер не шлёт `'destroy'` → `routeFinishIntent` (где жила пауза) не срабатывал, прогресс ниже порога никуда не уходил. Теперь `scrobblePause` вызывается прямо из ветки `timeline_low_pct` в `processTimelineUpdate` (гард `_isPlayerActive`, тротлинг `_lastScrobblePauseKey` по hash+%). Покрывает и встроенный, и внешний плеер.
 
 ## История фиксов
 
@@ -87,6 +87,7 @@
 | v3.2.7 | TBD | Фикс постеров и рамки фокуса после live-rebuild Up Next: `Line.visible()` после rebuild → `Layer.visible(scroll)` → `card.visible()` грузит постеры; `toggle()` восстанавливает рамку если пользователь был на строке |
 | v3.2.8 | TBD | Live-rebuild строки «Хочу посмотреть» на главной после отметки фильма как просмотренного: `rebuildWatchlistLineInPlace()` + `_watchlistLineRef` + `_pendingWatchlistRefresh`; вызов только при `mode==='movie'` |
 | v3.2.9 | TBD | Фикс «Смотреть дальше» для фильмов: `scrobblePause` восстанавливает `ids.tmdb` из `media.id` (у карточки Lampa нет `.ids`) → Trakt создаёт запись прогресса. Диагностика `scrobble_pause_sent/error/skip` в «Историю отметок» |
+| v3.2.10 | TBD | Фикс «Смотреть дальше» для внешнего плеера: `scrobblePause` вызывается из ветки `timeline_low_pct` в `processTimelineUpdate` (гард `_isPlayerActive`, тротлинг `_lastScrobblePauseKey`), т.к. внешний плеер не шлёт `'destroy'` и `routeFinishIntent` не отрабатывает |
 
 ## Архитектура scrobbling
 

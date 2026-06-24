@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.9';
+  var PLUGIN_VERSION = '3.2.10';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -12825,6 +12825,7 @@
   var isInitialized$1 = false;
   var _isPlayerActive = false;
   var _sessionFirstObservedPct = null;   // первый % в сессии плеера; гард от ложных отметок
+  var _lastScrobblePauseKey = null;      // hash+округлённый% последней отправленной паузы (тротлинг)
   var _externalPlayerActive = false;     // между запуском 'external' и его отметкой
   var _externalActiveUntil = 0;          // метка времени для корректного перезапуска
   var _externalClearTimer = null;        // резервный таймер сброса
@@ -13197,6 +13198,25 @@
           try { _watchLogAdd('timeline_inactive', { percent: percent, minProg: minProgress, extra: 'threshold_met_but_inactive' }); } catch(e) {}
         } else {
           try { _watchLogAdd('timeline_low_pct', { percent: percent, minProg: minProgress, extra: 'min:' + minProgress }); } catch(e) {}
+          // Ниже порога Path A не отмечает «просмотрено», но для появления в
+          // «Смотреть дальше» нужно записать прогресс в Trakt (/scrobble/pause).
+          // Для внешнего плеера это ЕДИНСТВЕННЫЙ путь: 'destroy' не приходит,
+          // routeFinishIntent (где обычно живёт пауза) не срабатывает. Гард
+          // _isPlayerActive исключает ложные 'update' при открытии списка
+          // файлов торрента. Тротлинг по hash+% не даёт спамить одинаковыми.
+          if (_isPlayerActive && percent > 0) {
+            var _pauseKey = String(hash) + '_' + Math.round(percent);
+            if (_pauseKey !== _lastScrobblePauseKey) {
+              _lastScrobblePauseKey = _pauseKey;
+              var pauseMedia = Object.assign({}, card, { hash: hash });
+              if (meta) {
+                if (meta.season) pauseMedia.season_number = meta.season;
+                if (meta.episode) pauseMedia.episode_number = meta.episode;
+                if (meta.ids) pauseMedia.ids = meta.ids;
+              }
+              try { watching.scrobblePause(pauseMedia, percent); } catch(e) {}
+            }
+          }
         }
       }
     },
