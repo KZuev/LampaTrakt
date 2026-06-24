@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.12';
+  var PLUGIN_VERSION = '3.2.13';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -5068,6 +5068,14 @@
     var activeSortOrder = activeSort.order;
     var vipEnabled = getTraktVipStatusCached();
     var typeBtn, yearBtn, genreBtn, countryBtn, sortBtn;
+    var lastResults = [];
+
+    function openRandomItem() {
+      if (!lastResults.length) { try { Lampa.Noty.show(tr('trakttv_list_empty', 'Список пуст')); } catch(e) {} restoreFilters(); return; }
+      var item = lastResults[Math.floor(Math.random() * lastResults.length)];
+      if (item) Lampa.Activity.push(item);
+      else restoreFilters();
+    }
 
     function tr(key, fallback) {
       try { return Lampa.Lang.translate(key) || fallback || key; } catch(e) { return fallback || key; }
@@ -5122,6 +5130,7 @@
         filterYear: activeFilters.year,
         filterGenre: activeFilters.genre,
         filterCountry: activeFilters.country,
+        onData: function(results) { lastResults = Array.isArray(results) ? results : []; },
         onHead: function() { Lampa.Controller.toggle(WL_FILTER_CTRL); }
       });
       currentView = new baseComponent(viewObject, 'watchlist');
@@ -5231,6 +5240,7 @@
         title: tr('trakttv_watchlist_sort_more_title', 'Сортировка'),
         randomLabel: tr('trakttv_watchlist_sort_random', 'Случайно'),
         vipLabel: tr('trakttv_vip_status', 'VIP'),
+        topAction: { title: tr('trakttv_list_open_random', 'Открыть случайный'), onSelect: openRandomItem },
         onSelect: function(field) { switchSort(field); },
         onBack: restoreFilters
       });
