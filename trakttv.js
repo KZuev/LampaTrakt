@@ -10715,7 +10715,7 @@
       }()),
       field: {
         name: 'Сортировка по умолчанию',
-        description: 'Применяется при открытии «Хочу посмотреть», «Мои списки» и «Избранное»'
+        description: 'Применяется при открытии «Хочу посмотреть», «Мои списки», «Избранное» и строки на главной странице'
       },
       onRender: function(item) { item.show(); }
     });
@@ -10729,7 +10729,7 @@
       },
       field: {
         name: 'Направление сортировки',
-        description: 'По убыванию — от новых к старым, от Я до А'
+        description: 'Применяется везде, где применяется сортировка по умолчанию'
       },
       onRender: function(item) { item.show(); }
     });
@@ -15121,7 +15121,7 @@
     // .items-line__head, and more.onVisible crashes on null head when total_pages > 1.
     if (checkUpNextPermissions()) {
       configs.push({ name: 'TraktUpNextRow', apiMethod: 'upnext', limit: 36, displayLimit: 20, traktRow: 'upnext', displayTitle: Lampa.Lang.translate('trakttv_upnext'), component: 'trakt_upnext' });
-      configs.push({ name: 'TraktWatchlistRow', apiMethod: 'watchlist', limit: 36, displayLimit: 20, displayTitle: Lampa.Lang.translate('trakttv_watchlist'), component: 'trakt_watchlist', apiParams: function() { var s = getDefaultListSort(); return { sort: s.field + '/' + s.order, watchlistSort: s.field + '/' + s.order }; } });
+      configs.push({ name: 'TraktWatchlistRow', apiMethod: 'watchlist', limit: 100, displayLimit: 20, displayTitle: Lampa.Lang.translate('trakttv_watchlist'), component: 'trakt_watchlist', apiParams: function() { var s = getDefaultListSort(); return { sort: s.field + '/' + s.order, watchlistSort: s.field + '/' + s.order }; } });
     }
     if (checkRecommendationsPermissions()) {
       configs.push({ name: 'TraktRecommendationsRow', apiMethod: 'recommendations', limit: 36, displayLimit: 20, displayTitle: Lampa.Lang.translate('trakttv_recommendations'), component: 'trakttv_recommendations' });
@@ -15417,7 +15417,7 @@
       displayTitle: Lampa.Lang.translate('trakttv_watchlist'),
       apiMethod: 'watchlist',
       component: 'trakt_watchlist',
-      limit: 36,
+      limit: 100,
       displayLimit: 20,
       checkPermission: checkUpNextPermissions,
       apiParams: function() { var s = getDefaultListSort(); return { sort: s.field + '/' + s.order, watchlistSort: s.field + '/' + s.order }; },
