@@ -3547,7 +3547,7 @@
   var DEFAULT_WATCHLIST_VIP_SORT_FIELDS = ['imdb_rating', 'tmdb_rating', 'rt_tomatometer', 'rt_audience', 'metascore', 'votes', 'imdb_votes', 'tmdb_votes'];
   function getDefaultListSort() {
     var field = Lampa.Storage.field('trakt_default_list_sort') || 'added';
-    var order = (field === 'rank' || field === 'title') ? 'asc' : 'desc';
+    var order = Lampa.Storage.field('trakt_default_list_sort_order') || 'desc';
     return { field: field, order: order };
   }
   var WATCHLIST_SORT_LABELS = {
@@ -10716,6 +10716,20 @@
       field: {
         name: 'Сортировка по умолчанию',
         description: 'Применяется при открытии «Хочу посмотреть», «Мои списки» и «Избранное»'
+      },
+      onRender: function(item) { item.show(); }
+    });
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: {
+        name: 'trakt_default_list_sort_order',
+        type: 'select',
+        values: { 'desc': 'По убыванию ↓', 'asc': 'По возрастанию ↑' },
+        'default': 'desc'
+      },
+      field: {
+        name: 'Направление сортировки',
+        description: 'По убыванию — от новых к старым, от Я до А'
       },
       onRender: function(item) { item.show(); }
     });
