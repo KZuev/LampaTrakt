@@ -5071,7 +5071,14 @@
     var lastResults = [];
 
     function openRandomItem() {
-      var pool = lastResults.filter(function(item) { return !item._trakt_is_upcoming; });
+      var todayStr = new Date().toISOString().slice(0, 10);
+      var currentYear = new Date().getFullYear();
+      var pool = lastResults.filter(function(item) {
+        if (item._trakt_is_upcoming) return false;
+        var rel = item.trakt_released;
+        if (rel && /^\d{4}-\d{2}-\d{2}/.test(String(rel))) return String(rel).slice(0, 10) <= todayStr;
+        return (parseInt(item.release_date, 10) || 0) <= currentYear;
+      });
       if (!pool.length) { try { Lampa.Noty.show(tr('trakttv_list_empty', 'Список пуст')); } catch(e) {} restoreFilters(); return; }
       var item = pool[Math.floor(Math.random() * pool.length)];
       if (item) Lampa.Activity.push(item);
