@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.15';
+  var PLUGIN_VERSION = '3.2.16';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -8829,18 +8829,19 @@
 
     var tmdbId = String(movieId);
 
-    // Та же логика что у бейджа «Цифровой релиз» на постерах (_buildDigitalLabel):
-    // относительная дата для известного будущего релиза, «Скоро» — для soonMovieIds,
-    // фактическая дата для уже вышедшего цифрового релиза.
+    // В карточке: полная дата DD.MM.YYYY если цифровой релиз известен;
+    // «Скоро» — только для soonMovieIds (как бейдж «СКОРО» на постере, цифровой даты нет).
     function applyLabel() {
       if (renderRoot.find('.trakt-digital-date').length) return;
-      var labelValue = _buildDigitalLabel(tmdbId);
-      if (!labelValue) {
-        var iso = getUpcomingMovieDates()[tmdbId];
+      var labelValue = null;
+      var iso = getUpcomingMovieDates()[tmdbId];
+      if (iso) {
         var parts = (iso || '').split('T')[0].split('-');
-        if (parts.length !== 3 || !parts[1] || !parts[2]) return;
-        labelValue = parts[2] + '.' + parts[1] + '.' + parts[0];
+        if (parts.length === 3 && parts[1] && parts[2]) labelValue = parts[2] + '.' + parts[1] + '.' + parts[0];
+      } else if (getSoonMovieIds().has(tmdbId)) {
+        labelValue = 'Скоро';
       }
+      if (!labelValue) return;
       var label = (Lampa.Lang && Lampa.Lang.translate('trakt_digital_release')) || 'Digital';
       var chip = document.createElement('div');
       chip.className = 'trakt-digital-date';
