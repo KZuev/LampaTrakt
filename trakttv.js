@@ -8829,17 +8829,21 @@
 
     var tmdbId = String(movieId);
 
-    // В карточке: полная дата DD.MM.YYYY если цифровой релиз известен;
-    // «Скоро» — только для soonMovieIds (как бейдж «СКОРО» на постере, цифровой даты нет).
+    // Та же логика что у бейджа на постере (_buildDigitalLabel: Сегодня / Завтра /
+    // Через N дней / Скоро), но дальнюю дату — на постере короткий формат «12 июл» —
+    // в карточке показываем полностью DD.MM.YYYY (тут место позволяет).
     function applyLabel() {
       if (renderRoot.find('.trakt-digital-date').length) return;
-      var labelValue = null;
+      var labelValue = _buildDigitalLabel(tmdbId);
       var iso = getUpcomingMovieDates()[tmdbId];
       if (iso) {
-        var parts = (iso || '').split('T')[0].split('-');
-        if (parts.length === 3 && parts[1] && parts[2]) labelValue = parts[2] + '.' + parts[1] + '.' + parts[0];
-      } else if (getSoonMovieIds().has(tmdbId)) {
-        labelValue = 'Скоро';
+        var today = new Date(); today.setHours(0, 0, 0, 0);
+        var rel = new Date((iso || '').split('T')[0]); rel.setHours(0, 0, 0, 0);
+        var diff = Math.round((rel - today) / 86400000);
+        if (!labelValue || diff > 3) {
+          var parts = (iso || '').split('T')[0].split('-');
+          if (parts.length === 3 && parts[1] && parts[2]) labelValue = parts[2] + '.' + parts[1] + '.' + parts[0];
+        }
       }
       if (!labelValue) return;
       var label = (Lampa.Lang && Lampa.Lang.translate('trakt_digital_release')) || 'Digital';
