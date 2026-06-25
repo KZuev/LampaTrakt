@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.14';
+  var PLUGIN_VERSION = '3.2.15';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -6554,10 +6554,6 @@
       trakttv_watchlist_upcoming: {
         ru: "Ожидаемые",
       },
-      trakttv_soon: {
-        ru: "Скоро",
-        en: "Soon",
-      },
       trakttv_upnext_movies: {
         ru: "Фильмы",
       },
@@ -8831,20 +8827,24 @@
     var renderRoot = act && typeof act.render === 'function' ? act.render() : null;
     if (!renderRoot) return;
 
-    function applyDate(isoDate) {
+    var tmdbId = String(movieId);
+
+    // Та же логика что у бейджа «Цифровой релиз» на постерах (_buildDigitalLabel):
+    // относительная дата для известного будущего релиза, «Скоро» — для soonMovieIds,
+    // фактическая дата для уже вышедшего цифрового релиза.
+    function applyLabel() {
       if (renderRoot.find('.trakt-digital-date').length) return;
-      var datePart = (isoDate || '').split('T')[0];
-      var parts = datePart.split('-');
-      if (parts.length !== 3 || !parts[1] || !parts[2]) return;
-      var today = new Date(); today.setHours(0, 0, 0, 0);
-      var release = new Date(datePart); release.setHours(0, 0, 0, 0);
-      var displayDate = release >= today
-        ? ((Lampa.Lang && Lampa.Lang.translate('trakttv_soon')) || 'Скоро')
-        : parts[2] + '.' + parts[1] + '.' + parts[0];
+      var labelValue = _buildDigitalLabel(tmdbId);
+      if (!labelValue) {
+        var iso = getUpcomingMovieDates()[tmdbId];
+        var parts = (iso || '').split('T')[0].split('-');
+        if (parts.length !== 3 || !parts[1] || !parts[2]) return;
+        labelValue = parts[2] + '.' + parts[1] + '.' + parts[0];
+      }
       var label = (Lampa.Lang && Lampa.Lang.translate('trakt_digital_release')) || 'Digital';
       var chip = document.createElement('div');
       chip.className = 'trakt-digital-date';
-      chip.textContent = label + ': ' + displayDate;
+      chip.textContent = label + ': ' + labelValue;
       var anchor = renderRoot.find('.full-start-new__details:not(.trakt):not(.trakt-digital-date)').last();
       if (anchor.length) {
         anchor.after(chip);
@@ -8855,16 +8855,15 @@
       }
     }
 
-    var tmdbId = String(movieId);
     var lang = Lampa.Storage ? Lampa.Storage.get('language', 'ru') : 'ru';
     var langCode = lang.slice(0, 2).toUpperCase();
     var countryMap = { RU: 'RU', EN: 'US', UK: 'GB', DE: 'DE', FR: 'FR', ES: 'ES', IT: 'IT', PT: 'PT' };
     var isoCountry = countryMap[langCode] || 'US';
 
-    // Быстрый путь: берём из общего кэша
+    // Быстрый путь: дата или флаг «скоро» уже в кэше
     var cachedDates = getUpcomingMovieDates();
-    if (tmdbId in cachedDates && cachedDates[tmdbId]) {
-      applyDate(cachedDates[tmdbId]);
+    if ((tmdbId in cachedDates && cachedDates[tmdbId]) || getSoonMovieIds().has(tmdbId)) {
+      applyLabel();
       return;
     }
     // Прямой запрос через append_to_response (тот же метод что у Календаря)
@@ -8886,15 +8885,40 @@
         });
       });
       var chosen = exactDate || usDate || anyDate;
-      if (!chosen) return;
-      var map = getUpcomingMovieDates();
-      map[tmdbId] = chosen;
-      saveUpcomingMovieDates(map);
-      _digitalDateFetchDone.add(tmdbId);
-      var today = new Date(); today.setHours(0, 0, 0, 0);
-      var release = new Date(chosen); release.setHours(0, 0, 0, 0);
-      if (release >= today) { _digitalDatesAvailable = true; scheduleRefreshDigitalBadgesDOM(); }
-      applyDate(chosen);
+      if (chosen) {
+        var map = getUpcomingMovieDates();
+        map[tmdbId] = chosen;
+        saveUpcomingMovieDates(map);
+        _digitalDateFetchDone.add(tmdbId);
+        var today = new Date(); today.setHours(0, 0, 0, 0);
+        var release = new Date(chosen); release.setHours(0, 0, 0, 0);
+        if (release >= today) { _digitalDatesAvailable = true; scheduleRefreshDigitalBadgesDOM(); }
+        applyLabel();
+        return;
+      }
+      // Нет цифровой даты — «Скоро», если театральный релиз был ≤180 дней назад (как у бейджа)
+      var todayT = new Date(); todayT.setHours(0, 0, 0, 0);
+      var firstPastTheatrical = null;
+      results.forEach(function(entry) {
+        if (!Array.isArray(entry.release_dates)) return;
+        entry.release_dates.forEach(function(rd) {
+          if (rd.type === 3 && rd.release_date) {
+            var rdDate = new Date(rd.release_date); rdDate.setHours(0, 0, 0, 0);
+            if (rdDate <= todayT && (!firstPastTheatrical || rd.release_date < firstPastTheatrical)) firstPastTheatrical = rd.release_date;
+          }
+        });
+      });
+      if (firstPastTheatrical) {
+        var tDate = new Date(firstPastTheatrical); tDate.setHours(0, 0, 0, 0);
+        if (Math.round((todayT - tDate) / 86400000) <= 180) {
+          var soonSet = getSoonMovieIds();
+          soonSet.add(tmdbId);
+          saveSoonMovieIds(soonSet);
+          _digitalDatesAvailable = true;
+          scheduleRefreshDigitalBadgesDOM();
+          applyLabel();
+        }
+      }
     }, function() {});
   }
 
