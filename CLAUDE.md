@@ -10,6 +10,8 @@
 
 ## Текущая версия
 
+**v3.2.21** — Фикс: белый значок (отслеживание выключено) при фокусе на Apple TV сливался с белым кругом выделения. Добавлено `.trakt-account-switcher.trakt-tracking-off.focus/.hover{color:#000}` (специфичность 0,3,0 бьёт `.head__action.focus` и tracking-off-правило) — при выделении значок инвертируется в тёмный, как родные значки Lampa.
+
 **v3.2.20** — Значок Trakt в шапке белеет (`#fff`), когда отслеживание выключено, и остаётся фиолетовым (`#c850c0`) при включённом. CSS-класс `.trakt-account-switcher.trakt-tracking-off` (специфичность бьёт базовый цвет без `!important`), хелпер `applyTraktHeadTrackingColor()` читает `readBooleanStorage$2('trakt_enable_watching')` и тоглит класс. Вызов из `updateTraktAccountSwitchBadge` (любой рефреш) и из обоих обработчиков тумблера (мгновенно). SVG красится через `currentColor`; бейдж-кружок со своим цветом не затронут.
 
 **v3.2.19** — Фикс записи тумблера «Включить отслеживание просмотра» в шапке: значение пишется строкой `'true'/'false'`, а не boolean. В Lampa `Storage.get` делает `value || empty`, поэтому boolean `false` в `readed`-кэше всегда перебивается дефолтом → «Нет» не сохранялось, тумблер застревал на «Да». Сам Lampa хранит триггеры строками (`params.js`). Чтение — прежнее (`readBooleanStorage$2`).
@@ -116,6 +118,7 @@
 | v3.2.18 | TBD | Фикс тумблера отслеживания в шапке: чтение через `readBooleanStorage$2` (нормализация типа) вместо `Lampa.Storage.field` — состояние теперь переключается |
 | v3.2.19 | TBD | Фикс записи тумблера: строка `'true'/'false'` вместо boolean (Lampa `get` делает `value\|\|empty` → boolean `false` затирался дефолтом, застревало на «Да») |
 | v3.2.20 | TBD | Значок Trakt в шапке белеет при выключенном отслеживании, фиолетовый при включённом: класс `.trakt-account-switcher.trakt-tracking-off` + хелпер `applyTraktHeadTrackingColor()` |
+| v3.2.21 | TBD | Фикс белого значка при фокусе на Apple TV (сливался с белым кругом): `.trakt-tracking-off.focus/.hover{color:#000}` — инверсия в тёмный как у родных значков Lampa |
 
 ## Архитектура scrobbling
 
