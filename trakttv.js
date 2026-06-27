@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.16';
+  var PLUGIN_VERSION = '3.2.17';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -9188,6 +9188,28 @@
     try {
       var accounts = multiAccountGetAll().filter(function (d) { return d && d.token; });
       if (!accounts.length) return;
+      var YES = t$1('trakt_multiwatch_yes', 'Да');
+      var NO  = t$1('trakt_multiwatch_no',  'Нет');
+      var trackingItem = {
+        title: t$1('trakttv_enable_watching', 'Включить отслеживание просмотра'),
+        subtitle: Lampa.Storage.field('trakt_enable_watching') ? YES : NO,
+        isTracking: true
+      };
+      // Один аккаунт — переключать нечего, показываем только тумблер отслеживания
+      if (accounts.length === 1) {
+        Lampa.Select.show({
+          title: getSlotDisplayName(accounts[0].slot),
+          items: [trackingItem],
+          onSelect: function (item) {
+            if (item.isTracking) {
+              Lampa.Storage.set('trakt_enable_watching', !Lampa.Storage.field('trakt_enable_watching'));
+              setTimeout(openTraktAccountSwitchMenu, 0);
+            }
+          },
+          onBack: function () { try { Lampa.Controller.toggle('head'); } catch (e) {} }
+        });
+        return;
+      }
       var active = multiAccountGetActiveSlot();
       var mwEnabled = readBooleanStorage$2('trakt_multiwatch_enabled', false);
       var items = accounts.map(function (d) {
@@ -9208,10 +9230,16 @@
         mwLabel = t$1('trakt_multiwatch_enabled', 'Совместный просмотр');
       }
       items.push({ title: mwLabel, isMultiwatch: true });
+      items.push(trackingItem);
       Lampa.Select.show({
         title: t$1('trakt_switch_account', 'Переключить аккаунт Trakt.TV'),
         items: items,
         onSelect: function (item) {
+          if (item.isTracking) {
+            Lampa.Storage.set('trakt_enable_watching', !Lampa.Storage.field('trakt_enable_watching'));
+            setTimeout(openTraktAccountSwitchMenu, 0);
+            return;
+          }
           if (item.isMultiwatch) { setTimeout(openMultiwatchSelector, 0); return; }
           if (mwEnabled) {
             Lampa.Storage.set('trakt_multiwatch_enabled', false);
@@ -9258,11 +9286,6 @@
         return;
       }
       badge.removeClass('trakt-account-badge--cross');
-      if (authed.length === 1) {
-        // Один аккаунт — переключать нечего, значок не нужен
-        $('.trakt-account-switcher').remove();
-        return;
-      }
       var active = multiAccountGetActiveSlot();
       var enabled = readBooleanStorage$2('trakt_multiwatch_enabled', false);
       if (enabled) {
@@ -9297,9 +9320,8 @@
       if (!window.Lampa || !Lampa.Head || typeof Lampa.Head.addIcon !== 'function') return;
       if ($('.trakt-account-switcher').length) return;
       var accounts = multiAccountGetAll().filter(function (d) { return d && d.token; });
-      // Показываем значок при 0 (крестик → настройки) и ≥2 (переключение) аккаунтах.
-      // При ровно одном аккаунте переключать нечего — значок не нужен.
-      if (accounts.length === 1) return;
+      // Показываем значок всегда: 0 (крестик → настройки), 1 (тумблер отслеживания)
+      // и ≥2 (переключение аккаунтов + тумблер).
       var iconSvg = icons.TRAKT_ICON.replace('<svg ', '<svg style="width:100%;height:100%;display:block;" ');
       var btn = Lampa.Head.addIcon(
         '<span class="trakt-head-icon">' + iconSvg + '<span class="trakt-account-badge">1</span></span>',
