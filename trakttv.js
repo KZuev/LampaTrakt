@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.17';
+  var PLUGIN_VERSION = '3.2.18';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -9192,7 +9192,7 @@
       var NO  = t$1('trakt_multiwatch_no',  'Нет');
       var trackingItem = {
         title: t$1('trakttv_enable_watching', 'Включить отслеживание просмотра'),
-        subtitle: Lampa.Storage.field('trakt_enable_watching') ? YES : NO,
+        subtitle: readBooleanStorage$2('trakt_enable_watching', true) ? YES : NO,
         isTracking: true
       };
       // Один аккаунт — переключать нечего, показываем только тумблер отслеживания
@@ -9202,7 +9202,7 @@
           items: [trackingItem],
           onSelect: function (item) {
             if (item.isTracking) {
-              Lampa.Storage.set('trakt_enable_watching', !Lampa.Storage.field('trakt_enable_watching'));
+              Lampa.Storage.set('trakt_enable_watching', !readBooleanStorage$2('trakt_enable_watching', true));
               setTimeout(openTraktAccountSwitchMenu, 0);
             }
           },
@@ -9236,7 +9236,7 @@
         items: items,
         onSelect: function (item) {
           if (item.isTracking) {
-            Lampa.Storage.set('trakt_enable_watching', !Lampa.Storage.field('trakt_enable_watching'));
+            Lampa.Storage.set('trakt_enable_watching', !readBooleanStorage$2('trakt_enable_watching', true));
             setTimeout(openTraktAccountSwitchMenu, 0);
             return;
           }
