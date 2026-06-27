@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.24';
+  var PLUGIN_VERSION = '3.2.25';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -4077,6 +4077,7 @@
                   var _isS = _bt === 'tv' || _bt === 'show';
                   if (_isM || _isS) {
                     if (_renderedCardInstances.indexOf(_card) < 0) _renderedCardInstances.push(_card);
+                    if (type === 'watchlist') _card._trakt_no_watchlist_badge = true;
                     if (_isM) renderDigitalReleaseBadge(_card);
                     renderWatchedBadge(_card);
                     renderWatchingBadge(_card);
@@ -4168,6 +4169,7 @@
             var _isS = _bt === 'tv' || _bt === 'show';
             if (_isM || _isS) {
               if (_renderedCardInstances.indexOf(card) < 0) _renderedCardInstances.push(card);
+              if (type === 'watchlist') card._trakt_no_watchlist_badge = true;
               if (_isM) renderDigitalReleaseBadge(card);
               renderWatchedBadge(card); renderWatchingBadge(card); renderWatchlistBadge(card);
             }
@@ -14078,6 +14080,7 @@
   }
 
   function renderWatchlistBadge(cardInstance) {
+    if (cardInstance && cardInstance._trakt_no_watchlist_badge) return;
     if (!_watchlistBadgeCache) return;
     var data = cardInstance && cardInstance.data;
     if (!data || !data.id) return;
