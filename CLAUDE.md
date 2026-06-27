@@ -10,6 +10,8 @@
 
 ## Текущая версия
 
+**v3.2.22** — Цвет значка в шапке теперь реагирует и на переключение «Включить отслеживание просмотра» из общих настроек: в слушатель `Lampa.Storage.listener.follow('change')` добавлена ветка `e.name === 'trakt_enable_watching'` → `applyTraktHeadTrackingColor()`. Раньше цвет менялся только при переключении через сам значок.
+
 **v3.2.21** — Фикс: белый значок (отслеживание выключено) при фокусе на Apple TV сливался с белым кругом выделения. Добавлено `.trakt-account-switcher.trakt-tracking-off.focus/.hover{color:#000}` (специфичность 0,3,0 бьёт `.head__action.focus` и tracking-off-правило) — при выделении значок инвертируется в тёмный, как родные значки Lampa.
 
 **v3.2.20** — Значок Trakt в шапке белеет (`#fff`), когда отслеживание выключено, и остаётся фиолетовым (`#c850c0`) при включённом. CSS-класс `.trakt-account-switcher.trakt-tracking-off` (специфичность бьёт базовый цвет без `!important`), хелпер `applyTraktHeadTrackingColor()` читает `readBooleanStorage$2('trakt_enable_watching')` и тоглит класс. Вызов из `updateTraktAccountSwitchBadge` (любой рефреш) и из обоих обработчиков тумблера (мгновенно). SVG красится через `currentColor`; бейдж-кружок со своим цветом не затронут.
@@ -119,6 +121,7 @@
 | v3.2.19 | TBD | Фикс записи тумблера: строка `'true'/'false'` вместо boolean (Lampa `get` делает `value\|\|empty` → boolean `false` затирался дефолтом, застревало на «Да») |
 | v3.2.20 | TBD | Значок Trakt в шапке белеет при выключенном отслеживании, фиолетовый при включённом: класс `.trakt-account-switcher.trakt-tracking-off` + хелпер `applyTraktHeadTrackingColor()` |
 | v3.2.21 | TBD | Фикс белого значка при фокусе на Apple TV (сливался с белым кругом): `.trakt-tracking-off.focus/.hover{color:#000}` — инверсия в тёмный как у родных значков Lampa |
+| v3.2.22 | TBD | Цвет значка реагирует на тумблер отслеживания из общих настроек: ветка `trakt_enable_watching` в `Storage.listener('change')` → `applyTraktHeadTrackingColor()` |
 
 ## Архитектура scrobbling
 

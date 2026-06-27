@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.21';
+  var PLUGIN_VERSION = '3.2.22';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -11094,6 +11094,7 @@
     if (Lampa.Storage && Lampa.Storage.listener) {
       Lampa.Storage.listener.follow('change', function(e) {
         if (e && (e.name === 'trakt_badge_completed' || e.name === 'trakt_badge_watching' || e.name === 'trakt_badge_watchlist' || e.name === 'trakt_badge_digital_release' || e.name === 'trakt_badge_digital_date')) applyBadgeVisibility();
+        if (e && e.name === 'trakt_enable_watching') applyTraktHeadTrackingColor();
       });
     }
 
