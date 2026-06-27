@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.18';
+  var PLUGIN_VERSION = '3.2.19';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -9202,7 +9202,7 @@
           items: [trackingItem],
           onSelect: function (item) {
             if (item.isTracking) {
-              Lampa.Storage.set('trakt_enable_watching', !readBooleanStorage$2('trakt_enable_watching', true));
+              Lampa.Storage.set('trakt_enable_watching', readBooleanStorage$2('trakt_enable_watching', true) ? 'false' : 'true');
               setTimeout(openTraktAccountSwitchMenu, 0);
             }
           },
@@ -9236,7 +9236,7 @@
         items: items,
         onSelect: function (item) {
           if (item.isTracking) {
-            Lampa.Storage.set('trakt_enable_watching', !readBooleanStorage$2('trakt_enable_watching', true));
+            Lampa.Storage.set('trakt_enable_watching', readBooleanStorage$2('trakt_enable_watching', true) ? 'false' : 'true');
             setTimeout(openTraktAccountSwitchMenu, 0);
             return;
           }
