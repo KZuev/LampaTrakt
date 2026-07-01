@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.31';
+  var PLUGIN_VERSION = '3.2.32';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -16218,6 +16218,9 @@
                     if (out.episode) out.episode.still_path = out._backdropRaw;
                   }
                   delete out._backdropRaw;
+                  // «Общая» горизонтальная картинка (fanart/бэкдроп) как фолбэк Episode-card:
+                  // Lampa рисует this.data.img, если нет still_path и card.backdrop_path.
+                  if (out.card && out.card.image) out.img = out.card.image;
                 });
                 if (!baseResults.length) return null;
                 var calTitle = Lampa.Lang.translate('trakttv_calendar');
