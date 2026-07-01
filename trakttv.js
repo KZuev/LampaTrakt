@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.28';
+  var PLUGIN_VERSION = '3.2.29';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -15504,7 +15504,11 @@
     var apiTotalPages = data && data.total_pages ? data.total_pages : 1;
     var apiTotal = data && data.total ? data.total : 0;
     var displayLimit = config && config.displayLimit > 0 ? config.displayLimit : 0;
-    var totalPages = displayLimit > 0 && apiTotal > displayLimit ? Math.max(apiTotalPages, 2) : apiTotalPages;
+    // Кнопка «Ещё» рисуется Lampa только при total_pages>1 и через событие 'more' открывает
+    // полноэкранный хаб. У всех строк с хабом (config.component) она должна быть всегда —
+    // это переход в каталог (фильтры/сортировка/полный список), а не постраничная догрузка.
+    var hasHub = !!(config && config.component);
+    var totalPages = (hasHub || (displayLimit > 0 && apiTotal > displayLimit)) ? Math.max(apiTotalPages, 2) : apiTotalPages;
     var payload = {
       title: config.displayTitle,
       component: config.component || undefined,
@@ -16140,7 +16144,7 @@
                   title: calTitle,
                   source: 'tmdb',
                   page: 1,
-                  total_pages: 1,
+                  total_pages: 2,
                   trakt_line: true,
                   trakt_line_title: calTitle,
                   trakt_more_component: 'trakt_timetable_all',
