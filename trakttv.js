@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.27';
+  var PLUGIN_VERSION = '3.2.28';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -15797,7 +15797,7 @@
    * Register Calendar rows with Episode card format
    * (same look as title_upcoming_episodes / title_recent_episodes)
    */
-  var CALENDAR_ROW_LIMIT = 20;
+  var CALENDAR_ROW_LIMIT = 7;
   function createCalendarCall(screenFilter) {
       return function (params, screen) {
         // Permission: needs Trakt auth
@@ -15811,38 +15811,51 @@
           var nowM = String(now.getMonth() + 1).padStart(2, '0');
           var nowD = String(now.getDate()).padStart(2, '0');
           var todayStr = nowY + '-' + nowM + '-' + nowD;
-          var dateString = todayStr;
-          var days = 14;
 
-          var showsPromise = Api.get("/calendars/my/shows/".concat(dateString, "/").concat(days, "?extended=full,images"));
+          var CAL_TARGET = CALENDAR_ROW_LIMIT;
+          var CAL_CHUNK = 30;
+          var CAL_MAX_CHUNKS = 3;
+
+          function calChunkStart(i) {
+            var d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i * CAL_CHUNK);
+            return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+          }
+
+          // Последовательно тянем чанки календаря по 30 дней (до ~90), дедуп по сериалу,
+          // берём ближайшую серию (только сегодня/будущее), останавливаемся при наборе 7 сериалов.
+          function fetchShowsUntilEnough() {
+            var showMap = {};
+            function step(i) {
+              return Api.get("/calendars/my/shows/".concat(calChunkStart(i), "/").concat(CAL_CHUNK, "?extended=full,images")).then(function (resp) {
+                var raw = Array.isArray(resp) ? resp : [];
+                raw.forEach(function (item) {
+                  var show = item && item.show;
+                  var episode = item && item.episode;
+                  if (!show || !show.ids) return;
+                  var tmdbId = show.ids.tmdb;
+                  if (!tmdbId) return;
+                  var d = item.first_aired ? String(item.first_aired).slice(0, 10) : '';
+                  if (d < todayStr) return;
+                  if (!showMap[tmdbId]) showMap[tmdbId] = { show: show, first_aired: item.first_aired, episode: episode };
+                });
+                if (Object.keys(showMap).length >= CAL_TARGET || i + 1 >= CAL_MAX_CHUNKS) return showMap;
+                return step(i + 1);
+              })['catch'](function () { return showMap; });
+            }
+            return step(0);
+          }
+
+          var showsPromise = fetchShowsUntilEnough();
           var moviesPromise = (Api.watchlistMovies ? Api.watchlistMovies() : Promise.resolve([])).catch(function () { return []; });
 
           Promise.all([showsPromise, moviesPromise]).then(function (fetched) {
-            var response = fetched[0];
+            var showMap = fetched[0] || {};
             var movieItems = Array.isArray(fetched[1]) ? fetched[1] : [];
-            var raw = Array.isArray(response) ? response : [];
 
-            // Group by show TMDB ID (deduplicate — one card per show)
-            var showMap = {};
-            raw.forEach(function (item) {
-              var show = item && item.show;
-              var episode = item && item.episode;
-              if (!show || !show.ids) return;
-              var tmdbId = show.ids.tmdb;
-              if (!tmdbId) return;
-              if (!showMap[tmdbId]) {
-                showMap[tmdbId] = { show: show, first_aired: item.first_aired, episode: episode };
-              }
-            });
             var shows = Object.values(showMap);
-
-            // Sort by first_aired ascending, only today and future
+            // Сортировка по first_aired по возрастанию (фильтр >= today применён при сборе)
             shows.sort(function (a, b) {
               return (a.first_aired || '').localeCompare(b.first_aired || '');
-            });
-            shows = shows.filter(function (s) {
-              var d = s.first_aired ? String(s.first_aired).slice(0, 10) : '';
-              return d >= todayStr;
             });
 
             // Fetch digital release dates for watchlist movies
