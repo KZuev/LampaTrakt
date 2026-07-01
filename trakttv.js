@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.29';
+  var PLUGIN_VERSION = '3.2.30';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -15470,6 +15470,13 @@
       try {
         // Lampa 3.0 игнорирует onMore и строит category_full из source:'tmdb'.
         // Перехватываем и перенаправляем на правильный Trakt-компонент.
+        // 1) Прямой путь: данные строки несут trakt_more_component (не зависит от заголовка).
+        if (data && data.trakt_more_component && data.component !== data.trakt_more_component) {
+          var _moreComp = data.trakt_more_component;
+          _navLogEvent('activity_push_redirect', { from: data.component || '?', to: _moreComp, title: data.trakt_more_title || data.title || '' });
+          return _orig.call(this, { title: data.trakt_more_title || data.title || '', component: _moreComp, page: 1 });
+        }
+        // 2) Резерв: по заголовку строки через _traktRowsByTitle.
         if (data && data.component === 'category_full' && data.title && _traktRowsByTitle[data.title]) {
           var traktComp = _traktRowsByTitle[data.title];
           _navLogEvent('activity_push_redirect', { from: 'category_full', to: traktComp, title: data.title });
@@ -15763,11 +15770,14 @@
     });
     // 3. Calendar
     if (Api && typeof Api.get === 'function') {
+      var _calTitle = Lampa.Lang.translate('trakttv_calendar');
+      _traktRowsByTitle[_calTitle] = 'trakt_timetable_all';
       Lampa.ContentRows.add({
         name: 'TraktCalendarRow',
         title: Lampa.Lang.translate('trakttv_row_calendar_main'),
         index: 1,
         screen: ['main'],
+        onMore: createOnMoreHandler({ component: 'trakt_timetable_all', displayTitle: _calTitle }),
         call: createCalendarCall(function () { return true; })
       });
     }
