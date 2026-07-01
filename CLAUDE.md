@@ -10,6 +10,8 @@
 
 ## Текущая версия
 
+**v3.2.31** — Календарь на главной больше не «застревает» при загрузке: cache-first. `createCalendarCall` разбит на `buildCalendarLine()` (весь конвейер → сериализуемый line) + контроллер. In-memory кэш `_calendarMemCache` ({line, sig, time}, TTL как `STALE_CACHE_TTL_MS`=6ч) отдаётся мгновенно (`_calCloneLine`), затем свежие данные тянутся в фоне; если сигнатура (`_calSignature`: id+тип+дата+сезон/эпизод) изменилась — тихий live-rebuild на месте (`rebuildCalendarLineInPlace`, приём как у Up Next). Ссылка `_calendarLineRef` ловится в 'line'-слушателе по `trakt_row:'calendar'`. Кэш in-memory (переживает переходы в рамках сессии, не переживает перезапуск приложения — там первый заход грузится как раньше). Карточки-Episode с функциями шэрятся целиком (без сериализации).
+
 **v3.2.30** — Фикс «Ещё» → «здесь пусто». Lampa на «Ещё» пушит `category_full` (source:'tmdb' → пустой каталог); плагин перехватывает в `patchActivityPush`. Обычные строки спасал редирект по заголовку (`_traktRowsByTitle`), но **календарная строка** регистрировалась без `onMore` и не попадала в карту → пусто. Добавлены: запись `_traktRowsByTitle['Календарь']='trakt_timetable_all'` + `onMore` в её `ContentRows.add`. Плюс редирект усилен: срабатывает по `data.trakt_more_component` (не зависит от заголовка) — резерв для любых строк.
 
 **v3.2.29** — Фикс пропавшей кнопки «Ещё» на строках Trakt. Lampa рисует «Ещё» только при `total_pages > 1` (`line/module/more.js`), а v3.2.6 загейтила её на `apiTotal > displayLimit` → у строк, где элементов ≤ лимита, кнопка исчезла. Теперь `createRowPayload` форсит `total_pages ≥ 2` для любой строки с хабом (`config.component`) — «Ещё» = переход в полноэкранный каталог (через событие `'more'` → `trakt_more_component`), а не постраничная догрузка. Календарь (`createCalendarCall`) тоже: `total_pages` 1→2. DVD-строки (без `component`) не тронуты.
@@ -146,6 +148,7 @@
 | v3.2.28 | TBD | Календарь на главной: 7 ближайших записей вместо окна 14 дней/лимита 20. Сериалы — чанки по 30 дней до ~90 (`fetchShowsUntilEnough`, ранняя остановка при 7), дедуп по сериалу сохранён; фильмы без изменений |
 | v3.2.29 | TBD | Фикс пропавшей кнопки «Ещё»: `createRowPayload` форсит `total_pages≥2` для строк с хабом (`config.component`), календарь `total_pages` 1→2. Lampa рисует «Ещё» только при `total_pages>1`; v3.2.6 загейтила её на `total>displayLimit` и она пропала у коротких строк |
 | v3.2.30 | TBD | Фикс «Ещё»→«здесь пусто»: календарь добавлен в `_traktRowsByTitle` + `onMore`; редирект `patchActivityPush` усилен — срабатывает по `data.trakt_more_component` (не только по заголовку `category_full`) |
+| v3.2.31 | TBD | Календарь на главной cache-first: `buildCalendarLine()` + in-memory `_calendarMemCache`; мгновенный показ из кэша, фоновое обновление, live-rebuild при изменении сигнатуры (`rebuildCalendarLineInPlace`, ссылка по `trakt_row:'calendar'`). Снимает «застревание» загрузки |
 
 ## Палитра (фирменный цвет Trakt)
 

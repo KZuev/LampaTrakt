@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.30';
+  var PLUGIN_VERSION = '3.2.31';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -12943,6 +12943,10 @@
   var _pendingMainRefresh = false;       // нужно обновить Up Next при следующем входе на главную
   var _watchlistLineRef = null;          // ссылка на Line-инстанс строки «Хочу посмотреть» на главной
   var _pendingWatchlistRefresh = false;  // нужно обновить Watchlist при следующем входе на главную
+  var _calendarLineRef = null;           // ссылка на Line-инстанс строки «Календарь» на главной
+  var _pendingCalendarRefresh = false;   // отложенный live-rebuild календаря (строка ещё не жива)
+  var _calendarMemCache = null;          // in-memory кэш готовой строки календаря { line, sig, time }
+  var _calendarFreshPending = null;      // последняя свежая строка календаря, ждущая rebuild
   var _ownMarkReconcileTimer = null;     // дебаунс-таймер реконсиляции бейджей после отметки
   var _fullCardRefreshFn = null;         // перерисовывает статус на открытой странице описания
   var _fullCardItemId = null;            // tmdb id текущей открытой страницы описания
@@ -14020,6 +14024,63 @@
     } catch(ex) {}
   }
 
+  // Сигнатура содержимого календаря — для сравнения кэша и свежих данных (без учёта
+  // локализации/постеров): id + тип + дата выхода + сезон/эпизод.
+  function _calSignature(line) {
+    try {
+      var items = line && Array.isArray(line.results) ? line.results : [];
+      return items.map(function(o) {
+        var ep = o.episode || {};
+        return (o.isMovie ? 'm' : 't') + (o.id || '') + ':' + (o.air_date || ep.air_date || '') + ':' + ((ep.season_number != null ? ep.season_number : '') + 'e' + (ep.episode_number != null ? ep.episode_number : ''));
+      }).join('|');
+    } catch(e) { return String(Date.now()); }
+  }
+  // Поверхностный клон строки (и массива results) — чтобы ContentRows не мутировал
+  // кэшированные объекты между показами. Карточки (out) шэрятся — их функции и card целы.
+  function _calCloneLine(line) {
+    var out = Object.assign({}, line);
+    out.results = (line && Array.isArray(line.results) ? line.results : []).map(function(o) { return Object.assign({}, o); });
+    return out;
+  }
+  // Live-rebuild строки «Календарь» на месте по уже готовой (гидратированной) строке —
+  // без повторного fetch. Тот же приём, что rebuildUpnextLineInPlace.
+  function rebuildCalendarLineInPlace(line) {
+    try {
+      if (!readBooleanStorage$1('trakt_realtime_upnext', true)) return;
+      if (!line || !Array.isArray(line.results)) return;
+      if (!_calendarLineRef || !isLineAlive(_calendarLineRef)) {
+        _pendingCalendarRefresh = true;
+        _calendarFreshPending = line;
+        return;
+      }
+      var items = line.results.map(function(o) { return Object.assign({}, o); });
+      try {
+        if (Array.isArray(_calendarLineRef.items)) {
+          _calendarLineRef.items.forEach(function(item) { try { item.destroy && item.destroy(); } catch(e) {} });
+          _calendarLineRef.items.length = 0;
+        }
+      } catch(e) {}
+      try { _calendarLineRef.scroll.clear(); } catch(e) {}
+      try {
+        if (_calendarLineRef.data) _calendarLineRef.data.results = items;
+        _calendarLineRef.active = 0;
+        _calendarLineRef.last = false;
+      } catch(e) {}
+      items.forEach(function(item) {
+        try { _calendarLineRef.emit('createAndAppend', item); } catch(e) {}
+      });
+      try {
+        if (typeof _calendarLineRef.visible === 'function') _calendarLineRef.visible();
+      } catch(e) {}
+      try {
+        if (Lampa && Lampa.Controller && Lampa.Controller.own(_calendarLineRef) && typeof _calendarLineRef.toggle === 'function') {
+          _calendarLineRef.toggle();
+        }
+      } catch(e) {}
+      try { _watchLogAdd('calendar_live_rebuilt', { extra: items.length + ' items' }); } catch(e) {}
+    } catch(ex) {}
+  }
+
   function refreshFullCardProgress(tmdbId) {
     try {
       if (!_fullCardRefreshFn) return;
@@ -14566,6 +14627,16 @@
               if (_pendingWatchlistRefresh) {
                 _pendingWatchlistRefresh = false;
                 setTimeout(function() { try { rebuildWatchlistLineInPlace(); } catch(e2) {} }, 300);
+              }
+            }
+            var _isCalendarRow = e.data && e.data.trakt_row === 'calendar';
+            if (_isCalendarRow && e.line) {
+              _calendarLineRef = e.line;
+              if (_pendingCalendarRefresh && _calendarFreshPending) {
+                _pendingCalendarRefresh = false;
+                var _calPend = _calendarFreshPending;
+                _calendarFreshPending = null;
+                setTimeout(function() { try { rebuildCalendarLineInPlace(_calPend); } catch(e2) {} }, 300);
               }
             }
             e.items.forEach(function(ci) {
@@ -15820,6 +15891,7 @@
         // Screen-specific visibility
         if (typeof screenFilter === 'function' && !screenFilter(params, screen)) return;
         return function (call) {
+          function buildCalendarLine() {
           var now = new Date();
           var nowY = now.getFullYear();
           var nowM = String(now.getMonth() + 1).padStart(2, '0');
@@ -15862,7 +15934,7 @@
           var showsPromise = fetchShowsUntilEnough();
           var moviesPromise = (Api.watchlistMovies ? Api.watchlistMovies() : Promise.resolve([])).catch(function () { return []; });
 
-          Promise.all([showsPromise, moviesPromise]).then(function (fetched) {
+          return Promise.all([showsPromise, moviesPromise]).then(function (fetched) {
             var showMap = fetched[0] || {};
             var movieItems = Array.isArray(fetched[1]) ? fetched[1] : [];
 
@@ -16147,9 +16219,9 @@
                   }
                   delete out._backdropRaw;
                 });
-                if (!baseResults.length) return call();
+                if (!baseResults.length) return null;
                 var calTitle = Lampa.Lang.translate('trakttv_calendar');
-                call({
+                return {
                   results: baseResults,
                   title: calTitle,
                   source: 'tmdb',
@@ -16157,15 +16229,40 @@
                   total_pages: 2,
                   trakt_line: true,
                   trakt_line_title: calTitle,
+                  trakt_row: 'calendar',
                   trakt_more_component: 'trakt_timetable_all',
                   trakt_more_title: calTitle,
                   onMore: function () {
                     Lampa.Activity.push({ title: calTitle, component: 'trakt_timetable_all', page: 1 });
                   }
-                });
+                };
               });
             });
-          }).catch(function () { call(); });
+          });
+          }
+          // Cache-first: мгновенно показываем строку из in-memory кэша (снимает
+          // «застревание» на загрузке календаря), затем в фоне тянем свежие данные и,
+          // если содержимое изменилось, тихо перестраиваем строку на месте.
+          var mem = _calendarMemCache;
+          var hadCache = false;
+          if (mem && mem.line && (Date.now() - mem.time) < STALE_CACHE_TTL_MS) {
+            hadCache = true;
+            try { call(_calCloneLine(mem.line)); } catch (e) {}
+          }
+          buildCalendarLine().then(function (freshLine) {
+            if (!freshLine || !Array.isArray(freshLine.results) || !freshLine.results.length) {
+              if (!hadCache) call();
+              return;
+            }
+            var sig = _calSignature(freshLine);
+            var changed = !mem || mem.sig !== sig;
+            _calendarMemCache = { line: freshLine, sig: sig, time: Date.now() };
+            if (hadCache) {
+              if (changed) { try { rebuildCalendarLineInPlace(freshLine); } catch (e) {} }
+            } else {
+              try { call(_calCloneLine(freshLine)); } catch (e) {}
+            }
+          }).catch(function () { if (!hadCache) call(); });
         };
       };
     }
