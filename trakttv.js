@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.32';
+  var PLUGIN_VERSION = '3.2.33';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -7985,6 +7985,11 @@
     return /дублирован|дубляж|  apple| dub | d[,| ]|[,\s]дб[,\s]/i.test(title || '');
   }
 
+  // Число озвучек в раздаче — распарсенный Lampa массив студий (element.info.voices).
+  function _atVoiceCount(el) {
+    return el && el.info && Array.isArray(el.info.voices) ? el.info.voices.length : 0;
+  }
+
   function _atHasRusAudio(e) {
     var el = e.element || {};
     if (Array.isArray(el.languages) && el.languages.some(function(l) {
@@ -8065,16 +8070,23 @@
       return q < targetScore ? q : -q; // ниже целевого лучше, чем выше
     }
     var popularityFirst = _atSetting('trakt_at_popularity', 'quality_first') === 'popularity_first';
+    // Сериалы: опция «приоритет по числу озвучек» — тайбрейкер среди раздач одинакового
+    // качества (качество не проседает). Число озвучек = element.info.voices.length (парсер Lampa).
+    var multiVoice = !isMovie && readBooleanStorage$2('trakt_at_shows_multivoice', false);
     var sorted = pool.slice().sort(function(a, b) {
       var qa = effectiveQuality(a.element.Title || ''), qb = effectiveQuality(b.element.Title || '');
       var pa = (a.element.Seeders || 0) + (a.element.Peers || 0);
       var pb = (b.element.Seeders || 0) + (b.element.Peers || 0);
       if (popularityFirst) {
         if (pb !== pa) return pb - pa;
-        return qb - qa;
+        if (qb !== qa) return qb - qa;
+        if (multiVoice) { var v1 = _atVoiceCount(b.element) - _atVoiceCount(a.element); if (v1) return v1; }
+      } else {
+        if (qb !== qa) return qb - qa;
+        if (multiVoice) { var v2 = _atVoiceCount(b.element) - _atVoiceCount(a.element); if (v2) return v2; }
+        if (pb !== pa) return pb - pa;
       }
-      if (qb !== qa) return qb - qa;
-      return pb - pa;
+      return 0;
     });
     // Торренты, ранее открытые в Lampa (hash есть в torrents_view), идут первыми —
     // независимо от сортировки по качеству/популярности. Если таких несколько —
@@ -10954,6 +10966,15 @@
         }
       },
       field: { name: 'Авто-торрент: озвучка сериалов', description: 'Фильтр озвучки при автовыборе торрента сериала' }
+    });
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: {
+        name: 'trakt_at_shows_multivoice',
+        type: 'trigger',
+        "default": false
+      },
+      field: { name: 'Авто-торрент: приоритет по числу озвучек (сериалы)', description: 'Среди раздач одинакового качества выбирать с бóльшим числом озвучек' }
     });
     Lampa.SettingsApi.addParam({
       component: 'trakt',

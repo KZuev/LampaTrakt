@@ -10,6 +10,8 @@
 
 ## Текущая версия
 
+**v3.2.33** — Авто-торрент (сериалы): опция «приоритет по числу озвучек» (`trakt_at_shows_multivoice`, trigger, off). В `_atSortTorrentCandidates` — тайбрейкер по `element.info.voices.length` (распарсенные Lampa студии озвучки) среди раздач одинакового качества: в дефолтном режиме quality_first порядок «качество → число озвучек → популярность». Сезон-фильтр, фильтр озвучки (dub/rus/any), приоритет ранее открытых (`torrents_view`) и фильмы не затронуты. Флаг читается через `readBooleanStorage$2` (нормализация типа).
+
 **v3.2.32** — Календарь на главной: если у ближайшей серии/фильма нет кадра (горизонтального стилла), подставляется «общая» горизонтальная картинка (fanart/бэкдроп) вместо пустоты. Episode-card Lampa рисует по цепочке `data.still_path → card.backdrop_path → data.img`; плагин заполнял только `still_path`. Теперь в пост-обработке `baseResults` проставляется `out.img = out.card.image` (Trakt fanart / TMDB-бэкдроп, полный URL) → попадает в `this.data.img` → 3-й фолбэк. Приоритет кадра серии сохранён.
 
 **v3.2.31** — Календарь на главной больше не «застревает» при загрузке: cache-first. `createCalendarCall` разбит на `buildCalendarLine()` (весь конвейер → сериализуемый line) + контроллер. In-memory кэш `_calendarMemCache` ({line, sig, time}, TTL как `STALE_CACHE_TTL_MS`=6ч) отдаётся мгновенно (`_calCloneLine`), затем свежие данные тянутся в фоне; если сигнатура (`_calSignature`: id+тип+дата+сезон/эпизод) изменилась — тихий live-rebuild на месте (`rebuildCalendarLineInPlace`, приём как у Up Next). Ссылка `_calendarLineRef` ловится в 'line'-слушателе по `trakt_row:'calendar'`. Кэш in-memory (переживает переходы в рамках сессии, не переживает перезапуск приложения — там первый заход грузится как раньше). Карточки-Episode с функциями шэрятся целиком (без сериализации).
@@ -152,6 +154,7 @@
 | v3.2.30 | TBD | Фикс «Ещё»→«здесь пусто»: календарь добавлен в `_traktRowsByTitle` + `onMore`; редирект `patchActivityPush` усилен — срабатывает по `data.trakt_more_component` (не только по заголовку `category_full`) |
 | v3.2.31 | TBD | Календарь на главной cache-first: `buildCalendarLine()` + in-memory `_calendarMemCache`; мгновенный показ из кэша, фоновое обновление, live-rebuild при изменении сигнатуры (`rebuildCalendarLineInPlace`, ссылка по `trakt_row:'calendar'`). Снимает «застревание» загрузки |
 | v3.2.32 | TBD | Календарь: фолбэк на «общую» горизонтальную картинку (fanart/бэкдроп) когда нет кадра серии — `out.img = out.card.image` → `this.data.img` в Episode-card (3-й фолбэк после `still_path`/`card.backdrop_path`) |
+| v3.2.33 | TBD | Авто-торрент (сериалы): опция `trakt_at_shows_multivoice` — тайбрейкер по числу озвучек (`element.info.voices.length`) среди раздач одинакового качества (quality_first: качество→озвучки→популярность). Фильмы/фильтры/приоритет ранее открытых не тронуты |
 
 ## Палитра (фирменный цвет Trakt)
 
