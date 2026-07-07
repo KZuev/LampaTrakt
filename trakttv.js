@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.33';
+  var PLUGIN_VERSION = '3.2.34';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -3700,6 +3700,7 @@
     var lang = Lampa.Storage ? Lampa.Storage.get('language', 'ru') : 'ru';
     if (!data || !Array.isArray(data.results) || !data.results.length) return Promise.resolve(data);
     if (!Lampa.TMDB || !Lampa.Reguest) return Promise.resolve(data);
+    var _localeFailed = 0;
     var promises = data.results.map(function (item) {
       var tmdbId = item.id;
       var type = item.method === 'movie' ? 'movie' : 'tv';
@@ -3712,22 +3713,31 @@
         if (cached.image) item.image = cached.image;
         return Promise.resolve(item);
       }
+      var url = Lampa.TMDB.api(type + '/' + tmdbId + '?api_key=' + Lampa.TMDB.key() + '&language=' + lang);
+      // 1 повтор при сетевом сбое — на нестабильной сети снимает большинство промахов,
+      // из-за которых элемент оставался с английским названием/постером из Trakt.
       return new Promise(function (resolve) {
-        var url = Lampa.TMDB.api(type + '/' + tmdbId + '?api_key=' + Lampa.TMDB.key() + '&language=' + lang);
-        var network = new Lampa.Reguest();
-        network.silent(url, function (d) {
-          var entry = {};
-          var localTitle = d && (d.title || d.name);
-          if (localTitle) { item.title = localTitle; entry.title = localTitle; }
-          if (d && d.poster_path) { item.poster = 'https://image.tmdb.org/t/p/w500' + d.poster_path; entry.poster = item.poster; }
-          if (d && d.backdrop_path) { item.image = 'https://image.tmdb.org/t/p/w1280' + d.backdrop_path; entry.image = item.image; }
-          _tmdbLocaleCache[cacheKey] = entry;
-          resolve(item);
-        }, function () { resolve(item); });
+        function attempt(retriesLeft) {
+          var network = new Lampa.Reguest();
+          network.silent(url, function (d) {
+            var entry = {};
+            var localTitle = d && (d.title || d.name);
+            if (localTitle) { item.title = localTitle; entry.title = localTitle; }
+            if (d && d.poster_path) { item.poster = 'https://image.tmdb.org/t/p/w500' + d.poster_path; entry.poster = item.poster; }
+            if (d && d.backdrop_path) { item.image = 'https://image.tmdb.org/t/p/w1280' + d.backdrop_path; entry.image = item.image; }
+            _tmdbLocaleCache[cacheKey] = entry;
+            resolve(item);
+          }, function () {
+            if (retriesLeft > 0) { attempt(retriesLeft - 1); return; }
+            _localeFailed++;
+            resolve(item);
+          });
+        }
+        attempt(1);
       });
     });
     return Promise.all(promises).then(function (enriched) {
-      return Object.assign({}, data, { results: enriched });
+      return Object.assign({}, data, { results: enriched, _localeIncomplete: _localeFailed > 0 });
     });
   }
   function rearrangeUpnextNotStarted(data) {
@@ -15733,7 +15743,9 @@
             updateTopshelf(config.topshelf, filtered);
           }
           var line = createRowPayload(config, data, normalizedResults);
-          saveRowToCache(cacheKey, line);
+          // Не кэшируем строку, если локализация в этот раз не удалась (часть элементов
+          // осталась английской из-за сетевого сбоя) — иначе английский «залипнет» в кэше.
+          if (!data || !data._localeIncomplete) saveRowToCache(cacheKey, line);
           if (!done) finish(attachOnMore(line, config));
         })["catch"](function (error) {
           logWarn('Row load failed', {
