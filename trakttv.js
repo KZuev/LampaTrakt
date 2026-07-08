@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.36';
+  var PLUGIN_VERSION = '3.2.37';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -2803,7 +2803,7 @@
           var watchedEps = 0;
           if (Array.isArray(item.seasons)) item.seasons.forEach(function(s) {
             if (s.number === 0) return;
-            if (Array.isArray(s.episodes)) s.episodes.forEach(function(e) { if ((e.plays || 0) > 0 || e.last_watched_at || e.completed) watchedEps++; });
+            if (Array.isArray(s.episodes)) s.episodes.forEach(function(e) { if ((e.plays || 0) > 0) watchedEps++; });
           });
           var isEnded = endedStatuses.some(function(s) { return (show.status || '').toLowerCase() === s; });
           var fullyWatched = totalEps > 0 && watchedEps >= totalEps;
@@ -2908,7 +2908,7 @@
           var watchedEps = 0;
           if (Array.isArray(item.seasons)) item.seasons.forEach(function(s) {
             if (s.number === 0) return;
-            if (Array.isArray(s.episodes)) s.episodes.forEach(function(e) { if ((e.plays || 0) > 0 || e.last_watched_at || e.completed) watchedEps++; });
+            if (Array.isArray(s.episodes)) s.episodes.forEach(function(e) { if ((e.plays || 0) > 0) watchedEps++; });
           });
           var fullyWatched = totalEps > 0 && watchedEps >= totalEps;
           var isEnded = endedStatuses.some(function(s) { return (show.status || '').toLowerCase() === s; });
@@ -11074,6 +11074,7 @@
             { title: 'Диагностика сетки постеров',                   action: 'grid'          },
             { title: 'История отметок просмотренного (' + _watchMarkLog.length + ')', action: 'watchlog' },
             { title: 'Диагностика списков (' + _listLog.length + ')',                 action: 'listlog'  },
+            { title: 'Дамп watched-серий',                                            action: 'watched_dump' },
             { title: 'Сравнение высоты списков',                                     action: 'height'   },
             { title: _badgesHidden ? 'Бейджи: ВКЛ (показать)' : 'Бейджи: ВЫКЛ (скрыть)', action: 'toggle_badges' },
             { title: 'Мигрировать ключи Авто-торрент (trakt_magic_* → trakt_at_*)',     action: 'migrate_at'   }
@@ -11086,6 +11087,7 @@
             if (item.action === 'grid')          { _showDebugGrid();          }
             if (item.action === 'watchlog')      { _showDebugWatchLog();      }
             if (item.action === 'listlog')       { _showDebugListLog();       }
+            if (item.action === 'watched_dump')  { _showDebugWatchedDump();   }
             if (item.action === 'height')        { _showDebugHeightCompare(); }
             if (item.action === 'toggle_badges') { _toggleBadgeVisibility();  }
             if (item.action === 'migrate_at')    { _atMigrateStorage(true);   }
@@ -11094,6 +11096,28 @@
         });
       }
     });
+
+    function _showDebugWatchedDump() {
+      requestApi('GET', '/sync/watched/shows?extended=full').then(function(items) {
+        var arr = Array.isArray(items) ? items : [];
+        var lines = [];
+        lines.push({ title: 'shows=' + arr.length + (Array.isArray(items) ? '' : ' (тип: ' + (typeof items) + ')') });
+        if (arr[0]) lines.push({ title: 'item keys: ' + Object.keys(arr[0]).join(',') });
+        arr.slice(0, 6).forEach(function(x) {
+          var show = x.show || {};
+          var seasons = x.seasons;
+          var eps = 0;
+          if (Array.isArray(seasons)) seasons.forEach(function(s) { if (Array.isArray(s.episodes)) eps += s.episodes.length; });
+          lines.push({ title: (show.title || '?').slice(0, 28) + ' | aired=' + show.aired_episodes + ' | plays=' + x.plays + ' | seasons=' + (Array.isArray(seasons) ? seasons.length : (typeof seasons)) + ' | eps=' + eps });
+          var s0 = Array.isArray(seasons) && seasons[0];
+          var e0 = s0 && Array.isArray(s0.episodes) && s0.episodes[0];
+          if (e0) lines.push({ title: '  ep0: ' + Object.keys(e0).map(function(k) { return k + '=' + JSON.stringify(e0[k]); }).join(', ').slice(0, 140) });
+        });
+        Lampa.Select.show({ title: 'Дамп watched-серий', items: lines, onBack: function() { Lampa.Controller.toggle('settings_component'); } });
+      })['catch'](function(e) {
+        Lampa.Select.show({ title: 'Дамп watched-серий', items: [{ title: 'Ошибка: ' + (e && e.message || String(e)) }], onBack: function() { Lampa.Controller.toggle('settings_component'); } });
+      });
+    }
 
     function _toggleBadgeVisibility() {
       _badgesHidden = !_badgesHidden;
@@ -13838,7 +13862,7 @@
             s.episodes.forEach(function(ep) {
               if (!ep || !ep.number) return;
               _watchedEpisodesCache.add(String(id) + '-' + String(s.number) + '-' + String(ep.number));
-              if (s.number !== 0 && ((ep.plays || 0) > 0 || ep.last_watched_at || ep.completed)) watchedEps++;
+              if (s.number !== 0 && (ep.plays || 0) > 0) watchedEps++;
             });
           });
         }
