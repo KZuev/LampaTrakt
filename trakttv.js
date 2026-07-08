@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.38';
+  var PLUGIN_VERSION = '3.2.39';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -2452,6 +2452,31 @@
     return "/sync/watchlist/".concat(mediaType, "/").concat(sort, "?").concat(query.toString());
   }
 
+  // Trakt начал пагинировать /sync/watched/shows (дефолт 100/страницу) — тянем все страницы.
+  // Дедуп по trakt/tmdb id делает функцию устойчивой и к непагинированному ответу
+  // (если page игнорируется и каждый запрос возвращает один и тот же полный список).
+  function fetchAllWatchedShows() {
+    var all = [];
+    var seen = {};
+    var LIMIT = 100;
+    function step(page) {
+      return requestApi('GET', '/sync/watched/shows?extended=full&limit=' + LIMIT + '&page=' + page).then(function(items) {
+        var arr = Array.isArray(items) ? items : [];
+        var added = 0;
+        arr.forEach(function(x) {
+          var ids = (x && x.show && x.show.ids) || {};
+          var key = ids.trakt || ids.tmdb || (x.show && x.show.title) || '?';
+          if (!seen[key]) { seen[key] = true; all.push(x); added++; }
+        });
+        // Стоп: страница не ровно LIMIT (последняя или limit игнорируется),
+        // ничего нового (непагинированный ответ повторился), или предохранитель 50 страниц.
+        if (arr.length !== LIMIT || added === 0 || page >= 50) return all;
+        return step(page + 1);
+      });
+    }
+    return step(1);
+  }
+
   var api$1 = {
     addToHistory: addToHistory$1,
     watchedMovies: function() { return requestApi('GET', '/sync/watched/movies'); },
@@ -2782,7 +2807,7 @@
         });
         return set;
       }
-      var watchedPromise = requestApi('GET', '/sync/watched/shows?extended=full', {}, false, 300);
+      var watchedPromise = fetchAllWatchedShows();
       var hiddenProgressPromise = requestApi('GET', '/users/hidden/progress_watched?type=show&limit=500', {}, false, 300)
         .then(buildHiddenSet)['catch'](function() { return {}; });
       var hiddenCalendarPromise = requestApi('GET', '/users/hidden/calendar?type=show&limit=500', {}, false, 300)
@@ -2883,7 +2908,7 @@
         });
         return set;
       }
-      var watchedPromise = requestApi('GET', '/sync/watched/shows?extended=full', {}, false, 300);
+      var watchedPromise = fetchAllWatchedShows();
       var hiddenProgressPromise = requestApi('GET', '/users/hidden/progress_watched?type=show&limit=500', {}, false, 300)
         .then(buildHiddenSet)['catch'](function() { return {}; });
       var hiddenCalendarPromise = requestApi('GET', '/users/hidden/calendar?type=show&limit=500', {}, false, 300)
@@ -11096,10 +11121,15 @@
     });
 
     function _showDebugWatchedDump() {
-      requestApi('GET', '/sync/watched/shows?extended=full').then(function(items) {
+      Promise.all([
+        requestApi('GET', '/sync/watched/shows?extended=full'),
+        fetchAllWatchedShows()['catch'](function() { return null; })
+      ]).then(function(res) {
+        var items = res[0];
+        var full = res[1];
         var arr = Array.isArray(items) ? items : [];
         var lines = [];
-        lines.push({ title: 'shows=' + arr.length + (Array.isArray(items) ? '' : ' (тип: ' + (typeof items) + ')') });
+        lines.push({ title: 'shows=' + arr.length + (Array.isArray(full) ? ' | всего (все страницы)=' + full.length : '') + (Array.isArray(items) ? '' : ' (тип: ' + (typeof items) + ')') });
         if (arr[0]) lines.push({ title: 'item keys: ' + Object.keys(arr[0]).join(',') });
         arr.slice(0, 6).forEach(function(x) {
           var show = x.show || {};
@@ -13849,7 +13879,7 @@
     if (!_A) return Promise.resolve({ movies: new Set(), shows: new Set(), completedShows: new Set(), watchingShows: new Set() });
     _watchedCachePromise = Promise.all([
       _A.watchedMovies().catch(function() { return []; }),
-      requestApi('GET', '/sync/watched/shows?extended=full').catch(function() { return []; }),
+      fetchAllWatchedShows().catch(function() { return []; }),
       requestApi('GET', '/users/hidden/dropped?type=show&limit=500', {}, false, 300).catch(function() { return []; })
     ]).then(function(res) {
       var ms = new Set(), ss = new Set(), cs = new Set(), ds = new Set(), mDates = new Map();
