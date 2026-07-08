@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.35';
+  var PLUGIN_VERSION = '3.2.36';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -2803,7 +2803,7 @@
           var watchedEps = 0;
           if (Array.isArray(item.seasons)) item.seasons.forEach(function(s) {
             if (s.number === 0) return;
-            if (Array.isArray(s.episodes)) s.episodes.forEach(function(e) { if ((e.plays || 0) > 0) watchedEps++; });
+            if (Array.isArray(s.episodes)) s.episodes.forEach(function(e) { if ((e.plays || 0) > 0 || e.last_watched_at || e.completed) watchedEps++; });
           });
           var isEnded = endedStatuses.some(function(s) { return (show.status || '').toLowerCase() === s; });
           var fullyWatched = totalEps > 0 && watchedEps >= totalEps;
@@ -2908,7 +2908,7 @@
           var watchedEps = 0;
           if (Array.isArray(item.seasons)) item.seasons.forEach(function(s) {
             if (s.number === 0) return;
-            if (Array.isArray(s.episodes)) s.episodes.forEach(function(e) { if ((e.plays || 0) > 0) watchedEps++; });
+            if (Array.isArray(s.episodes)) s.episodes.forEach(function(e) { if ((e.plays || 0) > 0 || e.last_watched_at || e.completed) watchedEps++; });
           });
           var fullyWatched = totalEps > 0 && watchedEps >= totalEps;
           var isEnded = endedStatuses.some(function(s) { return (show.status || '').toLowerCase() === s; });
@@ -13838,7 +13838,7 @@
             s.episodes.forEach(function(ep) {
               if (!ep || !ep.number) return;
               _watchedEpisodesCache.add(String(id) + '-' + String(s.number) + '-' + String(ep.number));
-              if (s.number !== 0 && (ep.plays || 0) > 0) watchedEps++;
+              if (s.number !== 0 && ((ep.plays || 0) > 0 || ep.last_watched_at || ep.completed)) watchedEps++;
             });
           });
         }
