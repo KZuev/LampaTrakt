@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.37';
+  var PLUGIN_VERSION = '3.2.38';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -2800,11 +2800,10 @@
         var enriched = items.map(function(item) {
           var show = item.show || {};
           var totalEps = Number(show.aired_episodes) || 0;
-          var watchedEps = 0;
-          if (Array.isArray(item.seasons)) item.seasons.forEach(function(s) {
-            if (s.number === 0) return;
-            if (Array.isArray(s.episodes)) s.episodes.forEach(function(e) { if ((e.plays || 0) > 0) watchedEps++; });
-          });
+          // Trakt перестал отдавать разбивку seasons/episodes в /sync/watched/shows?extended=full —
+          // считаем просмотренные серии по top-level plays (с ограничением по aired на пересмотры).
+          var _plays = Number(item.plays) || 0;
+          var watchedEps = totalEps > 0 ? Math.min(_plays, totalEps) : _plays;
           var isEnded = endedStatuses.some(function(s) { return (show.status || '').toLowerCase() === s; });
           var fullyWatched = totalEps > 0 && watchedEps >= totalEps;
           return { item: item, show: show, totalEps: totalEps, watchedEps: watchedEps, isEnded: isEnded, fullyWatched: fullyWatched };
@@ -2905,11 +2904,10 @@
           if (hiddenSet['trakt_' + ids.trakt] || hiddenSet['tmdb_' + ids.tmdb]) return;
           // Compute fullyWatched for active/completed distinction
           var totalEps = Number(show.aired_episodes) || 0;
-          var watchedEps = 0;
-          if (Array.isArray(item.seasons)) item.seasons.forEach(function(s) {
-            if (s.number === 0) return;
-            if (Array.isArray(s.episodes)) s.episodes.forEach(function(e) { if ((e.plays || 0) > 0) watchedEps++; });
-          });
+          // Trakt перестал отдавать разбивку seasons/episodes в /sync/watched/shows?extended=full —
+          // считаем просмотренные серии по top-level plays (с ограничением по aired на пересмотры).
+          var _plays = Number(item.plays) || 0;
+          var watchedEps = totalEps > 0 ? Math.min(_plays, totalEps) : _plays;
           var fullyWatched = totalEps > 0 && watchedEps >= totalEps;
           var isEnded = endedStatuses.some(function(s) { return (show.status || '').toLowerCase() === s; });
           counts.all++;
@@ -11113,7 +11111,14 @@
           var e0 = s0 && Array.isArray(s0.episodes) && s0.episodes[0];
           if (e0) lines.push({ title: '  ep0: ' + Object.keys(e0).map(function(k) { return k + '=' + JSON.stringify(e0[k]); }).join(', ').slice(0, 140) });
         });
-        Lampa.Select.show({ title: 'Дамп watched-серий', items: lines, onBack: function() { Lampa.Controller.toggle('settings_component'); } });
+        var fullText = lines.map(function(l) { return l.title; }).join('\n');
+        lines.push({ title: '[ Скопировать ]', _copy: fullText });
+        Lampa.Select.show({
+          title: 'Дамп watched-серий',
+          items: lines,
+          onSelect: function(item) { if (item && item._copy) _copyToClipboard(item._copy); },
+          onBack: function() { Lampa.Controller.toggle('settings_component'); }
+        });
       })['catch'](function(e) {
         Lampa.Select.show({ title: 'Дамп watched-серий', items: [{ title: 'Ошибка: ' + (e && e.message || String(e)) }], onBack: function() { Lampa.Controller.toggle('settings_component'); } });
       });
@@ -13855,14 +13860,17 @@
         if (!id) return;
         ss.add(String(id));
         var totalEps = Number(x.show && x.show.aired_episodes) || 0;
-        var watchedEps = 0;
+        // Trakt перестал отдавать seasons/episodes под extended=full — число просмотренных
+        // серий берём из top-level plays (ограничение по aired на пересмотры).
+        var _plays = Number(x.plays) || 0;
+        var watchedEps = totalEps > 0 ? Math.min(_plays, totalEps) : _plays;
+        // Если разбивка seasons вернётся — заполним кэш просмотренных серий (сейчас пусто).
         if (Array.isArray(x.seasons)) {
           x.seasons.forEach(function(s) {
             if (!s || !Array.isArray(s.episodes)) return;
             s.episodes.forEach(function(ep) {
               if (!ep || !ep.number) return;
               _watchedEpisodesCache.add(String(id) + '-' + String(s.number) + '-' + String(ep.number));
-              if (s.number !== 0 && (ep.plays || 0) > 0) watchedEps++;
             });
           });
         }

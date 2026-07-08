@@ -10,6 +10,8 @@
 
 ## Текущая версия
 
+**v3.2.38** — Настоящий фикс подсчёта просмотренных серий: Trakt **убрал разбивку `seasons`/`episodes`** из `/sync/watched/shows?extended=full` (дамп показал `item keys: plays, last_watched_at, last_updated_at, reset_at, show` — `seasons=undefined`). Раньше `watchedEps` считался итерацией `episodes[].plays` → всегда 0 → «Мои сериалы» показывали всё непросмотренным, галочки/остаток врали. Теперь число просмотренных серий берётся из **top-level `x.plays`** с ограничением `Math.min(plays, aired_episodes)` (на пересмотры). Исправлено в 3 местах (`watching`, `watchingCounts`, `ensureWatchedCache`); цикл по `seasons` оставлен для `_watchedEpisodesCache` на случай возврата разбивки. В дамп добавлена кнопка «Скопировать».
+
 **v3.2.37** — Откат v3.2.36 (не помог: `last_watched_at` не сработал → серии в ответе `/sync/watched/shows?extended=full` вообще не итерируются, `item.seasons` пуст/иной) + добавлен диагностический пункт «Дамп watched-серий» в меню отладки (`_showDebugWatchedDump`): показывает форму ответа (массив ли, ключи элемента, по первым 6 сериалам — aired_episodes/plays/seasons/eps и ключи+значения первой серии). Нужно снять дамп у пользователя и починить прицельно.
 
 **v3.2.36** — Фикс подсчёта просмотренных серий в «Мои сериалы»/бейджах (регрессия на стороне Trakt). `/sync/watched/shows?extended=full` перечисляет только просмотренные серии, но код считал их лишь при `plays>0` — Trakt перестал отдавать `plays` (или обнулил) под `extended=full`, из-за чего `watchedEps=0` везде: активные показывали все серии непросмотренными, галочки «просмотрено» пропали, кружок остатка = все серии. Фикс: считать серию просмотренной по `plays>0 ИЛИ last_watched_at ИЛИ completed` в трёх местах (`Api.watching`, `Api.watchingCounts`, `ensureWatchedCache`). Карточка/«Смотреть дальше» брали прогресс из `/progress/watched` и `up_next_nitro` — были корректны.
@@ -167,6 +169,7 @@
 | v3.2.35 | TBD | Авто-торрент (сериалы): при `next_episode = null` (все вышедшие просмотрены) `launchAtShow` прерывается с «Все вышедшие серии просмотрены» вместо крашащего фолбэка `season:null` → открытия торрентов |
 | v3.2.36 | TBD | Фикс подсчёта просмотренных серий (Мои сериалы/галочки/остаток): считать серию просмотренной по `plays>0 ИЛИ last_watched_at ИЛИ completed` — НЕ ПОМОГЛО, откачено в v3.2.37 |
 | v3.2.37 | TBD | Откат v3.2.36 + диагностика «Дамп watched-серий» в меню отладки (`_showDebugWatchedDump`) — показать реальную форму `/sync/watched/shows?extended=full` (серии не итерируются, `item.seasons` пуст/иной — не только `plays`) |
+| v3.2.38 | TBD | Настоящий фикс: Trakt убрал `seasons` из `/sync/watched/shows?extended=full` → `watchedEps` считаем по top-level `Math.min(x.plays, aired_episodes)` (3 места). Восстановлены Мои сериалы/галочки/остаток. + кнопка «Скопировать» в дамп |
 
 ## Палитра (фирменный цвет Trakt)
 
