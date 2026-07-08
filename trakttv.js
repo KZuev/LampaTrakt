@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.34';
+  var PLUGIN_VERSION = '3.2.35';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -6466,6 +6466,10 @@
         ru: "Следующий эпизод не найден",
         en: "Next episode not found",
       },
+      trakt_at_all_watched: {
+        ru: "Все вышедшие серии просмотрены",
+        en: "All aired episodes watched",
+      },
       trakt_at_status_api: {
         ru: "Ищем следующий эпизод…",
         en: "Looking up next episode…",
@@ -8346,11 +8350,11 @@
       var season = next && next.season;
       var episode = next && next.number;
       if (!season || !episode) {
-        // Следующий эпизод неизвестен — берём лучший видеофайл (как для фильма)
-        _atSelectPending = { type: 'show', season: null, episode: null };
-      } else {
-        _atSelectPending = { type: 'show', season: season, episode: episode };
+        // next_episode == null → доступной непросмотренной вышедшей серии нет.
+        // НЕ запускаем (иначе поиск файла по null season/episode падает).
+        var e = new Error('all_watched'); e._atAllWatched = true; throw e;
       }
+      _atSelectPending = { type: 'show', season: season, episode: episode };
       _atOverlaySetStatus(t$2('trakt_at_status_torrent', 'Ищем торрент…'));
       _atBtnReset(btn);
       _atSaveAndClearTorrentFilter();
@@ -8361,7 +8365,9 @@
       _atOverlayHide();
       _atRestoreTorrentFilter();
       _atControllerDisable();
-      notify(t$2('trakt_at_no_next', 'Следующий эпизод не найден'));
+      notify(err && err._atAllWatched
+        ? t$2('trakt_at_all_watched', 'Все вышедшие серии просмотрены')
+        : t$2('trakt_at_no_next', 'Следующий эпизод не найден'));
     });
   }
 
