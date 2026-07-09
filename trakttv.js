@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.45';
+  var PLUGIN_VERSION = '3.2.46';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -16068,11 +16068,12 @@
     };
   }
   function registerRows() {
-    // Main-screen rows registered in display order (all index:1 — sequence equals display order)
+    // Main-screen rows registered in display order (all index:0 — вставляются перед
+    // ВСЕМИ нативными строками Lampa; sequence equals display order)
     var mainRows = [{
       name: 'TraktUpNextRow',
       title: Lampa.Lang.translate('trakttv_row_upnext'),
-      index: 1,
+      index: 0,
       screen: ['main', 'category'],
       displayTitle: Lampa.Lang.translate('trakttv_upnext'),
       apiMethod: 'upnext',
@@ -16088,7 +16089,7 @@
     }, {
       name: 'TraktWatchlistRow',
       title: Lampa.Lang.translate('trakttv_row_watchlist_main'),
-      index: 1,
+      index: 0,
       screen: ['main'],
       displayTitle: Lampa.Lang.translate('trakttv_watchlist'),
       apiMethod: 'watchlist',
@@ -16156,7 +16157,10 @@
       }
     }];
     // Lampa renders same-index rows in reverse registration order (LIFO),
-    // so register in reverse display order: Recommendations → Calendar → Watchlist → UpNext
+    // so register in reverse display order: Recommendations → Calendar → Watchlist → UpNext.
+    // index:0 splices before position 0 of the already-built native rows array
+    // (ContentRows.call runs AFTER native rows are added to parts_data) — so our
+    // whole block ends up strictly above every native Lampa row on the main screen.
     // 4. Recommendations (registered first → shown last)
     var _recMainConfig = {
       name: 'TraktRecommendationsRow',
@@ -16175,7 +16179,7 @@
     Lampa.ContentRows.add({
       name: 'TraktRecommendationsRow',
       title: Lampa.Lang.translate('trakttv_row_recommendations_main'),
-      index: 1,
+      index: 0,
       screen: ['main'],
       onMore: createOnMoreHandler(_recMainConfig),
       call: createRowCall(_recMainConfig)
@@ -16187,7 +16191,7 @@
       Lampa.ContentRows.add({
         name: 'TraktCalendarRow',
         title: Lampa.Lang.translate('trakttv_row_calendar_main'),
-        index: 1,
+        index: 0,
         screen: ['main'],
         onMore: createOnMoreHandler({ component: 'trakt_timetable_all', displayTitle: _calTitle }),
         call: createCalendarCall(function () { return true; })
