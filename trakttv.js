@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.44';
+  var PLUGIN_VERSION = '3.2.45';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -10910,7 +10910,7 @@
       component: 'trakt',
       param: { name: 'trakt_replace_favorites', type: 'trigger', 'default': false },
       field: {
-        name: 'Заменить избранное Lampa на Trakt',
+        name: 'Заменить «Избранное» на «Хочу посмотреть» Trakt.TV',
         description: 'Пункт меню «Избранное», кнопка на карточке и контекстное меню постеров открывают и используют «Хочу посмотреть» Trakt вместо закладок Lampa'
       }
     });
@@ -10918,7 +10918,7 @@
       component: 'trakt',
       param: { name: 'trakt_replace_timetable', type: 'trigger', 'default': false },
       field: {
-        name: 'Заменить расписание Lampa на Trakt',
+        name: 'Заменить «Расписание» на «Календарь» Trakt.TV',
         description: 'Пункт меню «Расписание» открывает календарь Trakt вместо расписания Lampa'
       }
     });
@@ -10926,7 +10926,7 @@
       component: 'trakt',
       param: { name: 'trakt_replace_subscribes', type: 'trigger', 'default': false },
       field: {
-        name: 'Заменить подписки Lampa на Trakt',
+        name: 'Заменить «Подписки» на «Мои сериалы» Trakt.TV',
         description: 'Пункт меню «Подписки» открывает «Мои сериалы» Trakt; колокольчик подписки на карточке сериала скрывается (Trakt отслеживает сериалы автоматически по прогрессу просмотра)'
       }
     });
@@ -14581,71 +14581,86 @@
     } catch(e) {}
   }
 
-  // Хуки контекстного меню карточки (long-press). Читаем флаги в момент показа — живое вкл/выкл.
-  // Подмена избранного: галочка «Избранное» остаётся чекбоксом, но показывает и тогглит
-  // «Хочу посмотреть» Trakt (through where:'trakt_wl' → патч Lampa.Favorite.toggle);
-  // «Нравится»/«Позже»/«История» скрываются. Подмена подписок: скрывается раздел «Статус»
-  // (separator + cub-метки) — его аналог в Trakt это «Мои сериалы».
-  function _installTraktFavMenuHooks(cardInst, data) {
-    if (!cardInst) return;
-    var prevShow = cardInst.onMenuShow;
-    cardInst.onMenuShow = function(menu, cardEl, d) {
-      if (typeof prevShow === 'function') { try { prevShow.apply(this, arguments); } catch(e) {} }
-      try {
-        if (!Array.isArray(menu)) return;
-        if (!Lampa.Storage.get('trakt_token')) return;
-        var replaceFav = readBooleanStorage$2('trakt_replace_favorites', false);
-        var replaceSubs = readBooleanStorage$2('trakt_replace_subscribes', false);
-        if (!replaceFav && !replaceSubs) return;
-        var dd = d || data || {};
-        var idStr = dd.id != null ? String(dd.id) : '';
-        var type = dd.method || dd.card_type || dd.type || (dd.first_air_date || dd.name ? 'tv' : 'movie');
-        var inWl = false;
-        if (_watchlistBadgeCache && idStr) {
-          inWl = type === 'movie' ? _watchlistBadgeCache.movies.has(idStr) : _watchlistBadgeCache.shows.has(idStr);
-        }
-        var statusTitle = null;
-        try { statusTitle = Lampa.Lang.translate('settings_cub_status'); } catch(e) {}
-        for (var i = menu.length - 1; i >= 0; i--) {
-          var m = menu[i];
-          if (!m) continue;
-          if (replaceFav) {
-            if (m.where === 'book') { m.checked = inWl; m.where = 'trakt_wl'; continue; }
-            if (m.where === 'like' || m.where === 'wath' || m.where === 'history') { menu.splice(i, 1); continue; }
+  // Трекер «какую карточку долго нажали» — Lampa.Select.show() для long-press меню
+  // карточки не получает card data напрямую (см. _installTraktCardMenuPatch), поэтому
+  // ловим hover:long на document (capture-фаза не зависит от bubbles) и сопоставляем
+  // DOM-ноду события с живыми инстансами карточек в _renderedCardInstances.
+  var _lastLongPressCardData = null;
+  var _lastLongPressTime = 0;
+  var _longPressTrackerInstalled = false;
+  function _initLongPressCardTracker() {
+    if (_longPressTrackerInstalled) return;
+    _longPressTrackerInstalled = true;
+    try {
+      document.addEventListener('hover:long', function(ev) {
+        try {
+          var target = ev && ev.target;
+          if (!target) return;
+          for (var i = _renderedCardInstances.length - 1; i >= 0; i--) {
+            var inst = _renderedCardInstances[i];
+            var node = inst && typeof inst.render === 'function' ? inst.render(true) : null;
+            var domNode = node && node.jquery !== undefined ? node[0] : node;
+            if (domNode === target) { _lastLongPressCardData = inst.data; _lastLongPressTime = Date.now(); return; }
           }
-          if (replaceSubs) {
-            if (m.collect) { menu.splice(i, 1); continue; }
-            if (m.separator && statusTitle && m.title === statusTitle) { menu.splice(i, 1); continue; }
-          }
-        }
-      } catch(e) {}
-    };
+        } catch(e) {}
+      }, true);
+    } catch(e) {}
   }
 
-  // Патч Lampa.Favorite.toggle: синтетическая категория 'trakt_wl' (её ставит
-  // _installTraktFavMenuHooks на галочку «Избранное») тогглит watchlist Trakt
-  // вместо локальных закладок. Возвращаем новое состояние синхронно из бейдж-кэша.
-  function _patchLampaFavoriteToggle() {
+  // Реальные постеры (Lampa 3.0+/Maker) создаёт interaction/card/card.js — модульный
+  // класс, никак не связанный с window.Lampa.Card (тот — легаси, не используется
+  // современным рендерингом строк/хабов). Long-press меню строит внутренний модуль
+  // card/module/menu.js через Lampa.Select.show({title:'title_action', items, ...}) —
+  // единственная стабильная и глобально доступная точка перехвата — Lampa.Select.listener
+  // 'preshow' (шлётся синхронно до отрисовки, см. interaction/select.js). У Select.show
+  // нет card data — используем _lastLongPressCardData из трекера выше. Пункт меню
+  // избранного распознаём структурно (item.where === 'book'), т.к. title 'title_action'
+  // используется много где (торренты/плеер/темы).
+  function _installTraktCardMenuPatch() {
     try {
-      if (!window.Lampa || !Lampa.Favorite || typeof Lampa.Favorite.toggle !== 'function') return;
-      if (Lampa.Favorite._traktWlPatched) return;
-      var _orig = Lampa.Favorite.toggle;
-      Lampa.Favorite.toggle = function(where, card) {
-        if (where === 'trakt_wl') {
-          var inWl = false;
-          try {
-            var params = _traktWatchlistParamsForCard(card);
-            if (params && _watchlistBadgeCache) {
-              var idStr = String(params.id);
-              inWl = params.method === 'movie' ? _watchlistBadgeCache.movies.has(idStr) : _watchlistBadgeCache.shows.has(idStr);
+      if (!window.Lampa || !Lampa.Select || !Lampa.Select.listener) return;
+      if (Lampa.Select._traktMenuPatched) return;
+      Lampa.Select._traktMenuPatched = true;
+      Lampa.Select.listener.follow('preshow', function(e) {
+        try {
+          var active = e && e.active;
+          if (!active || !Array.isArray(active.items)) return;
+          var isFavMenu = active.items.some(function(m) { return m && m.where === 'book'; });
+          if (!isFavMenu) return;
+          if (!Lampa.Storage.get('trakt_token')) return;
+          var replaceFav = readBooleanStorage$2('trakt_replace_favorites', false);
+          var replaceSubs = readBooleanStorage$2('trakt_replace_subscribes', false);
+          if (!replaceFav && !replaceSubs) return;
+          var cardData = (_lastLongPressCardData && (Date.now() - _lastLongPressTime) < 3000) ? _lastLongPressCardData : null;
+          var statusTitle = null;
+          try { statusTitle = Lampa.Lang.translate('settings_cub_status'); } catch(err) {}
+          var items = active.items;
+          for (var i = items.length - 1; i >= 0; i--) {
+            var m = items[i];
+            if (!m) continue;
+            if (replaceFav) {
+              if (m.where === 'book') {
+                if (cardData) {
+                  var params = _traktWatchlistParamsForCard(cardData);
+                  var inWl = false;
+                  if (params && _watchlistBadgeCache) {
+                    var idStr = String(params.id);
+                    inWl = params.method === 'movie' ? _watchlistBadgeCache.movies.has(idStr) : _watchlistBadgeCache.shows.has(idStr);
+                  }
+                  m.checked = inWl;
+                  (function(cd) { m.onCheck = function() { traktToggleWatchlistForCard(cd); }; })(cardData);
+                }
+                continue;
+              }
+              if (m.where === 'like' || m.where === 'wath' || m.where === 'history') { items.splice(i, 1); continue; }
             }
-          } catch(e) {}
-          try { traktToggleWatchlistForCard(card); } catch(e) {}
-          return !inWl;
-        }
-        return _orig.apply(this, arguments);
-      };
-      Lampa.Favorite._traktWlPatched = true;
+            if (replaceSubs) {
+              if (m.collect) { items.splice(i, 1); continue; }
+              if (m.separator && statusTitle && m.title === statusTitle) { items.splice(i, 1); continue; }
+            }
+          }
+        } catch(err) {}
+      });
     } catch(e) {}
   }
 
@@ -14658,9 +14673,6 @@
     var _orig = Lampa.Card;
     Lampa.Card = function(data, params) {
       var inst = _orig.apply(this, arguments);
-      // Подмена избранного: хуки long-press меню (inst может быть undefined у
-      // конструкторного вызова — тогда карточка это this)
-      try { _installTraktFavMenuHooks(inst || this, data); } catch(e) {}
       if (!Lampa.Storage.get('trakt_token')) return inst;
       if (inst && data && data.id) {
         var type = data.method || data.card_type || data.type || (data.first_air_date ? 'tv' : 'movie');
@@ -14945,7 +14957,8 @@
       });
       _initCardObserver();
       _patchLampaCard();
-      _patchLampaFavoriteToggle();
+      _initLongPressCardTracker();
+      _installTraktCardMenuPatch();
 
       if (window.Lampa && Lampa.Player && Lampa.Player.listener) {
         // onEnded / onStop / onHidden -> markFinishIntent for the current media key
@@ -15051,12 +15064,13 @@
       setInterval(checkGuestSlotExpiry, 30 * 60 * 1000);
       setTimeout(syncPlaybackFromTrakt, 2000);
       _patchLampaCard();
-      _patchLampaFavoriteToggle();
-      // Повторная попытка патча на случай позднего создания Lampa.Card
+      _initLongPressCardTracker();
+      _installTraktCardMenuPatch();
+      // Повторная попытка патча на случай позднего создания Lampa.Card/Lampa.Select
       setTimeout(_patchLampaCard, 1000);
       setTimeout(_patchLampaCard, 3000);
-      setTimeout(_patchLampaFavoriteToggle, 1000);
-      setTimeout(_patchLampaFavoriteToggle, 3000);
+      setTimeout(_installTraktCardMenuPatch, 1000);
+      setTimeout(_installTraktCardMenuPatch, 3000);
       if (Object.keys(getUpcomingMovieDates()).length > 0 || getSoonMovieIds().size > 0) {
         _digitalDatesAvailable = true;
         setTimeout(function() {
