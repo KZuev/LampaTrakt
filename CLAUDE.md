@@ -10,6 +10,8 @@
 
 ## Текущая версия
 
+**v3.2.44** — Переработка long-press меню карточек под подмены. При подмене избранного: галочка «Избранное» остаётся **чекбоксом**, но показывает и тогглит «Хочу посмотреть» Trakt — `onMenuShow` ставит ей `checked` из бейдж-кэша и `where:'trakt_wl'`; новый патч `_patchLampaFavoriteToggle` перехватывает `Lampa.Favorite.toggle('trakt_wl')` → `traktToggleWatchlistForCard`, синхронно возвращая новое состояние из кэша (родной `onCheck` дергает `Favorite.toggle`). «Нравится»/«Позже»/«История» скрываются; прежний unshift-пункт и `onMenuSelect`-хук убраны (переводы `trakt_watchlist_add/remove_item` удалены). При подмене подписок: полностью скрывается раздел «Статус» (separator по title `settings_cub_status` + все `collect`-метки). Опции независимы.
+
 **v3.2.43** — Опция `trakt_replace_subscribes` (trigger, off) в «Подмене разделов Lampa»: пункт меню «Подписки» (`action:'subscribes'`) открывает «Мои сериалы» (`trakt_watching`) — та же ветка общего `menu:action`-перехвата. Колокольчик подписки на карточке сериала (`.button--subscribe`) при включённой опции скрывается (`addClass('hide')` в `onFullCardReady` — надёжно, т.к. модуль Subscribed показывает кнопку синхронно в onCreate, а 'full complite' позже): в Trakt нет сущности «подписка», сериалы отслеживаются автоматически по прогрессу.
 
 **v3.2.42** — Раздел настроек «Избранное Lampa» переименован в «Подмена разделов Lampa» (ключ `trakt_favorites_section` сохранён). Новая опция `trakt_replace_timetable` (trigger, off): пункт меню Lampa «Расписание» (`action:'timetable'`) открывает календарь Trakt (`trakt_timetable_all`) — тот же перехват `menu:action`+`abort()`, что у избранного; общий обработчик обоих action.
@@ -185,6 +187,7 @@
 | v3.2.41 | TBD | Кнопка `.button--book` отражает состояние watchlist: заливка `path` `currentColor/transparent` (нативный приём Lampa) при открытии карточки (+повтор 500мс — перебить нативный updateFavorite) и после тоггла (`onToggled` в `traktToggleWatchlistForCard`) |
 | v3.2.42 | TBD | Раздел «Избранное Lampa» → «Подмена разделов Lampa»; опция `trakt_replace_timetable` — пункт меню «Расписание» открывает календарь Trakt (`trakt_timetable_all`), общий перехват `menu:action` |
 | v3.2.43 | TBD | Опция `trakt_replace_subscribes` — пункт меню «Подписки» открывает «Мои сериалы» (`trakt_watching`); колокольчик `.button--subscribe` на карточке скрывается (в Trakt подписка не нужна — отслеживание по прогрессу) |
+| v3.2.44 | TBD | Long-press меню: галочка «Избранное» = чекбокс watchlist Trakt (`where:'trakt_wl'` + патч `Favorite.toggle`), «Нравится»/«Позже»/«История» скрыты (подмена избранного); раздел «Статус» (separator+метки) скрыт при подмене подписок |
 
 ## Палитра (фирменный цвет Trakt)
 
