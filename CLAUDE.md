@@ -10,6 +10,8 @@
 
 ## Текущая версия
 
+**v3.2.41** — Кнопка «Избранное» на карточке (при включённой подмене) теперь отражает состояние watchlist Trakt визуально: заливка иконки тем же приёмом, что у нативной Lampa (`.button--book path` → `fill: currentColor/transparent`, как в `full/start/bookmarks.js onUpdateFavorite`). Хелперы `_traktWatchlistParamsForCard`/`_traktWatchlistStateForCard` (состояние из бейдж-кэша, иначе API) + `_setBookBtnWatchlistFill`; заливка при открытии карточки (повтор через 500мс — перебить нативный `updateFavorite`, красящий по закладкам Lampa) и сразу после тоггла (колбэк `onToggled(newState)` в `traktToggleWatchlistForCard`).
+
 **v3.2.40** — Опция «Заменить избранное Lampa на Trakt» (`trakt_replace_favorites`, trigger, off; новый раздел настроек «Избранное Lampa»). При включении (и наличии токена): (1) пункт «Избранное» бокового меню Lampa открывает хаб «Хочу посмотреть» — перехват `Lampa.Listener 'menu' {type:'action', action:'favorite'}` + `e.abort()`; (2) кнопка `.button--book` на карточке тогглит watchlist Trakt (`traktToggleWatchlistForCard` → существующий `handleSelectAction`), подпись меняется на «Хочу посмотреть»; (3) long-press меню карточек — родные пункты закладок (`where`/`collect`) удаляются, добавляется пункт «В/Убрать из „Хочу посмотреть"» (`_installTraktFavMenuHooks` в обёртке `_patchLampaCard`, на `inst || this`, с chain прежних `onMenuShow/onMenuSelect`). Флаг читается в момент события — вкл/выкл живое. Переводы: `trakt_watchlist_add_item`/`trakt_watchlist_remove_item`/`trakt_favorites_section`.
 
 **v3.2.39** — Фикс «сериалов стало сильно меньше» в «Мои сериалы» (все вкладки): Trakt вместе с удалением `seasons` начал **пагинировать** `/sync/watched/shows` (дефолт 100/страницу; в дампе `shows=100` ровно). Плагин брал только первый ответ → всё за пределами первой сотни исчезало. Добавлен `fetchAllWatchedShows()` — постраничная дозагрузка (`limit=100&page=N`) с дедупом по trakt/tmdb id (устойчив к непагинированному ответу), стоп: страница ≠ 100 эл-в / ничего нового / 50 страниц. Используется в `watching`, `watchingCounts`, `ensureWatchedCache` (галочки). Дамп показывает `shows=… | всего (все страницы)=…`.
@@ -176,6 +178,7 @@
 | v3.2.38 | TBD | Настоящий фикс: Trakt убрал `seasons` из `/sync/watched/shows?extended=full` → `watchedEps` считаем по top-level `Math.min(x.plays, aired_episodes)` (3 места). Восстановлены Мои сериалы/галочки/остаток. + кнопка «Скопировать» в дамп |
 | v3.2.39 | TBD | Фикс усечения «Мои сериалы» до 100: Trakt начал пагинировать `/sync/watched/shows` → `fetchAllWatchedShows()` тянет все страницы с дедупом (устойчив к непагинированному ответу); используется в `watching`/`watchingCounts`/`ensureWatchedCache`; дамп показывает `всего (все страницы)` |
 | v3.2.40 | TBD | Опция «Заменить избранное Lampa на Trakt» (`trakt_replace_favorites`): пункт меню «Избранное» → хаб «Хочу посмотреть» (перехват `menu:action` + `abort`), кнопка `.button--book` → тоггл watchlist, long-press меню → пункт Trakt вместо закладок Lampa (`_installTraktFavMenuHooks`) |
+| v3.2.41 | TBD | Кнопка `.button--book` отражает состояние watchlist: заливка `path` `currentColor/transparent` (нативный приём Lampa) при открытии карточки (+повтор 500мс — перебить нативный updateFavorite) и после тоггла (`onToggled` в `traktToggleWatchlistForCard`) |
 
 ## Палитра (фирменный цвет Trakt)
 

@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.40';
+  var PLUGIN_VERSION = '3.2.41';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -14530,27 +14530,44 @@
     if (document.body) mo.observe(document.body, { childList: true, subtree: true });
   }
 
+  // Параметры watchlist-запроса из данных карточки (нормализация вложенных контейнеров)
+  function _traktWatchlistParamsForCard(cardData) {
+    var d = _atNormalizeCard(cardData);
+    if (!d || !d.id) return null;
+    var type = d.method || d.card_type || d.type || (d.first_air_date || d.name ? 'tv' : 'movie');
+    var method = type === 'movie' ? 'movie' : 'tv';
+    return { method: method, id: d.id, ids: { tmdb: d.id } };
+  }
+
+  // Текущее состояние «в watchlist?» — из бейдж-кэша (быстро), иначе через API
+  function _traktWatchlistStateForCard(cardData) {
+    var params = _traktWatchlistParamsForCard(cardData);
+    if (!params) return Promise.resolve(false);
+    var idStr = String(params.id);
+    if (_watchlistBadgeCache) {
+      return Promise.resolve(params.method === 'movie' ? _watchlistBadgeCache.movies.has(idStr) : _watchlistBadgeCache.shows.has(idStr));
+    }
+    return api$1 ? api$1.inWatchlist(params)['catch'](function() { return false; }) : Promise.resolve(false);
+  }
+
+  // Заливка иконки кнопки «Избранное» (.button--book) — тот же приём, что у нативной
+  // Lampa (full/start/bookmarks.js onUpdateFavorite): path fill currentColor/transparent.
+  function _setBookBtnWatchlistFill(bookBtn, inWl) {
+    try { bookBtn.find('path').attr('fill', inWl ? 'currentColor' : 'transparent'); } catch(e) {}
+  }
+
   // Тоггл «Хочу посмотреть» Trakt для данных карточки (подмена избранного Lampa).
-  // Состояние берём из бейдж-кэша (быстро), иначе спрашиваем API; сам тоггл,
-  // уведомление и обновление бейджей делает существующий handleSelectAction.
-  function traktToggleWatchlistForCard(cardData) {
+  // Сам тоггл, уведомление и обновление бейджей делает существующий handleSelectAction.
+  // onToggled(newState) — колбэк для обновления вида вызвавшей кнопки.
+  function traktToggleWatchlistForCard(cardData, onToggled) {
     try {
-      var d = _atNormalizeCard(cardData);
-      if (!d || !d.id) return;
-      var type = d.method || d.card_type || d.type || (d.first_air_date || d.name ? 'tv' : 'movie');
-      var method = type === 'movie' ? 'movie' : 'tv';
-      var params = { method: method, id: d.id, ids: { tmdb: d.id } };
-      var idStr = String(d.id);
-      var statePromise;
-      if (_watchlistBadgeCache) {
-        statePromise = Promise.resolve(method === 'movie' ? _watchlistBadgeCache.movies.has(idStr) : _watchlistBadgeCache.shows.has(idStr));
-      } else {
-        statePromise = api$1 ? api$1.inWatchlist(params)['catch'](function() { return false; }) : Promise.resolve(false);
-      }
-      statePromise.then(function(inList) {
+      var params = _traktWatchlistParamsForCard(cardData);
+      if (!params) return;
+      _traktWatchlistStateForCard(cardData).then(function(inList) {
         handleSelectAction({ target: 'watchlist', inList: !!inList }, params, function() {
           try { ensureWatchlistBadgeCache(); } catch(e) {}
           try { _renderedCardInstances.forEach(renderWatchlistBadge); } catch(e) {}
+          if (typeof onToggled === 'function') { try { onToggled(!inList); } catch(e) {} }
         });
       });
     } catch(e) {}
@@ -15278,8 +15295,19 @@
           var bookBtn = favRoot ? favRoot.find('.button--book') : null;
           if (bookBtn && bookBtn.length) {
             var favCardData = e.data;
+            // Начальная заливка иконки по состоянию watchlist (с задержкой — нативный
+            // updateFavorite красит по закладкам Lampa после создания кнопки, перебиваем)
+            var _paintBook = function () {
+              _traktWatchlistStateForCard(favCardData).then(function (inWl) {
+                _setBookBtnWatchlistFill(bookBtn, inWl);
+              });
+            };
+            _paintBook();
+            setTimeout(_paintBook, 500);
             bookBtn.off('hover:enter').on('hover:enter', function () {
-              traktToggleWatchlistForCard(favCardData);
+              traktToggleWatchlistForCard(favCardData, function (nowIn) {
+                _setBookBtnWatchlistFill(bookBtn, nowIn);
+              });
             });
             var bookLabel = bookBtn.find('span');
             if (bookLabel.length) bookLabel.text((Lampa.Lang && Lampa.Lang.translate('trakttv_watchlist')) || 'Хочу посмотреть');
