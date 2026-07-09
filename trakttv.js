@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.39';
+  var PLUGIN_VERSION = '3.2.40';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -6493,6 +6493,18 @@
         ru: "Все вышедшие серии просмотрены",
         en: "All aired episodes watched",
       },
+      trakt_watchlist_add_item: {
+        ru: "В «Хочу посмотреть»",
+        en: "Add to watchlist",
+      },
+      trakt_watchlist_remove_item: {
+        ru: "Убрать из «Хочу посмотреть»",
+        en: "Remove from watchlist",
+      },
+      trakt_favorites_section: {
+        ru: "Избранное Lampa",
+        en: "Lampa favorites",
+      },
       trakt_at_status_api: {
         ru: "Ищем следующий эпизод…",
         en: "Looking up next episode…",
@@ -10892,6 +10904,24 @@
       },
       onRender: function(item) { item.show(); }
     });
+    // ── Избранное Lampa ───────────────────────────────────────────────────────────
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: { name: 'trakt_favorites_section', type: 'static' },
+      field: { name: '' },
+      onRender: function(item) {
+        item.empty();
+        item.append('<div class="settings-param__name" style="opacity:.55;font-weight:700">' + t$1('trakt_favorites_section', 'Избранное Lampa') + '</div>');
+      }
+    });
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: { name: 'trakt_replace_favorites', type: 'trigger', 'default': false },
+      field: {
+        name: 'Заменить избранное Lampa на Trakt',
+        description: 'Пункт меню «Избранное», кнопка на карточке и контекстное меню постеров открывают и используют «Хочу посмотреть» Trakt вместо закладок Lampa'
+      }
+    });
     // ── Страница фильма и сериала ─────────────────────────────────────────────────
     Lampa.SettingsApi.addParam({
       component: 'trakt',
@@ -14500,6 +14530,68 @@
     if (document.body) mo.observe(document.body, { childList: true, subtree: true });
   }
 
+  // Тоггл «Хочу посмотреть» Trakt для данных карточки (подмена избранного Lampa).
+  // Состояние берём из бейдж-кэша (быстро), иначе спрашиваем API; сам тоггл,
+  // уведомление и обновление бейджей делает существующий handleSelectAction.
+  function traktToggleWatchlistForCard(cardData) {
+    try {
+      var d = _atNormalizeCard(cardData);
+      if (!d || !d.id) return;
+      var type = d.method || d.card_type || d.type || (d.first_air_date || d.name ? 'tv' : 'movie');
+      var method = type === 'movie' ? 'movie' : 'tv';
+      var params = { method: method, id: d.id, ids: { tmdb: d.id } };
+      var idStr = String(d.id);
+      var statePromise;
+      if (_watchlistBadgeCache) {
+        statePromise = Promise.resolve(method === 'movie' ? _watchlistBadgeCache.movies.has(idStr) : _watchlistBadgeCache.shows.has(idStr));
+      } else {
+        statePromise = api$1 ? api$1.inWatchlist(params)['catch'](function() { return false; }) : Promise.resolve(false);
+      }
+      statePromise.then(function(inList) {
+        handleSelectAction({ target: 'watchlist', inList: !!inList }, params, function() {
+          try { ensureWatchlistBadgeCache(); } catch(e) {}
+          try { _renderedCardInstances.forEach(renderWatchlistBadge); } catch(e) {}
+        });
+      });
+    } catch(e) {}
+  }
+
+  // Хуки контекстного меню карточки: при включённой подмене избранного убираем
+  // родные пункты закладок Lampa (book/like/wath/history + метки) и добавляем
+  // пункт «Хочу посмотреть» Trakt. Читаем флаг в момент показа — живое вкл/выкл.
+  function _installTraktFavMenuHooks(cardInst, data) {
+    if (!cardInst) return;
+    var prevShow = cardInst.onMenuShow;
+    cardInst.onMenuShow = function(menu, cardEl, d) {
+      if (typeof prevShow === 'function') { try { prevShow.apply(this, arguments); } catch(e) {} }
+      try {
+        if (!Array.isArray(menu)) return;
+        if (!readBooleanStorage$2('trakt_replace_favorites', false)) return;
+        if (!Lampa.Storage.get('trakt_token')) return;
+        for (var i = menu.length - 1; i >= 0; i--) {
+          var m = menu[i];
+          if (m && (m.where || m.collect)) menu.splice(i, 1);
+        }
+        var dd = d || data || {};
+        var idStr = dd.id != null ? String(dd.id) : '';
+        var type = dd.method || dd.card_type || dd.type || (dd.first_air_date || dd.name ? 'tv' : 'movie');
+        var inWl = false;
+        if (_watchlistBadgeCache && idStr) {
+          inWl = type === 'movie' ? _watchlistBadgeCache.movies.has(idStr) : _watchlistBadgeCache.shows.has(idStr);
+        }
+        menu.unshift({
+          title: inWl ? t$2('trakt_watchlist_remove_item', 'Убрать из «Хочу посмотреть»') : t$2('trakt_watchlist_add_item', 'В «Хочу посмотреть»'),
+          trakt_wl_toggle: true
+        });
+      } catch(e) {}
+    };
+    var prevSel = cardInst.onMenuSelect;
+    cardInst.onMenuSelect = function(a, cardEl, d) {
+      if (a && a.trakt_wl_toggle) { try { traktToggleWatchlistForCard(d || data); } catch(e) {} return; }
+      if (typeof prevSel === 'function') { try { prevSel.apply(this, arguments); } catch(e) {} }
+    };
+  }
+
   function _patchLampaCard() {
     if (!window.Lampa || typeof Lampa.Card !== 'function') {
       _patchStatus = 'skip: Lampa.Card=' + (window.Lampa ? typeof Lampa.Card : 'no Lampa');
@@ -14509,6 +14601,9 @@
     var _orig = Lampa.Card;
     Lampa.Card = function(data, params) {
       var inst = _orig.apply(this, arguments);
+      // Подмена избранного: хуки long-press меню (inst может быть undefined у
+      // конструкторного вызова — тогда карточка это this)
+      try { _installTraktFavMenuHooks(inst || this, data); } catch(e) {}
       if (!Lampa.Storage.get('trakt_token')) return inst;
       if (inst && data && data.id) {
         var type = data.method || data.card_type || data.type || (data.first_air_date ? 'tv' : 'movie');
@@ -14591,6 +14686,22 @@
         if (e.type === 'complite' && Lampa.Storage.get('trakt_token')) {
           _this.onFullCardReady(e);
         }
+      });
+
+      // Подмена избранного Lampa: клик по пункту «Избранное» в боковом меню
+      // открывает «Хочу посмотреть» Trakt (abort() отменяет родное bookmarks).
+      Lampa.Listener.follow('menu', function (e) {
+        try {
+          if (!e || e.type !== 'action' || e.action !== 'favorite') return;
+          if (!readBooleanStorage$2('trakt_replace_favorites', false)) return;
+          if (!Lampa.Storage.get('trakt_token')) return;
+          if (typeof e.abort === 'function') e.abort();
+          Lampa.Activity.push({
+            title: (Lampa.Lang && Lampa.Lang.translate('trakttv_watchlist')) || 'Хочу посмотреть',
+            component: 'trakt_watchlist',
+            page: 1
+          });
+        } catch (err) {}
       });
 
       // Magic Button: авто-выбор лучшего торрента из поисковой выдачи
@@ -15156,6 +15267,24 @@
             if (e.object.method === 'tv') btnsContainer.append(addAtRandomEpisodeButton(e.data));
           }
         }
+      }
+
+      // Подмена избранного Lampa: кнопка «Избранное» (.button--book) на карточке
+      // тогглит «Хочу посмотреть» Trakt вместо меню закладок Lampa.
+      if (readBooleanStorage$2('trakt_replace_favorites', false)) {
+        try {
+          var favRoot = e.object && e.object.activity && typeof e.object.activity.render === 'function'
+            ? e.object.activity.render() : null;
+          var bookBtn = favRoot ? favRoot.find('.button--book') : null;
+          if (bookBtn && bookBtn.length) {
+            var favCardData = e.data;
+            bookBtn.off('hover:enter').on('hover:enter', function () {
+              traktToggleWatchlistForCard(favCardData);
+            });
+            var bookLabel = bookBtn.find('span');
+            if (bookLabel.length) bookLabel.text((Lampa.Lang && Lampa.Lang.translate('trakttv_watchlist')) || 'Хочу посмотреть');
+          }
+        } catch (err) {}
       }
     }
   };
