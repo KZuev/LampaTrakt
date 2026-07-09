@@ -10,6 +10,8 @@
 
 ## Текущая версия
 
+**v3.2.42** — Раздел настроек «Избранное Lampa» переименован в «Подмена разделов Lampa» (ключ `trakt_favorites_section` сохранён). Новая опция `trakt_replace_timetable` (trigger, off): пункт меню Lampa «Расписание» (`action:'timetable'`) открывает календарь Trakt (`trakt_timetable_all`) — тот же перехват `menu:action`+`abort()`, что у избранного; общий обработчик обоих action.
+
 **v3.2.41** — Кнопка «Избранное» на карточке (при включённой подмене) теперь отражает состояние watchlist Trakt визуально: заливка иконки тем же приёмом, что у нативной Lampa (`.button--book path` → `fill: currentColor/transparent`, как в `full/start/bookmarks.js onUpdateFavorite`). Хелперы `_traktWatchlistParamsForCard`/`_traktWatchlistStateForCard` (состояние из бейдж-кэша, иначе API) + `_setBookBtnWatchlistFill`; заливка при открытии карточки (повтор через 500мс — перебить нативный `updateFavorite`, красящий по закладкам Lampa) и сразу после тоггла (колбэк `onToggled(newState)` в `traktToggleWatchlistForCard`).
 
 **v3.2.40** — Опция «Заменить избранное Lampa на Trakt» (`trakt_replace_favorites`, trigger, off; новый раздел настроек «Избранное Lampa»). При включении (и наличии токена): (1) пункт «Избранное» бокового меню Lampa открывает хаб «Хочу посмотреть» — перехват `Lampa.Listener 'menu' {type:'action', action:'favorite'}` + `e.abort()`; (2) кнопка `.button--book` на карточке тогглит watchlist Trakt (`traktToggleWatchlistForCard` → существующий `handleSelectAction`), подпись меняется на «Хочу посмотреть»; (3) long-press меню карточек — родные пункты закладок (`where`/`collect`) удаляются, добавляется пункт «В/Убрать из „Хочу посмотреть"» (`_installTraktFavMenuHooks` в обёртке `_patchLampaCard`, на `inst || this`, с chain прежних `onMenuShow/onMenuSelect`). Флаг читается в момент события — вкл/выкл живое. Переводы: `trakt_watchlist_add_item`/`trakt_watchlist_remove_item`/`trakt_favorites_section`.
@@ -179,6 +181,7 @@
 | v3.2.39 | TBD | Фикс усечения «Мои сериалы» до 100: Trakt начал пагинировать `/sync/watched/shows` → `fetchAllWatchedShows()` тянет все страницы с дедупом (устойчив к непагинированному ответу); используется в `watching`/`watchingCounts`/`ensureWatchedCache`; дамп показывает `всего (все страницы)` |
 | v3.2.40 | TBD | Опция «Заменить избранное Lampa на Trakt» (`trakt_replace_favorites`): пункт меню «Избранное» → хаб «Хочу посмотреть» (перехват `menu:action` + `abort`), кнопка `.button--book` → тоггл watchlist, long-press меню → пункт Trakt вместо закладок Lampa (`_installTraktFavMenuHooks`) |
 | v3.2.41 | TBD | Кнопка `.button--book` отражает состояние watchlist: заливка `path` `currentColor/transparent` (нативный приём Lampa) при открытии карточки (+повтор 500мс — перебить нативный updateFavorite) и после тоггла (`onToggled` в `traktToggleWatchlistForCard`) |
+| v3.2.42 | TBD | Раздел «Избранное Lampa» → «Подмена разделов Lampa»; опция `trakt_replace_timetable` — пункт меню «Расписание» открывает календарь Trakt (`trakt_timetable_all`), общий перехват `menu:action` |
 
 ## Палитра (фирменный цвет Trakt)
 

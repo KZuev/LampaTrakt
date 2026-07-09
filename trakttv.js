@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.41';
+  var PLUGIN_VERSION = '3.2.42';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -6502,8 +6502,8 @@
         en: "Remove from watchlist",
       },
       trakt_favorites_section: {
-        ru: "Избранное Lampa",
-        en: "Lampa favorites",
+        ru: "Подмена разделов Lampa",
+        en: "Lampa sections replacement",
       },
       trakt_at_status_api: {
         ru: "Ищем следующий эпизод…",
@@ -10904,14 +10904,14 @@
       },
       onRender: function(item) { item.show(); }
     });
-    // ── Избранное Lampa ───────────────────────────────────────────────────────────
+    // ── Подмена разделов Lampa ───────────────────────────────────────────────────
     Lampa.SettingsApi.addParam({
       component: 'trakt',
       param: { name: 'trakt_favorites_section', type: 'static' },
       field: { name: '' },
       onRender: function(item) {
         item.empty();
-        item.append('<div class="settings-param__name" style="opacity:.55;font-weight:700">' + t$1('trakt_favorites_section', 'Избранное Lampa') + '</div>');
+        item.append('<div class="settings-param__name" style="opacity:.55;font-weight:700">' + t$1('trakt_favorites_section', 'Подмена разделов Lampa') + '</div>');
       }
     });
     Lampa.SettingsApi.addParam({
@@ -10920,6 +10920,14 @@
       field: {
         name: 'Заменить избранное Lampa на Trakt',
         description: 'Пункт меню «Избранное», кнопка на карточке и контекстное меню постеров открывают и используют «Хочу посмотреть» Trakt вместо закладок Lampa'
+      }
+    });
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: { name: 'trakt_replace_timetable', type: 'trigger', 'default': false },
+      field: {
+        name: 'Заменить расписание Lampa на Trakt',
+        description: 'Пункт меню «Расписание» открывает календарь Trakt вместо расписания Lampa'
       }
     });
     // ── Страница фильма и сериала ─────────────────────────────────────────────────
@@ -14705,19 +14713,28 @@
         }
       });
 
-      // Подмена избранного Lampa: клик по пункту «Избранное» в боковом меню
-      // открывает «Хочу посмотреть» Trakt (abort() отменяет родное bookmarks).
+      // Подмена разделов Lampa: клики по пунктам бокового меню открывают разделы
+      // Trakt вместо нативных (abort() отменяет родной роутинг).
+      // «Избранное» → «Хочу посмотреть», «Расписание» → календарь Trakt.
       Lampa.Listener.follow('menu', function (e) {
         try {
-          if (!e || e.type !== 'action' || e.action !== 'favorite') return;
-          if (!readBooleanStorage$2('trakt_replace_favorites', false)) return;
+          if (!e || e.type !== 'action') return;
           if (!Lampa.Storage.get('trakt_token')) return;
+          var target = null;
+          if (e.action === 'favorite' && readBooleanStorage$2('trakt_replace_favorites', false)) {
+            target = {
+              title: (Lampa.Lang && Lampa.Lang.translate('trakttv_watchlist')) || 'Хочу посмотреть',
+              component: 'trakt_watchlist'
+            };
+          } else if (e.action === 'timetable' && readBooleanStorage$2('trakt_replace_timetable', false)) {
+            target = {
+              title: (Lampa.Lang && Lampa.Lang.translate('trakttv_calendar')) || 'Календарь',
+              component: 'trakt_timetable_all'
+            };
+          }
+          if (!target) return;
           if (typeof e.abort === 'function') e.abort();
-          Lampa.Activity.push({
-            title: (Lampa.Lang && Lampa.Lang.translate('trakttv_watchlist')) || 'Хочу посмотреть',
-            component: 'trakt_watchlist',
-            page: 1
-          });
+          Lampa.Activity.push({ title: target.title, component: target.component, page: 1 });
         } catch (err) {}
       });
 
