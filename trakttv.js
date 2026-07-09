@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.42';
+  var PLUGIN_VERSION = '3.2.43';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -10930,6 +10930,14 @@
         description: 'Пункт меню «Расписание» открывает календарь Trakt вместо расписания Lampa'
       }
     });
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: { name: 'trakt_replace_subscribes', type: 'trigger', 'default': false },
+      field: {
+        name: 'Заменить подписки Lampa на Trakt',
+        description: 'Пункт меню «Подписки» открывает «Мои сериалы» Trakt; колокольчик подписки на карточке сериала скрывается (Trakt отслеживает сериалы автоматически по прогрессу просмотра)'
+      }
+    });
     // ── Страница фильма и сериала ─────────────────────────────────────────────────
     Lampa.SettingsApi.addParam({
       component: 'trakt',
@@ -14731,6 +14739,11 @@
               title: (Lampa.Lang && Lampa.Lang.translate('trakttv_calendar')) || 'Календарь',
               component: 'trakt_timetable_all'
             };
+          } else if (e.action === 'subscribes' && readBooleanStorage$2('trakt_replace_subscribes', false)) {
+            target = {
+              title: (Lampa.Lang && Lampa.Lang.translate('trakt_watching')) || 'Мои сериалы',
+              component: 'trakt_watching'
+            };
           }
           if (!target) return;
           if (typeof e.abort === 'function') e.abort();
@@ -15329,6 +15342,17 @@
             var bookLabel = bookBtn.find('span');
             if (bookLabel.length) bookLabel.text((Lampa.Lang && Lampa.Lang.translate('trakttv_watchlist')) || 'Хочу посмотреть');
           }
+        } catch (err) {}
+      }
+
+      // Подмена подписок Lampa: колокольчик подписки на карточке сериала скрывается —
+      // в Trakt нет сущности «подписка», сериалы отслеживаются автоматически по прогрессу.
+      // Модуль Subscribed показывает кнопку синхронно в onCreate — 'full complite' позже.
+      if (readBooleanStorage$2('trakt_replace_subscribes', false)) {
+        try {
+          var subRoot = e.object && e.object.activity && typeof e.object.activity.render === 'function'
+            ? e.object.activity.render() : null;
+          if (subRoot) subRoot.find('.button--subscribe').addClass('hide');
         } catch (err) {}
       }
     }

@@ -10,6 +10,8 @@
 
 ## Текущая версия
 
+**v3.2.43** — Опция `trakt_replace_subscribes` (trigger, off) в «Подмене разделов Lampa»: пункт меню «Подписки» (`action:'subscribes'`) открывает «Мои сериалы» (`trakt_watching`) — та же ветка общего `menu:action`-перехвата. Колокольчик подписки на карточке сериала (`.button--subscribe`) при включённой опции скрывается (`addClass('hide')` в `onFullCardReady` — надёжно, т.к. модуль Subscribed показывает кнопку синхронно в onCreate, а 'full complite' позже): в Trakt нет сущности «подписка», сериалы отслеживаются автоматически по прогрессу.
+
 **v3.2.42** — Раздел настроек «Избранное Lampa» переименован в «Подмена разделов Lampa» (ключ `trakt_favorites_section` сохранён). Новая опция `trakt_replace_timetable` (trigger, off): пункт меню Lampa «Расписание» (`action:'timetable'`) открывает календарь Trakt (`trakt_timetable_all`) — тот же перехват `menu:action`+`abort()`, что у избранного; общий обработчик обоих action.
 
 **v3.2.41** — Кнопка «Избранное» на карточке (при включённой подмене) теперь отражает состояние watchlist Trakt визуально: заливка иконки тем же приёмом, что у нативной Lampa (`.button--book path` → `fill: currentColor/transparent`, как в `full/start/bookmarks.js onUpdateFavorite`). Хелперы `_traktWatchlistParamsForCard`/`_traktWatchlistStateForCard` (состояние из бейдж-кэша, иначе API) + `_setBookBtnWatchlistFill`; заливка при открытии карточки (повтор через 500мс — перебить нативный `updateFavorite`, красящий по закладкам Lampa) и сразу после тоггла (колбэк `onToggled(newState)` в `traktToggleWatchlistForCard`).
@@ -182,6 +184,7 @@
 | v3.2.40 | TBD | Опция «Заменить избранное Lampa на Trakt» (`trakt_replace_favorites`): пункт меню «Избранное» → хаб «Хочу посмотреть» (перехват `menu:action` + `abort`), кнопка `.button--book` → тоггл watchlist, long-press меню → пункт Trakt вместо закладок Lampa (`_installTraktFavMenuHooks`) |
 | v3.2.41 | TBD | Кнопка `.button--book` отражает состояние watchlist: заливка `path` `currentColor/transparent` (нативный приём Lampa) при открытии карточки (+повтор 500мс — перебить нативный updateFavorite) и после тоггла (`onToggled` в `traktToggleWatchlistForCard`) |
 | v3.2.42 | TBD | Раздел «Избранное Lampa» → «Подмена разделов Lampa»; опция `trakt_replace_timetable` — пункт меню «Расписание» открывает календарь Trakt (`trakt_timetable_all`), общий перехват `menu:action` |
+| v3.2.43 | TBD | Опция `trakt_replace_subscribes` — пункт меню «Подписки» открывает «Мои сериалы» (`trakt_watching`); колокольчик `.button--subscribe` на карточке скрывается (в Trakt подписка не нужна — отслеживание по прогрессу) |
 
 ## Палитра (фирменный цвет Trakt)
 
