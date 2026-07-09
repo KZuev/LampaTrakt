@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.46';
+  var PLUGIN_VERSION = '3.2.47';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -2741,7 +2741,8 @@
                   release_date: movie.year ? String(movie.year) : '',
                   vote_average: Number(movie.rating || 0),
                   method: 'movie', card_type: 'movie',
-                  trakt_upnext_watched: watched, trakt_upnext_total: total, trakt_upnext_progress: progressText
+                  trakt_upnext_watched: watched, trakt_upnext_total: total, trakt_upnext_progress: progressText,
+                  trakt_upnext_last_watched_at: item.paused_at || null
                 };
               }).filter(Boolean);
             })['catch'](function() { return []; })
@@ -3782,6 +3783,29 @@
     if (allShows.length > 0) allShows[0]._trakt_upnext_first_show = true;
     if (notStarted.length > 0) notStarted[0]._trakt_upnext_first_unstarted = true;
     return Object.assign({}, data, { results: movies.concat(startedShows).concat(notStarted) });
+  }
+  // Настройка «Порядок в Смотреть дальше» (trakt_upnext_sort_mode: recency_mixed) —
+  // только для превью-строки на главной (createRowCall), полный список hub'а
+  // (baseComponent/rearrangeUpnextNotStarted) не трогаем. Фильмы и начатые сериалы
+  // сортируются по дате последнего просмотра (movie: paused_at, show: last_watched_at
+  // из up_next_nitro) по убыванию; не начатые сериалы (0 просмотренных серий, нет даты)
+  // всегда уходят в конец списка.
+  function applyUpnextRecencySort(results) {
+    if (!Array.isArray(results)) return results;
+    var withDate = [], noDate = [];
+    results.forEach(function (item) {
+      var isMovie = item && (item.method === 'movie' || item.card_type === 'movie');
+      var watched = Number(item && item.trakt_upnext_watched);
+      var isNotStarted = !isMovie && Number.isFinite(watched) && watched === 0;
+      if (isNotStarted || !item || !item.trakt_upnext_last_watched_at) noDate.push(item);
+      else withDate.push(item);
+    });
+    withDate.sort(function (a, b) {
+      var ta = Date.parse(a.trakt_upnext_last_watched_at) || 0;
+      var tb = Date.parse(b.trakt_upnext_last_watched_at) || 0;
+      return tb - ta;
+    });
+    return withDate.concat(noDate);
   }
   function insertUpnextNotStartedDivider(comp) {
     var container = comp && typeof comp.render === 'function' ? comp.render(true) : null;
@@ -6496,6 +6520,10 @@
       trakt_favorites_section: {
         ru: "Подмена разделов Lampa",
         en: "Lampa sections replacement",
+      },
+      trakt_main_section: {
+        ru: "Главная страница",
+        en: "Main page",
       },
       trakt_at_status_api: {
         ru: "Ищем следующий эпизод…",
@@ -10928,6 +10956,32 @@
       field: {
         name: 'Заменить «Подписки» на «Мои сериалы» Trakt.TV',
         description: 'Пункт меню «Подписки» открывает «Мои сериалы» Trakt; колокольчик подписки на карточке сериала скрывается (Trakt отслеживает сериалы автоматически по прогрессу просмотра)'
+      }
+    });
+    // ── Главная страница ──────────────────────────────────────────────────────────
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: { name: 'trakt_main_section', type: 'static' },
+      field: { name: '' },
+      onRender: function(item) {
+        item.empty();
+        item.append('<div class="settings-param__name" style="opacity:.55;font-weight:700">' + t$1('trakt_main_section', 'Главная страница') + '</div>');
+      }
+    });
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: {
+        name: 'trakt_upnext_sort_mode',
+        type: 'select',
+        'default': 'type_first',
+        values: {
+          type_first: 'Сначала фильмы, потом сериалы',
+          recency_mixed: 'Вперемешку, по дате последнего просмотра'
+        }
+      },
+      field: {
+        name: 'Порядок в «Смотреть дальше»',
+        description: 'Как сортировать фильмы и сериалы в строке «Смотреть дальше» на главной и в её полном списке'
       }
     });
     // ── Страница фильма и сериала ─────────────────────────────────────────────────
@@ -16039,6 +16093,11 @@
         var _rowExtraParams = typeof config.apiParams === 'function' ? config.apiParams() : (config.apiParams || {});
         Api[config.apiMethod](Object.assign({ limit: rowLimit, page: 1 }, _rowExtraParams)).then(function (data) {
           var results = data && Array.isArray(data.results) ? data.results : [];
+          // «Порядок в Смотреть дальше» — только для превью-строки на главной,
+          // полный список (кнопка «Ещё») сортировку не меняет.
+          if (config.traktRow === 'upnext' && screen === 'main' && (Lampa.Storage.field('trakt_upnext_sort_mode') || 'type_first') === 'recency_mixed') {
+            results = applyUpnextRecencySort(results);
+          }
           var filtered = typeof config.filter === 'function' ? config.filter(results, params, screen) : results;
           if (!filtered || !filtered.length) {
             clearRowCache(cacheKey);
