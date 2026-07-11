@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.47';
+  var PLUGIN_VERSION = '3.2.48';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -2470,6 +2470,29 @@
         });
         // Стоп: страница не ровно LIMIT (последняя или limit игнорируется),
         // ничего нового (непагинированный ответ повторился), или предохранитель 50 страниц.
+        if (arr.length !== LIMIT || added === 0 || page >= 50) return all;
+        return step(page + 1);
+      });
+    }
+    return step(1);
+  }
+
+  // Trakt начал пагинировать и /sync/watched/movies (тот же дефолт 100/страницу,
+  // что вскрылся у /sync/watched/shows в v3.2.39) — тянем все страницы, иначе
+  // фильмы за пределами первой сотни молча теряют бейдж «просмотрено».
+  function fetchAllWatchedMovies() {
+    var all = [];
+    var seen = {};
+    var LIMIT = 100;
+    function step(page) {
+      return requestApi('GET', '/sync/watched/movies?limit=' + LIMIT + '&page=' + page).then(function(items) {
+        var arr = Array.isArray(items) ? items : [];
+        var added = 0;
+        arr.forEach(function(x) {
+          var ids = (x && x.movie && x.movie.ids) || {};
+          var key = ids.trakt || ids.tmdb || (x.movie && x.movie.title) || '?';
+          if (!seen[key]) { seen[key] = true; all.push(x); added++; }
+        });
         if (arr.length !== LIMIT || added === 0 || page >= 50) return all;
         return step(page + 1);
       });
@@ -13970,7 +13993,7 @@
     var _A = typeof api$1 !== 'undefined' && api$1 || null;
     if (!_A) return Promise.resolve({ movies: new Set(), shows: new Set(), completedShows: new Set(), watchingShows: new Set() });
     _watchedCachePromise = Promise.all([
-      _A.watchedMovies().catch(function() { return []; }),
+      fetchAllWatchedMovies().catch(function() { return []; }),
       fetchAllWatchedShows().catch(function() { return []; }),
       requestApi('GET', '/users/hidden/dropped?type=show&limit=500', {}, false, 300).catch(function() { return []; })
     ]).then(function(res) {
