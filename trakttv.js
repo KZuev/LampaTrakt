@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.53';
+  var PLUGIN_VERSION = '3.2.54';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -8562,14 +8562,17 @@
     try {
       var active = Lampa.Activity.active();
       var act = active && active.activity;
-      if (!act || !act.slide || typeof act.slide.find !== 'function') return false;
-      var icon = act.slide.find('.activity__loader');
-      if (!icon.length) return false;
+      // Как в Lampa-Plex: единственное условие — наличие act.slide. Дальше .find()
+      // вызывается безусловно и .addClass() на пустой jQuery-коллекции — безопасный
+      // no-op, а НЕ повод откатываться на старый спиннер (что было тут раньше и
+      // вызывало возврат старого лого-спиннера, если .activity__loader не находился
+      // сразу/по другому селектору).
+      if (!act || !act.slide) return false;
       _traktLoaderActivity = act;
-      _traktLoaderIcon = icon;
-      icon.addClass('trakt-loader-show');
-      _traktLoaderBody = act.body && act.body.length ? act.body : act.slide.find('.activity__body');
-      if (_traktLoaderBody.length) _traktLoaderBody.addClass('trakt-loader-dim');
+      _traktLoaderIcon = act.slide.find('.activity__loader');
+      _traktLoaderIcon.addClass('trakt-loader-show');
+      _traktLoaderBody = act.body || act.slide.find('.activity__body');
+      _traktLoaderBody.addClass('trakt-loader-dim');
     } catch (e) { return false; }
     try {
       var catcher = document.createElement('div');
