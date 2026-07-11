@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.50';
+  var PLUGIN_VERSION = '3.2.51';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -9388,7 +9388,7 @@
             invalidateWatchedCache();
             invalidateWatchlistBadgeCache();
             loadWatchedCache();
-            ensureWatchlistBadgeCache();
+            loadWatchlistBadgeCache();
           }
           var name = getSlotDisplayName(item.slot);
           try { Lampa.Bell.push({ text: t$1('trakt_switched_to', 'Привет,') + ' ' + name + '!' }); } catch (e) {}
@@ -10554,7 +10554,7 @@
                     invalidateWatchedCache();
                     invalidateWatchlistBadgeCache();
                     loadWatchedCache();
-                    ensureWatchlistBadgeCache();
+                    loadWatchlistBadgeCache();
                     updateTraktAccountSwitchBadge();
                     try { Lampa.Settings.update(); } catch (e) {}
                     var _desc = getCurrentActivityDescriptor();
@@ -14107,6 +14107,18 @@
 
   function invalidateWatchlistBadgeCache() { _watchlistBadgeCache = null; _watchlistBadgeCachePromise = null; }
 
+  // Симметрично loadWatchedCache(): без этой ретро-перерисовки карточки,
+  // отрисованные ДО того как _watchlistBadgeCache успел загрузиться (renderWatchlistBadge
+  // тихо выходит на `if (!_watchlistBadgeCache) return;`), так и оставались без бейджа
+  // «Хочу посмотреть» до полного перезапуска — их никто не перерисовывал повторно.
+  function loadWatchlistBadgeCache() {
+    ensureWatchlistBadgeCache().then(function() {
+      setTimeout(function() {
+        _renderedCardInstances.forEach(renderWatchlistBadge);
+      }, 0);
+    }).catch(function() {});
+  }
+
   function isLineAlive(line) {
     try {
       if (!line || typeof line.render !== 'function') return false;
@@ -15161,7 +15173,7 @@
       addMenuItems();
       // Кеш просмотренных и вотчлиста для бейджей
       loadWatchedCache();
-      ensureWatchlistBadgeCache();
+      loadWatchlistBadgeCache();
       refreshTraktAccountSwitcher();
       checkGuestSlotExpiry();
       setInterval(checkGuestSlotExpiry, 30 * 60 * 1000);
@@ -17849,10 +17861,24 @@
           try {
             if (!cardInstance || !cardInstance.data || !cardInstance.data.id) return;
             if (_renderedCardInstances.indexOf(cardInstance) < 0) _renderedCardInstances.push(cardInstance);
-            renderWatchedBadge(cardInstance);
-            renderWatchingBadge(cardInstance);
-            renderWatchlistBadge(cardInstance);
-            renderDigitalReleaseBadge(cardInstance);
+            var paint = function () {
+              try {
+                renderWatchedBadge(cardInstance);
+                renderWatchingBadge(cardInstance);
+                renderWatchlistBadge(cardInstance);
+                renderDigitalReleaseBadge(cardInstance);
+              } catch (e2) {/* noop */}
+            };
+            paint();
+            // Сторонняя сетка (напр. Lampa-Plex) может вызвать applyBadges раньше,
+            // чем прогрузятся собственные кэши плагина — тогда рендер-функции выше
+            // тихо ничего не нарисуют. Перерисовываем именно эту карточку ещё раз,
+            // когда оба кэша точно готовы (no-op, если оба уже были готовы выше).
+            if (!_watchedCache || !_watchlistBadgeCache) {
+              Promise.all([ensureWatchedCache(), ensureWatchlistBadgeCache()]).then(function () {
+                setTimeout(paint, 0);
+              })['catch'](function () {/* noop */});
+            }
           } catch (e) {/* noop */}
         };
       }
