@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.48';
+  var PLUGIN_VERSION = '3.2.49';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -2500,12 +2500,38 @@
     return step(1);
   }
 
+  // Тот же паттерн, что у watched-эндпоинтов — /sync/watchlist/{movies|shows} тоже
+  // без явного limit/page отдаёт лишь первую страницу. Используется бейдж-кэшем
+  // «Хочу посмотреть» (ensureWatchlistBadgeCache) и мгновенным membership-чеком
+  // (inWatchlist) — без дозагрузки страниц у активных пользователей с большим
+  // списком бейдж/галочка «Хочу посмотреть» пропадала бы для части позиций.
+  function fetchAllWatchlistItems(mediaType) {
+    var all = [];
+    var seen = {};
+    var LIMIT = 100;
+    function step(page) {
+      return requestApi('GET', '/sync/watchlist/' + mediaType + '?extended=full&limit=' + LIMIT + '&page=' + page).then(function(items) {
+        var arr = Array.isArray(items) ? items : [];
+        var added = 0;
+        arr.forEach(function(x) {
+          var entity = mediaType === 'movies' ? (x && x.movie) : (x && x.show);
+          var ids = (entity && entity.ids) || {};
+          var key = ids.trakt || ids.tmdb || (entity && entity.title) || '?';
+          if (!seen[key]) { seen[key] = true; all.push(x); added++; }
+        });
+        if (arr.length !== LIMIT || added === 0 || page >= 50) return all;
+        return step(page + 1);
+      });
+    }
+    return step(1);
+  }
+
   var api$1 = {
     addToHistory: addToHistory$1,
     watchedMovies: function() { return requestApi('GET', '/sync/watched/movies'); },
     watchedShows: function() { return requestApi('GET', '/sync/watched/shows'); },
-    watchlistMovies: function() { return requestApi('GET', '/sync/watchlist/movies?extended=full'); },
-    watchlistShows: function() { return requestApi('GET', '/sync/watchlist/shows?extended=full'); },
+    watchlistMovies: function() { return fetchAllWatchlistItems('movies'); },
+    watchlistShows: function() { return fetchAllWatchlistItems('shows'); },
     showWatchedProgress: function(traktId) { return requestApi('GET', '/shows/' + traktId + '/progress/watched'); },
     watchlistSortFields: Array.from(WATCHLIST_SORT_FIELDS),
     watchlistVipSortFields: Array.from(WATCHLIST_VIP_SORT_FIELDS),
@@ -3208,7 +3234,7 @@
     inWatchlist: function inWatchlist(params) {
       var type = normalizeMediaType(params) === 'movie' ? 'movies' : 'shows';
       var ids = resolveTraktIds(params);
-      return requestApi('GET', "/sync/watchlist/".concat(type, "?extended=full")).then(function (response) {
+      return fetchAllWatchlistItems(type).then(function (response) {
         var found = (Array.isArray(response) ? response : []).find(function (item) {
           var entity = extractMediaFromSyncItem(item);
           return entity.media && sameAnyId(entity.media.ids || {}, ids);
