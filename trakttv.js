@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.49';
+  var PLUGIN_VERSION = '3.2.50';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -17839,6 +17839,22 @@
           hadExisting: !!existing,
           finalHas: !!window.TraktTV.api
         });
+
+        // Публичный мост для сторонних плагинов (напр. Lampa-Plex): применяет те
+        // же бейджи (просмотрено/смотрю/хочу посмотреть/дата цифрового релиза),
+        // что и собственные хабы плагина в своём onInstance, к любому card-
+        // инстансу с TMDB-полями (data.id + data.method/card_type). Вызывать из
+        // onInstance/onCreateAndAppend сторонней сетки: window.TraktTV.applyBadges(card).
+        window.TraktTV.applyBadges = function (cardInstance) {
+          try {
+            if (!cardInstance || !cardInstance.data || !cardInstance.data.id) return;
+            if (_renderedCardInstances.indexOf(cardInstance) < 0) _renderedCardInstances.push(cardInstance);
+            renderWatchedBadge(cardInstance);
+            renderWatchingBadge(cardInstance);
+            renderWatchlistBadge(cardInstance);
+            renderDigitalReleaseBadge(cardInstance);
+          } catch (e) {/* noop */}
+        };
       }
     } catch (e) {/* noop */}
 
