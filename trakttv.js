@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.54';
+  var PLUGIN_VERSION = '3.2.55';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -8628,6 +8628,12 @@
       _fullCardItemId = String(itemId);
 
       function buildProgressElement() {
+        // Гард от повторного клика/hover:enter, пока предыдущий запрос статуса
+        // ещё не завершился — без него второй клик перезаписывает глобальные
+        // ссылки лоадера (_traktLoaderActivity/Icon/Body), и когда ПЕРВЫЙ запрос
+        // резолвится первым, он обнуляет их раньше второго — затемнение от
+        // второго вызова остаётся навсегда, снять его уже некому.
+        var _statusLoading = false;
         var el = document.createElement('div');
         el.className = 'full-start-new__details trakt selector trakt-status-clickable';
         el.innerHTML = '<div class="trakt-icon" style="width:1.5em;height:1.5em;color:rgba(255,255,255,0.38)">' + icons.TRAKT_ICON + '</div><span>…</span>';
@@ -8670,6 +8676,7 @@
           });
         }
         $(el).on('hover:enter', function() {
+          if (_statusLoading) return;
           var listParams = normalizeCardParams(data);
           function showTraktMenu(watchlistState, withMembership, favoritesState, droppedState) {
             var statusItems = isShow ? [
@@ -8753,7 +8760,8 @@
             showTraktMenu(cached.watchlistState, cached.withMembership, cached.favoritesState, cached.droppedState || false);
             return;
           }
-          var _usingActivityLoader = _traktLoaderShow(function () { /* пользователь отменил — просто закрываем оверлей */ });
+          _statusLoading = true;
+          var _usingActivityLoader = _traktLoaderShow(function () { _statusLoading = false; /* пользователь отменил — просто закрываем оверлей */ });
           if (!_usingActivityLoader) el.classList.add('trakt-loading');
           Promise.all([
             (api$1 ? api$1.inWatchlist(listParams).catch(function() { return false; }) : Promise.resolve(false)),
@@ -8768,12 +8776,15 @@
             var lists = myListsResponse && Array.isArray(myListsResponse.results) ? myListsResponse.results : [];
             return loadMyListsMembership(listParams, lists).then(function(withMembership) {
               _setListMenuCache(listParams, watchlistState, withMembership, favoritesState, droppedState);
+              var wasCancelled = _traktLoaderCancelled;
               if (_usingActivityLoader) _traktLoaderHide(); else el.classList.remove('trakt-loading');
-              if (_traktLoaderCancelled) return; // пользователь уже отменил — меню не открываем
+              _statusLoading = false;
+              if (wasCancelled) return; // пользователь уже отменил — меню не открываем
               showTraktMenu(watchlistState, withMembership, favoritesState, droppedState);
             });
           }).catch(function() {
             if (_usingActivityLoader) _traktLoaderHide(); else el.classList.remove('trakt-loading');
+            _statusLoading = false;
             Lampa.Controller.toggle('content');
           });
         });
