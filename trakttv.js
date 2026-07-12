@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.55';
+  var PLUGIN_VERSION = '3.2.56';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -8592,8 +8592,19 @@
     return true;
   }
   function _traktLoaderHide() {
-    try { if (_traktLoaderIcon) _traktLoaderIcon.removeClass('trakt-loader-show'); } catch (e) {}
-    try { if (_traktLoaderBody && _traktLoaderBody.length) _traktLoaderBody.removeClass('trakt-loader-dim'); } catch (e) {}
+    // Снимаем классы напрямую по document.querySelectorAll, а не через сохранённые
+    // jQuery-ссылки _traktLoaderIcon/_traktLoaderBody — на карточке они на практике
+    // оказывались рассинхронизированы с реальным DOM-узлом (затемнение оставалось
+    // навсегда), а прямой поиск по классу гарантированно чистит ВСЕ найденные узлы
+    // независимо от того, что стало со ссылками, которые их изначально пометили.
+    try {
+      var shown = document.querySelectorAll('.trakt-loader-show');
+      for (var i = 0; i < shown.length; i++) shown[i].classList.remove('trakt-loader-show');
+    } catch (e) {}
+    try {
+      var dimmed = document.querySelectorAll('.trakt-loader-dim');
+      for (var j = 0; j < dimmed.length; j++) dimmed[j].classList.remove('trakt-loader-dim');
+    } catch (e) {}
     _traktLoaderActivity = null;
     _traktLoaderIcon = null;
     _traktLoaderBody = null;
