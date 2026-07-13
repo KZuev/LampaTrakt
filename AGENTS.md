@@ -10,6 +10,8 @@
 
 ## Текущая версия
 
+**v3.2.60** — Правило «полностью просмотренному — без шкалы» (v3.2.59) распространено и на сериалы: если сериал завершён (все вышедшие серии просмотрены), `renderProgressBar` тоже не рисует шкалу. Проверка именно по `_watchedCache.completedShows` (полностью просмотренные), а НЕ по `_watchedCache.shows` (туда попадают и просто НАЧАТЫЕ сериалы) — иначе правило случайно скрыло бы шкалу и там, где она нужнее всего, у сериалов в процессе просмотра.
+
 **v3.2.59** — Шкала прогресса (`renderProgressBar`, v3.2.57/58) больше не показывается там, где она бессмысленна: (1) на странице «История» — карточки там помечаются флагом `_trakt_no_progress_bar` (по аналогии с `_trakt_no_watchlist_badge` из v3.2.25) в обоих `onInstance`-блоках `baseComponent` при `type === 'history'`, `renderProgressBar` рано выходит по этому флагу; (2) в общем случае — для ЛЮБОГО полностью просмотренного фильма шкала не рисуется вообще (галочка «Просмотрено» уже всё сообщает, полоса на 100% ничего не добавляет) — новая проверка `isMovie && isWatchedFromCache(data.id, 'movie')` в начале `renderProgressBar` (переиспользован уже существующий хелпер `isWatchedFromCache`). Сериалов это правило не касается — только фильмы, как и просили.
 
 **v3.2.58** — `trakt_badge_progress` (v3.2.57) стал `select` вместо `trigger`: `movie`/`show`/`both`/`none` (default `none`, порядок в UI — Фильмы/Сериалы/Фильмы и сериалы/Нет). `renderProgressBar` помечает каждую шкалу ещё и типом контента (`.trakt-progress-bar--movie`/`--show`, вместе с уже существующим `--general`); `applyBadgeVisibility()` читает значение через `Lampa.Storage.field` (не `readBooleanStorage$2` — больше не boolean) и скрывает `--general.trakt-progress-bar--show` при `movie`, `--general.trakt-progress-bar--movie` при `show`, весь `--general` при `none`, ничего при `both`. Шкала «Брошенные» (без `--general`) по-прежнему не затронута ни одним из режимов.
@@ -235,6 +237,7 @@
 | v3.2.57 | TBD | Опция «Шкала прогресса просмотра» (`trakt_badge_progress`, off) — `renderProgressBar` во всех 7 точках вызова бейджей (главная/Смотреть дальше/Хочу посмотреть/собственные хабы/сторонние сетки). Внешний вид как у `renderDroppedProgressBar` (Брошенные), процент из `resolveUpnextProgress` или нового `_watchedCache.moviesProgressPct`/`showsProgressPct` (новый параллельный запрос `/sync/playback?type=movies` в `ensureWatchedCache`). Отдельный класс `--general` не задевает всегда-видимую шкалу Брошенных |
 | v3.2.58 | TBD | `trakt_badge_progress` — `trigger` → `select` (`movie`/`show`/`both`/`none`, default `none`): выбор, для какого типа контента показывать шкалу. `renderProgressBar` метит бейдж классом `--movie`/`--show`, `applyBadgeVisibility` скрывает нужную комбинацию через `Lampa.Storage.field` |
 | v3.2.59 | TBD | Шкала прогресса не показывается на странице «История» (`_trakt_no_progress_bar` флаг) и для любого полностью просмотренного фильма — `renderProgressBar` рано выходит по `isWatchedFromCache(data.id, 'movie')` |
+| v3.2.60 | TBD | То же правило для завершённых сериалов — проверка по `_watchedCache.completedShows` (не `shows`, чтобы не задеть начатые/в процессе) |
 
 ## Палитра (фирменный цвет Trakt)
 

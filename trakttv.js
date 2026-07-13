@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.59';
+  var PLUGIN_VERSION = '3.2.60';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -14520,8 +14520,11 @@
     var isMovie = type === 'movie';
     var isShow = type === 'tv' || type === 'show';
     if (!isMovie && !isShow) return;
-    // Полностью просмотренный фильм уже отмечен галочкой — шкала на 100% ничего не добавляет.
+    // Полностью просмотренный фильм/завершённый сериал уже отмечен галочкой — шкала
+    // на 100% ничего не добавляет. Для сериала — именно completedShows (все вышедшие
+    // серии просмотрены), а не «shows» (там же и просто начатые — им шкала как раз нужна).
     if (isMovie && isWatchedFromCache(data.id, 'movie')) return;
+    if (isShow && _watchedCache && _watchedCache.completedShows && _watchedCache.completedShows.has(String(data.id))) return;
     var pct = null;
     var upnextProgress = resolveUpnextProgress(data);
     if (upnextProgress && upnextProgress.percent !== null && upnextProgress.percent !== undefined) {
