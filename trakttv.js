@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.56';
+  var PLUGIN_VERSION = '3.2.57';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -4188,6 +4188,7 @@
                     renderWatchedBadge(_card);
                     renderWatchingBadge(_card);
                     renderWatchlistBadge(_card);
+                    renderProgressBar(_card);
                   }
                 }
               }
@@ -4277,7 +4278,7 @@
               if (_renderedCardInstances.indexOf(card) < 0) _renderedCardInstances.push(card);
               if (type === 'watchlist') card._trakt_no_watchlist_badge = true;
               if (_isM) renderDigitalReleaseBadge(card);
-              renderWatchedBadge(card); renderWatchingBadge(card); renderWatchlistBadge(card);
+              renderWatchedBadge(card); renderWatchingBadge(card); renderWatchlistBadge(card); renderProgressBar(card);
             }
           }
         }
@@ -11180,6 +11181,11 @@
       param: { name: 'trakt_badge_digital_release', type: 'trigger', 'default': true },
       field: { name: t$1('trakttv_badge_digital_release', 'Бейдж «Цифровой релиз»'), description: t$1('trakttv_badge_digital_release_descr', 'Дата цифрового релиза на постере фильма') }
     });
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
+      param: { name: 'trakt_badge_progress', type: 'trigger', 'default': false },
+      field: { name: 'Шкала прогресса просмотра', description: 'Полоска сверху постера — сколько процентов фильма/сериала просмотрено (как в «Мои сериалы» → «Брошенные»). На главной, в «Смотреть дальше», «Хочу посмотреть» и везде, где показываются бейджи' }
+    });
     // ── Авто-торрент ─────────────────────────────────────────────────────────────
     Lampa.SettingsApi.addParam({
       component: 'trakt',
@@ -11413,6 +11419,10 @@
       if (!readBooleanStorage$2('trakt_badge_watchlist', true)) hidden.push('.trakt-watchlist-badge');
       if (!readBooleanStorage$2('trakt_badge_digital_release', true)) hidden.push('.trakt-digital-release');
       if (!readBooleanStorage$2('trakt_badge_digital_date', true)) hidden.push('.trakt-digital-date');
+      // По умолчанию выключено (default:false) — скрываем именно шкалу общего назначения
+      // (.trakt-progress-bar--general), а не .trakt-progress-bar целиком: у «Брошенные»
+      // в «Мои сериалы» своя, всегда включённая шкала того же вида, её не трогаем.
+      if (!readBooleanStorage$2('trakt_badge_progress', false)) hidden.push('.trakt-progress-bar--general');
       if (hidden.length) {
         if (!el) { el = document.createElement('style'); el.id = styleId; document.head.appendChild(el); }
         el.textContent = hidden.join(',') + '{display:none!important}';
@@ -11423,7 +11433,7 @@
     applyBadgeVisibility();
     if (Lampa.Storage && Lampa.Storage.listener) {
       Lampa.Storage.listener.follow('change', function(e) {
-        if (e && (e.name === 'trakt_badge_completed' || e.name === 'trakt_badge_watching' || e.name === 'trakt_badge_watchlist' || e.name === 'trakt_badge_digital_release' || e.name === 'trakt_badge_digital_date')) applyBadgeVisibility();
+        if (e && (e.name === 'trakt_badge_completed' || e.name === 'trakt_badge_watching' || e.name === 'trakt_badge_watchlist' || e.name === 'trakt_badge_digital_release' || e.name === 'trakt_badge_digital_date' || e.name === 'trakt_badge_progress')) applyBadgeVisibility();
         if (e && e.name === 'trakt_enable_watching') applyTraktHeadTrackingColor();
       });
     }
@@ -14112,9 +14122,14 @@
     _watchedCachePromise = Promise.all([
       fetchAllWatchedMovies().catch(function() { return []; }),
       fetchAllWatchedShows().catch(function() { return []; }),
-      requestApi('GET', '/users/hidden/dropped?type=show&limit=500', {}, false, 300).catch(function() { return []; })
+      requestApi('GET', '/users/hidden/dropped?type=show&limit=500', {}, false, 300).catch(function() { return []; }),
+      // Незавершённые фильмы (для шкалы прогресса, trakt_badge_progress) — /sync/watched
+      // отдаёт только полностью просмотренное, процент для фильмов «в процессе» есть
+      // только тут (то же, что уже используется в Api.upnext() для строки «Смотреть дальше»).
+      requestApi('GET', '/sync/playback?type=movies&extended=full&limit=100').catch(function() { return []; })
     ]).then(function(res) {
       var ms = new Set(), ss = new Set(), cs = new Set(), ds = new Set(), mDates = new Map();
+      var moviesProgressPct = new Map(), showsProgressPct = new Map();
       (res[0] || []).forEach(function(x) { var id = x.movie && x.movie.ids && x.movie.ids.tmdb; if (id) { ms.add(String(id)); if (x.last_watched_at) mDates.set(String(id), x.last_watched_at); } });
       _watchedEpisodesCache.clear();
       (res[1] || []).forEach(function(x) {
@@ -14137,16 +14152,24 @@
           });
         }
         if (totalEps > 0 && watchedEps >= totalEps) cs.add(String(id));
+        if (totalEps > 0) showsProgressPct.set(String(id), Math.min(100, Math.round(watchedEps / totalEps * 100)));
       });
       (res[2] || []).forEach(function(x) { var id = x.show && x.show.ids && x.show.ids.tmdb; if (id) ds.add(String(id)); });
+      (res[3] || []).forEach(function(x) {
+        var id = x && x.movie && x.movie.ids && x.movie.ids.tmdb;
+        var pct = x && Number(x.progress);
+        // Ограничение 99 — как и в Api.upnext(): 100% зарезервировано за «полностью просмотрено».
+        if (id && pct) moviesProgressPct.set(String(id), Math.max(0, Math.min(99, Math.round(pct))));
+      });
+      ms.forEach(function(id) { if (!moviesProgressPct.has(id)) moviesProgressPct.set(id, 100); });
       var ws = new Set();
       ss.forEach(function(id) { if (!cs.has(id) && !ds.has(id)) ws.add(id); });
-      _watchedCache = { movies: ms, shows: ss, completedShows: cs, watchingShows: ws, moviesWatchedAt: mDates };
+      _watchedCache = { movies: ms, shows: ss, completedShows: cs, watchingShows: ws, moviesWatchedAt: mDates, moviesProgressPct: moviesProgressPct, showsProgressPct: showsProgressPct };
       _watchedCachePromise = null;
       return _watchedCache;
     }).catch(function() {
       _watchedCachePromise = null;
-      _watchedCache = { movies: new Set(), shows: new Set(), completedShows: new Set(), watchingShows: new Set(), moviesWatchedAt: new Map() };
+      _watchedCache = { movies: new Set(), shows: new Set(), completedShows: new Set(), watchingShows: new Set(), moviesWatchedAt: new Map(), moviesProgressPct: new Map(), showsProgressPct: new Map() };
       return _watchedCache;
     });
     return _watchedCachePromise;
@@ -14157,6 +14180,7 @@
       setTimeout(function() {
         _renderedCardInstances.forEach(renderWatchedBadge);
         _renderedCardInstances.forEach(renderWatchingBadge);
+        _renderedCardInstances.forEach(renderProgressBar);
       }, 0);
     }).catch(function() {});
   }
@@ -14461,6 +14485,45 @@
     if (!_watchedCache || !tmdbId) return false;
     var s = String(tmdbId);
     return type === 'movie' ? _watchedCache.movies.has(s) : _watchedCache.shows.has(s);
+  }
+
+  // Шкала прогресса просмотра общего назначения (trakt_badge_progress, выкл. по
+  // умолчанию) — везде, где вешаются остальные бейджи: главная, Смотреть дальше,
+  // Хочу посмотреть, Мои сериалы/Рекомендации/Избранное, сторонние сетки через
+  // window.TraktTV.applyBadges. Тот же внешний вид, что у renderDroppedProgressBar
+  // (.trakt-progress-bar/.trakt-progress-bar__fill), но с отдельным классом-маркером
+  // (--general), чтобы CSS-скрытие по настройке не задевало всегда-видимую шкалу
+  // «Брошенные». Источник процента: сначала данные конкретно этой карточки (Смотреть
+  // дальше — resolveUpnextProgress по trakt_upnext_watched/total), иначе общий кэш
+  // _watchedCache.moviesProgressPct/showsProgressPct по TMDB id.
+  function renderProgressBar(cardInstance) {
+    var data = cardInstance && cardInstance.data;
+    if (!data || !data.id) return;
+    var type = data.method || data.card_type || data.type || (data.name ? 'tv' : 'movie');
+    var isMovie = type === 'movie';
+    var isShow = type === 'tv' || type === 'show';
+    if (!isMovie && !isShow) return;
+    var pct = null;
+    var upnextProgress = resolveUpnextProgress(data);
+    if (upnextProgress && upnextProgress.percent !== null && upnextProgress.percent !== undefined) {
+      pct = upnextProgress.percent;
+    } else if (_watchedCache) {
+      var map = isMovie ? _watchedCache.moviesProgressPct : _watchedCache.showsProgressPct;
+      if (map && map.has(String(data.id))) pct = map.get(String(data.id));
+    }
+    pct = Number(pct);
+    if (!pct || pct <= 0) return;
+    pct = Math.min(100, pct);
+    var cardNode = typeof cardInstance.render === 'function' ? cardInstance.render(true) : null;
+    var cardView = cardNode && cardNode.querySelector ? cardNode.querySelector('.card__view') : null;
+    if (!cardView || cardView.querySelector('.trakt-progress-bar--general')) return;
+    var bar = document.createElement('div');
+    bar.className = 'trakt-progress-bar trakt-progress-bar--general';
+    var fill = document.createElement('div');
+    fill.className = 'trakt-progress-bar__fill';
+    fill.style.width = pct + '%';
+    bar.appendChild(fill);
+    cardView.insertBefore(bar, cardView.firstChild);
   }
 
   function renderWatchedBadge(cardInstance) {
@@ -14891,6 +14954,7 @@
             renderWatchedBadge(inst);
             renderWatchingBadge(inst);
             renderWatchlistBadge(inst);
+            renderProgressBar(inst);
           }, 0);
         }
       }
@@ -15145,6 +15209,7 @@
             e.items.forEach(renderWatchingBadge);
             e.items.forEach(renderWatchlistBadge);
             e.items.forEach(renderDigitalReleaseBadge);
+            e.items.forEach(renderProgressBar);
             refreshDigitalBadgesDOM();
           }
         }
@@ -15159,6 +15224,7 @@
         e.items.forEach(renderWatchingBadge);
         e.items.forEach(renderWatchlistBadge);
         e.items.forEach(renderDigitalReleaseBadge);
+        e.items.forEach(renderProgressBar);
         refreshDigitalBadgesDOM();
       });
       _initCardObserver();
@@ -17958,6 +18024,7 @@
                 renderWatchingBadge(cardInstance);
                 renderWatchlistBadge(cardInstance);
                 renderDigitalReleaseBadge(cardInstance);
+                renderProgressBar(cardInstance);
               } catch (e2) {/* noop */}
             };
             paint();
