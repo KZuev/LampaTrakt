@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.61';
+  var PLUGIN_VERSION = '3.2.62';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -7602,8 +7602,17 @@
         // grid. No explicit collectionFocus — the user's next DOWN press will
         // move into the newly visible items via Navigator.move('down').
         setTimeout(function () {
-          Lampa.Controller.collectionSet(scroll.render());
-          if (last) Lampa.Controller.collectionFocus(last, scroll.render());
+          // На touch-платформах (iPhone и т.п.) Controller.collectionSet после
+          // дозагрузки уводит страницу в самый верх: Lampa переустанавливает
+          // фокус-коллекцию remote-навигации и фокусирует первый элемент
+          // коллекции (самый верхний), а .focus() на нём триггерит нативный
+          // scrollIntoView браузера. На Apple TV это необходимо — без
+          // пересборки коллекции пульт не «увидит» новые элементы; на touch
+          // такой навигации нет, страница и так листается пальцем.
+          if (!Lampa.Platform.screen('mobile')) {
+            Lampa.Controller.collectionSet(scroll.render());
+            if (last) Lampa.Controller.collectionFocus(last, scroll.render());
+          }
           loadingMore = false;
         }, 300);
       })['catch'](function () {
