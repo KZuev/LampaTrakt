@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.57';
+  var PLUGIN_VERSION = '3.2.58';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -11183,8 +11183,18 @@
     });
     Lampa.SettingsApi.addParam({
       component: 'trakt',
-      param: { name: 'trakt_badge_progress', type: 'trigger', 'default': false },
-      field: { name: 'Шкала прогресса просмотра', description: 'Полоска сверху постера — сколько процентов фильма/сериала просмотрено (как в «Мои сериалы» → «Брошенные»). На главной, в «Смотреть дальше», «Хочу посмотреть» и везде, где показываются бейджи' }
+      param: {
+        name: 'trakt_badge_progress',
+        type: 'select',
+        'default': 'none',
+        values: {
+          movie: 'Фильмы',
+          show: 'Сериалы',
+          both: 'Фильмы и сериалы',
+          none: 'Нет'
+        }
+      },
+      field: { name: 'Шкала прогресса просмотра', description: 'Полоска сверху постера — сколько процентов просмотрено (как в «Мои сериалы» → «Брошенные»). На главной, в «Смотреть дальше», «Хочу посмотреть» и везде, где показываются бейджи' }
     });
     // ── Авто-торрент ─────────────────────────────────────────────────────────────
     Lampa.SettingsApi.addParam({
@@ -11419,10 +11429,14 @@
       if (!readBooleanStorage$2('trakt_badge_watchlist', true)) hidden.push('.trakt-watchlist-badge');
       if (!readBooleanStorage$2('trakt_badge_digital_release', true)) hidden.push('.trakt-digital-release');
       if (!readBooleanStorage$2('trakt_badge_digital_date', true)) hidden.push('.trakt-digital-date');
-      // По умолчанию выключено (default:false) — скрываем именно шкалу общего назначения
-      // (.trakt-progress-bar--general), а не .trakt-progress-bar целиком: у «Брошенные»
-      // в «Мои сериалы» своя, всегда включённая шкала того же вида, её не трогаем.
-      if (!readBooleanStorage$2('trakt_badge_progress', false)) hidden.push('.trakt-progress-bar--general');
+      // По умолчанию «Нет» — скрываем именно шкалу общего назначения (.trakt-progress-bar--general),
+      // а не .trakt-progress-bar целиком: у «Брошенные» в «Мои сериалы» своя, всегда включённая
+      // шкала того же вида, её не трогаем. Элемент помечен ещё и типом контента
+      // (--movie/--show), поэтому режимы «Фильмы»/«Сериалы» скрывают только чужой тип.
+      var progressMode = String(Lampa.Storage.field('trakt_badge_progress') || 'none');
+      if (progressMode === 'none') hidden.push('.trakt-progress-bar--general');
+      else if (progressMode === 'movie') hidden.push('.trakt-progress-bar--general.trakt-progress-bar--show');
+      else if (progressMode === 'show') hidden.push('.trakt-progress-bar--general.trakt-progress-bar--movie');
       if (hidden.length) {
         if (!el) { el = document.createElement('style'); el.id = styleId; document.head.appendChild(el); }
         el.textContent = hidden.join(',') + '{display:none!important}';
@@ -14518,7 +14532,7 @@
     var cardView = cardNode && cardNode.querySelector ? cardNode.querySelector('.card__view') : null;
     if (!cardView || cardView.querySelector('.trakt-progress-bar--general')) return;
     var bar = document.createElement('div');
-    bar.className = 'trakt-progress-bar trakt-progress-bar--general';
+    bar.className = 'trakt-progress-bar trakt-progress-bar--general ' + (isMovie ? 'trakt-progress-bar--movie' : 'trakt-progress-bar--show');
     var fill = document.createElement('div');
     fill.className = 'trakt-progress-bar__fill';
     fill.style.width = pct + '%';
