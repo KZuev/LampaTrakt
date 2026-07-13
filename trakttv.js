@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.60';
+  var PLUGIN_VERSION = '3.2.61';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -7387,6 +7387,12 @@
     var Template = Lampa.Template;
     var Empty = Lampa.Empty;
     this.activity = null;
+    // create() — async generator: ждёт Trakt+TMDB (может занять секунды), пользователь
+    // может уйти с экрана раньше — Lampa вызовет destroy(). Без этого флага create()
+    // после резолва промисов всё равно дёргает this.activity.toggle() на уже снятой
+    // активности → краш глубоко в Lampa Controller/Activity (не в коде плагина), который
+    // вешает общую навигацию (не только календарь). См. AGENTS.md.
+    this._destroyed = false;
     var scroll = new Scroll({ mask: true, over: true, step: 300 });
     var html = $('<div></div>');
     var body = $('<div class="timetable"></div>');
@@ -7622,6 +7628,11 @@
             _context.n = 2;
             return enrichTimetableCards(episodes);
           case 2:
+            // Пока грузился календарь, пользователь мог уйти — destroy() уже отработал.
+            // Не строим DOM в снятый scroll/html и не трогаем this.activity — вызов
+            // toggle()/loader() на неактуальной активности крашит Lampa Controller/Activity
+            // и вешает навигацию всего приложения, а не только эту карточку.
+            if (this._destroyed) return _context.a(2, this.render());
             hasAny = false;
             (function () {
               var grouped = groupEpisodesByDate(episodes);
@@ -7669,15 +7680,17 @@
 
             html.append(scroll.render());
 
-            if (this.activity) this.activity.loader(false);
+            try { if (this.activity) this.activity.loader(false); } catch (e) {}
 
             this.body = body;
             this.scroll = scroll;
             this.html = html;
 
-            if (this.activity && typeof this.activity.toggle === 'function') {
-              this.activity.toggle();
-            }
+            try {
+              if (this.activity && typeof this.activity.toggle === 'function') {
+                this.activity.toggle();
+              }
+            } catch (e) {}
             return _context.a(2, this.render());
         }
       }, _callee, this);
@@ -7808,6 +7821,7 @@
       return html;
     };
     this.destroy = function () {
+      _this2._destroyed = true;
       scroll.destroy();
       html.remove();
     };
