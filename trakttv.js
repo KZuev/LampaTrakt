@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.58';
+  var PLUGIN_VERSION = '3.2.59';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -4184,6 +4184,7 @@
                   if (_isM || _isS) {
                     if (_renderedCardInstances.indexOf(_card) < 0) _renderedCardInstances.push(_card);
                     if (type === 'watchlist') _card._trakt_no_watchlist_badge = true;
+                    if (type === 'history') _card._trakt_no_progress_bar = true;
                     if (_isM) renderDigitalReleaseBadge(_card);
                     renderWatchedBadge(_card);
                     renderWatchingBadge(_card);
@@ -4277,6 +4278,7 @@
             if (_isM || _isS) {
               if (_renderedCardInstances.indexOf(card) < 0) _renderedCardInstances.push(card);
               if (type === 'watchlist') card._trakt_no_watchlist_badge = true;
+              if (type === 'history') card._trakt_no_progress_bar = true;
               if (_isM) renderDigitalReleaseBadge(card);
               renderWatchedBadge(card); renderWatchingBadge(card); renderWatchlistBadge(card); renderProgressBar(card);
             }
@@ -14511,12 +14513,15 @@
   // дальше — resolveUpnextProgress по trakt_upnext_watched/total), иначе общий кэш
   // _watchedCache.moviesProgressPct/showsProgressPct по TMDB id.
   function renderProgressBar(cardInstance) {
+    if (cardInstance && cardInstance._trakt_no_progress_bar) return; // История — там и так всё просмотрено
     var data = cardInstance && cardInstance.data;
     if (!data || !data.id) return;
     var type = data.method || data.card_type || data.type || (data.name ? 'tv' : 'movie');
     var isMovie = type === 'movie';
     var isShow = type === 'tv' || type === 'show';
     if (!isMovie && !isShow) return;
+    // Полностью просмотренный фильм уже отмечен галочкой — шкала на 100% ничего не добавляет.
+    if (isMovie && isWatchedFromCache(data.id, 'movie')) return;
     var pct = null;
     var upnextProgress = resolveUpnextProgress(data);
     if (upnextProgress && upnextProgress.percent !== null && upnextProgress.percent !== undefined) {
