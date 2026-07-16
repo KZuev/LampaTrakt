@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.62';
+  var PLUGIN_VERSION = '3.2.63';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -16362,8 +16362,12 @@
             results = applyUpnextRecencySort(results);
           }
           var filtered = typeof config.filter === 'function' ? config.filter(results, params, screen) : results;
+          var prevResults = staleLine && Array.isArray(staleLine.results) ? staleLine.results : [];
           if (!filtered || !filtered.length) {
-            clearRowCache(cacheKey);
+            // Если раньше кэш был непустым и заметным, а сейчас фильтр отдал пусто —
+            // похоже на временный сбой (сеть/авторизация), а не на реально опустевший список.
+            // Не чистим хороший кэш ради одного плохого захода, пусть следующий фетч сам себя исправит.
+            if (prevResults.length < 4) clearRowCache(cacheKey);
             if (!done) finish(null);
             return;
           }
@@ -16375,7 +16379,19 @@
           var line = createRowPayload(config, data, normalizedResults);
           // Не кэшируем строку, если локализация в этот раз не удалась (часть элементов
           // осталась английской из-за сетевого сбоя) — иначе английский «залипнет» в кэше.
-          if (!data || !data._localeIncomplete) saveRowToCache(cacheKey, line);
+          // Также не кэшируем при резкой просадке числа элементов относительно предыдущего
+          // кэша (>60% потери) — вероятный признак временного сбоя фетча, а не реального
+          // изменения состава (иначе один плохой заход «залипает» в кэше до 6 часов).
+          var suspiciousDrop = prevResults.length >= 4 && normalizedResults.length < prevResults.length * 0.4;
+          if (suspiciousDrop) {
+            logWarn('Row cache save skipped: suspicious drop', {
+              row: config.name,
+              prevCount: prevResults.length,
+              newCount: normalizedResults.length
+            }, { debugOnly: true });
+          } else if (!data || !data._localeIncomplete) {
+            saveRowToCache(cacheKey, line);
+          }
           if (!done) finish(attachOnMore(line, config));
         })["catch"](function (error) {
           logWarn('Row load failed', {
