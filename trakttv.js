@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.64';
+  var PLUGIN_VERSION = '3.2.65';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -540,6 +540,7 @@
   var authBlockedNotified = false;
   var authBlockedTokenFingerprint = '';
   var authNotifyAt = 0;
+  var authRecoveryTriedAt = 0;
   function getAccessTokenFingerprint() {
     var token = String(Lampa.Storage.get('trakt_token') || '');
     if (!token) return '';
@@ -651,6 +652,9 @@
     return status === 429 || status === 503;
   }
   function notifyAuthBlockedOnce() {
+    // Не показываем «Не авторизированы», пока рабочий токен на месте — блок в этом
+    // случае восстановимый (ложный), тост только путает пользователя.
+    if (isTraktAuthorized()) return;
     // Троттлинг по времени: параллельный бурст 401 (например на старте без аккаунтов)
     // схлопывается в одно уведомление. Гард authBlockedNotified не годится, т.к.
     // setAuthBlocked сбрасывает его при каждом блоке.
@@ -676,6 +680,37 @@
     if (!current) return false;
     if (!authBlockedTokenFingerprint) return true;
     return current !== authBlockedTokenFingerprint;
+  }
+  // Единый источник истины «есть ли авторизация»: любой слот с токеном ИЛИ плоский trakt_token.
+  // Флаг блокировки (trakt_auth_blocked) сюда НЕ входит — он временный/восстановимый.
+  function isTraktAuthorized() {
+    try {
+      var slots = multiAccountGetAll();
+      if (Array.isArray(slots) && slots.some(function (d) { return d && d.token; })) return true;
+    } catch (e) {/* noop */}
+    return hasUsableAccessToken();
+  }
+  // Попытка само-восстановления после ложной блокировки: если refresh-токен ещё валиден,
+  // форсированный рефреш вернёт новый access-токен и снимет блок. Терминальный отзыв
+  // (400/401 от /oauth/token) уже сам ставит блок + чистит хранилище внутри _refreshTokens.
+  function attemptAuthRecovery() {
+    if (!isAuthBlocked()) return Promise.resolve(false);
+    if (typeof isDeviceAuthActive === 'function' && isDeviceAuthActive()) return Promise.resolve(false);
+    if (getAuthRateLimitRemainingMs() > 0) return Promise.resolve(false);
+    if (!Lampa.Storage.get('trakt_refresh_token')) return Promise.resolve(false);
+    // Троттл, чтобы последовательные запросы не устраивали шторм рефрешей.
+    if (authRecoveryTriedAt && Date.now() - authRecoveryTriedAt < 15000) return Promise.resolve(false);
+    authRecoveryTriedAt = Date.now();
+    return runRefreshFlow({ reason: 'auth_recovery' }).then(function () {
+      if (hasUsableAccessToken()) {
+        clearAuthBlocked();
+        try { refreshTraktAccountSwitcher(); } catch (e) {/* noop */}
+        return true;
+      }
+      return false;
+    })["catch"](function () {
+      return false;
+    });
   }
   function saveTokens() {
     var response = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
@@ -1330,6 +1365,8 @@
               rlRecordRequest('/oauth/token', 200);
               if (res && res.access_token) {
                 saveTokens(res);
+                // Свежий токен получен — гасим возможный устаревший крестик на иконке.
+                try { refreshTraktAccountSwitcher(); } catch (e) {}
               }
               return res;
             })["catch"](function (error) {
@@ -1345,14 +1382,19 @@
                 });
               }
               if (error && (error.status === 400 || error.status === 401)) {
+                // Терминальный отзыв refresh-токена — очищаем ВСЕ слоты, не только активный,
+                // чтобы крестик на иконке, тап→настройки и «Выйти» в настройках были согласованы.
                 setAuthBlocked("refresh_failed_".concat(error.status));
                 clearAuthStorage();
                 try {
-                  multiAccountUpdateSlot(multiAccountGetActiveSlot(), {
-                    token: null,
-                    refresh_token: null,
-                    expires_at: null,
-                    expires_in: null
+                  multiAccountGetAll().forEach(function (s) {
+                    if (!s) return;
+                    multiAccountUpdateSlot(s.slot, {
+                      token: null,
+                      refresh_token: null,
+                      expires_at: null,
+                      expires_in: null
+                    });
                   });
                   refreshTraktAccountSwitcher();
                 } catch (e) {}
@@ -1867,13 +1909,12 @@
           case 17:
             return _context6.a(3, 9);
           case 18:
-            if (!unauthorized && _t3 && _t3.status === 401) {
-              setAuthBlocked('unauthorized_after_refresh');
-              notifyAuthBlockedOnce();
-            }
-            if (!unauthorized && _t3 && _t3.status === 403 && /^\/users\/me(\?|$)/.test(normalizedEndpoint)) {
-              setAuthBlocked('users_me_forbidden');
-              notifyAuthBlockedOnce();
+            // 401/403 ПОСЛЕ успешного рефреша (токены целы) — не терминальный сигнал,
+            // а вероятный временный сбой Trakt. Не ставим персистентный trakt_auth_blocked
+            // (иначе авторизация «слетает» до ручного перелогина, хотя refresh-токен валиден),
+            // только короткий авто-истекающий кулдаун, чтобы не долбить запросами.
+            if (!unauthorized && _t3 && (_t3.status === 401 || (_t3.status === 403 && /^\/users\/me(\?|$)/.test(normalizedEndpoint)))) {
+              setAuthRateLimitCooldown(_t3);
             }
             throw _t3;
           case 19:
@@ -9542,8 +9583,10 @@
       var badge = $('.trakt-account-badge');
       if (!badge.length) return;
       var authed = multiAccountGetAll().filter(function (d) { return d && d.token; });
-      if (authed.length === 0) {
-        // Нет авторизованных аккаунтов — красный крестик вместо цифры
+      if (authed.length === 0 && !hasUsableAccessToken()) {
+        // Нет авторизованных аккаунтов — красный крестик вместо цифры.
+        // Плоский trakt_token проверяем тоже, чтобы не рисовать крестик, пока слоты
+        // trakt_accounts ещё гидрируются из плоского токена на старте.
         badge[0].style.backgroundImage = '';
         badge.text('✕').removeClass('trakt-account-badge--multi trakt-account-badge--multiwatch trakt-account-badge--avatar').addClass('trakt-account-badge--cross');
         return;
@@ -9589,7 +9632,7 @@
       var btn = Lampa.Head.addIcon(
         '<span class="trakt-head-icon">' + iconSvg + '<span class="trakt-account-badge">1</span></span>',
         function() {
-          var has = multiAccountGetAll().some(function (d) { return d && d.token; });
+          var has = isTraktAuthorized();
           setTimeout(has ? openTraktAccountSwitchMenu : openTraktSettings, 0);
         }
       );
@@ -18107,6 +18150,13 @@
     $('body').append(Lampa.Template.get('trakt_style', {}, true));
 
     if (Lampa.Storage.get('trakt_refresh_token')) {
+      // Само-восстановление ложной блокировки: если авторизация помечена заблокированной,
+      // но refresh-токен ещё валиден — форс-рефреш выдаст новый access-токен и снимет блок.
+      // При реально отозванном токене рефреш вернёт 400/401 → блок останется + хранилище
+      // очистится (согласованный логаут). Fire-and-forget, вне горячего пути запросов.
+      if (isAuthBlocked()) {
+        attemptAuthRecovery()["catch"](function () {/* noop */});
+      }
       var _getGlobalApi;
       var authApi = (_getGlobalApi = getGlobalApi()) === null || _getGlobalApi === void 0 ? void 0 : _getGlobalApi.auth;
       if (authApi && typeof authApi.ensureValid === 'function') {
