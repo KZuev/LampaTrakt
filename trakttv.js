@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.63';
+  var PLUGIN_VERSION = '3.2.64';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -15972,8 +15972,8 @@
   // Local safe resolver for Api
   var Api = typeof api$1 !== 'undefined' && api$1 || window.TraktTV && window.TraktTV.api || null;
   var initialized = false;
-  var UI_DEADLINE_MAIN_MS = 2800;
-  var UI_DEADLINE_CATEGORY_MS = 3200;
+  var UI_DEADLINE_MAIN_MS = 6000;
+  var UI_DEADLINE_CATEGORY_MS = 7000;
   var STALE_PRESENT_DEADLINE_MS = 0;
   var STALE_CACHE_TTL_MS = 1000 * 60 * 60 * 6;
   var STORAGE_CACHE_PREFIX = 'trakttv_row_cache_v1_';
