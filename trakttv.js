@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.66';
+  var PLUGIN_VERSION = '3.2.67';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -11281,6 +11281,14 @@
     });
     Lampa.SettingsApi.addParam({
       component: 'trakt',
+      param: { name: 'trakt_upnext_enter_autotorrent', type: 'trigger', 'default': false },
+      field: {
+        name: 'Авто-торрент из «Смотреть дальше»',
+        description: 'При выборе карточки в строке «Смотреть дальше» на главной сразу запускать Авто-торрент, минуя открытие карточки'
+      }
+    });
+    Lampa.SettingsApi.addParam({
+      component: 'trakt',
       param: {
         name: 'trakt_at_quality',
         type: 'select',
@@ -14400,7 +14408,7 @@
       _pendingMainRefresh = false;
       _a.upnext({ limit: 36, page: 1 }).then(function(freshData) {
         var results = freshData && Array.isArray(freshData.results) ? freshData.results : [];
-        var normalItems = normalizeContentData(results.slice(0, 20));
+        var normalItems = normalizeContentData(results.slice(0, 20), { upnext: true });
         if (!isLineAlive(_upnextLineRef)) return;
         try {
           if (Array.isArray(_upnextLineRef.items)) {
@@ -15822,9 +15830,11 @@
    * @param {Array} items - Array of content items
    * @returns {Array} - Normalized items with params.emit
    */
-  function normalizeContentData(items) {
+  function normalizeContentData(items, options) {
+    var markUpnext = !!(options && options.upnext);
     return items.map(function (item) {
       var normalized = _objectSpread2({}, item);
+      normalized._trakt_upnext = markUpnext;
       var contentType = getContentType(item);
       if (contentType === 'tv' || contentType === 'show') {
         normalized.name = item.title || item.original_title;
@@ -15858,6 +15868,13 @@
             var _this$data;
             // Use normalized.method (fixed at creation time) instead of getContentType(this.data)
             var fixedMethod = normalized.method || normalized.card_type || normalized.type;
+            // Опция «Авто-торрент из «Смотреть дальше»»: для карточек этой строки сразу
+            // запускаем Авто-торрент, минуя открытие карточки (component:'full').
+            if (normalized._trakt_upnext && readBooleanStorage$2('trakt_upnext_enter_autotorrent', false)) {
+              if (fixedMethod === 'tv' || fixedMethod === 'show') { launchAtShow(null, normalized); }
+              else { launchAtMovie(null, normalized); }
+              return;
+            }
             Lampa.Activity.push({
               url: ((_this$data = this.data) === null || _this$data === void 0 ? void 0 : _this$data.url) || normalized.url,
               component: 'full',
@@ -16167,7 +16184,7 @@
         var results = data && Array.isArray(data.results) ? data.results : [];
         if (!results.length) return;
         var limited = config.displayLimit > 0 ? results.slice(0, config.displayLimit) : results;
-        saveRowToCache(cacheKey, createRowPayload(config, data, normalizeContentData(limited)));
+        saveRowToCache(cacheKey, createRowPayload(config, data, normalizeContentData(limited, { upnext: config.traktRow === 'upnext' })));
       })['catch'](function () {});
     });
   }
@@ -16428,7 +16445,7 @@
             return;
           }
           var limitedResults = rowDisplayLimit > 0 ? filtered.slice(0, rowDisplayLimit) : filtered;
-          var normalizedResults = normalizeContentData(limitedResults);
+          var normalizedResults = normalizeContentData(limitedResults, { upnext: config.traktRow === 'upnext' && screen === 'main' });
           if (screen === 'main' && config.topshelf) {
             updateTopshelf(config.topshelf, filtered);
           }
