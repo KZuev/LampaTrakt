@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.65';
+  var PLUGIN_VERSION = '3.2.66';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -14180,6 +14180,30 @@
   function saveUpcomingMovieIds(ids) {
     try { Lampa.Storage.set(_UPCOMING_MOVIE_KEY, JSON.stringify(Array.from(ids))); } catch(e) {}
   }
+  // Фильтр строки «Хочу посмотреть»: вышедшие фильмы/сериалы — первыми (в исходном порядке
+  // по дате добавления), фильмы с будущим цифровым релизом (upcomingIds) — всегда В КОНЦЕ.
+  // Downstream .slice(0, displayLimit) тогда сам оставит вышедшие впереди, а невышедшие покажет
+  // только если осталось место — реальные фильмы никогда не вытесняются. Множество оставляемых
+  // элементов идентично прежнему inline-фильтру, меняется только порядок (невышедшие → в хвост).
+  function filterWatchlistRowResults(results) {
+    var todayStr = new Date().toISOString().slice(0, 10);
+    var currentYear = new Date().getFullYear();
+    var upcomingIds = getUpcomingMovieIds();
+    var released = [];
+    var upcoming = [];
+    (Array.isArray(results) ? results : []).forEach(function(item) {
+      var isMovie = item.card_type === 'movie';
+      var rel = item.trakt_released;
+      var isReleased;
+      if (isMovie && !rel) isReleased = false;
+      else if (rel && /^\d{4}-\d{2}-\d{2}/.test(String(rel))) isReleased = String(rel).slice(0, 10) <= todayStr;
+      else isReleased = (parseInt(item.release_date, 10) || 0) <= currentYear;
+      if (isReleased) { released.push(item); return; }
+      if (isMovie && item.id && upcomingIds.has(String(item.id))) { upcoming.push(item); return; }
+      // иначе — отбрасываем (как и раньше)
+    });
+    return released.concat(upcoming);
+  }
   var _UPCOMING_MOVIE_DATES_KEY = 'trakt_upcoming_movie_dates';
   function getUpcomingMovieDates() {
     try { var r = localStorage.getItem(_UPCOMING_MOVIE_DATES_KEY); return r ? JSON.parse(r) : {}; } catch(e) { return {}; }
@@ -14430,19 +14454,8 @@
       var _sortStr = _sp.field + '/' + _sp.order;
       _a.watchlist({ limit: 100, page: 1, sort: _sortStr, watchlistSort: _sortStr }).then(function(freshData) {
         var results = freshData && Array.isArray(freshData.results) ? freshData.results : [];
-        // Apply same filter as TraktWatchlistRow config (hide unreleased movies, keep upcoming)
-        var todayStr = new Date().toISOString().slice(0, 10);
-        var currentYear = new Date().getFullYear();
-        var upcomingIds = getUpcomingMovieIds();
-        var filtered = results.filter(function(item) {
-          if (item.card_type === 'movie') {
-            if (item.id && upcomingIds.has(String(item.id))) return true;
-            if (!item.trakt_released) return false;
-          }
-          var rel = item.trakt_released;
-          if (rel && /^\d{4}-\d{2}-\d{2}/.test(String(rel))) return String(rel).slice(0, 10) <= todayStr;
-          return (parseInt(item.release_date, 10) || 0) <= currentYear;
-        });
+        // Тот же фильтр, что в конфиге TraktWatchlistRow: вышедшие первыми, невышедшие в конце.
+        var filtered = filterWatchlistRowResults(results);
         var normalItems = normalizeContentData(filtered.slice(0, 20));
         if (!isLineAlive(_watchlistLineRef)) return;
         try {
@@ -16484,22 +16497,10 @@
         return true;
       },
       filter: function filter(results) {
-        var todayStr = new Date().toISOString().slice(0, 10);
-        var currentYear = new Date().getFullYear();
-        var upcomingIds = getUpcomingMovieIds();
-        return results.filter(function(item) {
-          if (item.card_type === 'movie') {
-            // v2.1.9: Show movies with upcoming digital releases in watchlist row (with badge)
-            if (item.id && upcomingIds.has(String(item.id))) return true;
-            // Hide movies with no known release date (unreleased or untracked)
-            if (!item.trakt_released) return false;
-          }
-          var rel = item.trakt_released;
-          if (rel && /^\d{4}-\d{2}-\d{2}/.test(String(rel))) {
-            return String(rel).slice(0, 10) <= todayStr;
-          }
-          return (parseInt(item.release_date, 10) || 0) <= currentYear;
-        });
+        // v2.1.9 + v3.2.66: вышедшие — первыми, невышедшие с будущим цифровым релизом — в конце
+        // (не вытесняя реальные из первых displayLimit). Общий хелпер, чтобы поведение совпадало
+        // с rebuildWatchlistLineInPlace на первом и повторных заходах.
+        return filterWatchlistRowResults(results);
       }
     }];
     var catRows = [{
