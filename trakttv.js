@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.67';
+  var PLUGIN_VERSION = '3.2.68';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -15860,39 +15860,55 @@
 
       // Add params.emit for Lampa 3.0+ modular system.
       // Use onlyEnter to avoid default navigation firing as well.
-      // CRITICAL: Use normalized closure variables instead of this.data
-      // to prevent runtime modification by Lampa.
-      normalized.params = {
-        emit: {
-          onlyEnter: function onlyEnter() {
-            var _this$data;
-            // Use normalized.method (fixed at creation time) instead of getContentType(this.data)
-            var fixedMethod = normalized.method || normalized.card_type || normalized.type;
-            // Опция «Авто-торрент из «Смотреть дальше»»: для карточек этой строки сразу
-            // запускаем Авто-торрент, минуя открытие карточки (component:'full').
-            if (normalized._trakt_upnext && readBooleanStorage$2('trakt_upnext_enter_autotorrent', false)) {
-              if (fixedMethod === 'tv' || fixedMethod === 'show') { launchAtShow(null, normalized); }
-              else { launchAtMovie(null, normalized); }
-              return;
-            }
-            Lampa.Activity.push({
-              url: ((_this$data = this.data) === null || _this$data === void 0 ? void 0 : _this$data.url) || normalized.url,
-              component: 'full',
-              id: normalized.id,
-              // Use normalized.id (fixed)
-              method: fixedMethod,
-              // Use fixed method from normalized
-              card: normalized,
-              // Pass normalized instead of this.data
-              source: normalized.source || 'tmdb',
-              season: normalized.season,
-              episode: normalized.episode
-            });
-          }
-        }
-      };
+      normalized.params = buildRowEnterParams(normalized);
       return normalized;
     });
+  }
+
+  // Построение обработчика Enter карточки строки главной. Вынесено в отдельный хелпер,
+  // чтобы можно было ПЕРЕ-навесить его на элементы, отрисованные из кэша (при сериализации
+  // в хранилище функции теряются — иначе перехват «Авто-торрент из Смотреть дальше» не
+  // срабатывал бы на строке, отрисованной из кэша, и открывалась бы карточка).
+  // CRITICAL: замыкание использует entry, а не this.data — чтобы Lampa не мутировала данные.
+  function buildRowEnterParams(entry) {
+    return {
+      emit: {
+        onlyEnter: function onlyEnter() {
+          var _this$data;
+          var fixedMethod = entry.method || entry.card_type || entry.type;
+          // Опция «Авто-торрент из «Смотреть дальше»»: для карточек этой строки сразу
+          // запускаем Авто-торрент, минуя открытие карточки (component:'full').
+          if (entry._trakt_upnext && readBooleanStorage$2('trakt_upnext_enter_autotorrent', false)) {
+            if (fixedMethod === 'tv' || fixedMethod === 'show') { launchAtShow(null, entry); }
+            else { launchAtMovie(null, entry); }
+            return;
+          }
+          Lampa.Activity.push({
+            url: ((_this$data = this.data) === null || _this$data === void 0 ? void 0 : _this$data.url) || entry.url,
+            component: 'full',
+            id: entry.id,
+            method: fixedMethod,
+            card: entry,
+            source: entry.source || 'tmdb',
+            season: entry.season,
+            episode: entry.episode
+          });
+        }
+      }
+    };
+  }
+
+  // Гарантированно навесить перехват Enter на элементы строки «Смотреть дальше» перед показом.
+  // Работает и для строки из кэша (где params.emit потерян), и для «живой» — так опция
+  // «Авто-торрент из Смотреть дальше» срабатывает стабильно, а не через раз.
+  function ensureUpnextEnterParams(line, isUpnextMain) {
+    if (!isUpnextMain || !line || !Array.isArray(line.results)) return line;
+    line.results.forEach(function (it) {
+      if (!it) return;
+      it._trakt_upnext = true;
+      it.params = buildRowEnterParams(it);
+    });
+    return line;
   }
 
   /**
@@ -16413,6 +16429,7 @@
           return call();
         }
         var cacheKey = buildRowCacheKey(config, params, screen);
+        var isUpnextMain = config.traktRow === 'upnext' && screen === 'main';
         var staleLine = attachOnMore(loadRowFromCache(cacheKey), config);
         var deadline = staleLine ? STALE_PRESENT_DEADLINE_MS : getUiDeadline(screen);
         var done = false;
@@ -16421,6 +16438,9 @@
           if (done) return;
           done = true;
           if (timeoutId) clearTimeout(timeoutId);
+          // Перед показом гарантируем обработчик Enter для «Смотреть дальше» — строка из кэша
+          // теряет params.emit при сериализации, иначе перехват «Авто-торрент» срабатывал через раз.
+          ensureUpnextEnterParams(line, isUpnextMain);
           if (line && Array.isArray(line.results) && line.results.length) call(line);else call();
         };
         timeoutId = setTimeout(function () {
