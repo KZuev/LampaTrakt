@@ -384,7 +384,7 @@
   }
 
   var API_URL = 'https://api.trakt.tv';
-  var PLUGIN_VERSION = '3.2.68';
+  var PLUGIN_VERSION = '3.2.69';
 
   var _AT_MIGRATE_MAP = {
     trakt_magic_enabled:    'trakt_at_enabled',
@@ -872,7 +872,11 @@
       skewMs = _ref$skewMs === void 0 ? TOKEN_EXPIRY_SKEW_MS : _ref$skewMs;
     var _getTokenExpiryMeta = getTokenExpiryMeta(),
       expiresAt = _getTokenExpiryMeta.expiresAt;
-    if (!expiresAt || expiresAt <= 0) return true;
+    // Неизвестный срок годности: если рабочий access-токен есть — НЕ форсируем рефреш заранее.
+    // Каждый рефреш ротирует refresh-токен, и на мультидевайсе (общий/синхронизируемый токен)
+    // лишние ротации ломают авторизацию на других устройствах. Обновимся лениво по реальному
+    // 401 (путь 401-retry делает это безопасно). Форсируем только когда access-токена нет вовсе.
+    if (!expiresAt || expiresAt <= 0) return !hasUsableAccessToken();
     return Date.now() + skewMs >= expiresAt;
   }
   function isDeviceAuthActive() {
@@ -1384,20 +1388,40 @@
               if (error && (error.status === 400 || error.status === 401)) {
                 // Терминальный отзыв refresh-токена — очищаем ВСЕ слоты, не только активный,
                 // чтобы крестик на иконке, тап→настройки и «Выйти» в настройках были согласованы.
-                setAuthBlocked("refresh_failed_".concat(error.status));
-                clearAuthStorage();
-                try {
-                  multiAccountGetAll().forEach(function (s) {
-                    if (!s) return;
-                    multiAccountUpdateSlot(s.slot, {
-                      token: null,
-                      refresh_token: null,
-                      expires_at: null,
-                      expires_in: null
+                var _terminalLogout = function _terminalLogout() {
+                  setAuthBlocked("refresh_failed_".concat(error.status));
+                  clearAuthStorage();
+                  try {
+                    multiAccountGetAll().forEach(function (s) {
+                      if (!s) return;
+                      multiAccountUpdateSlot(s.slot, {
+                        token: null,
+                        refresh_token: null,
+                        expires_at: null,
+                        expires_in: null
+                      });
                     });
+                    refreshTraktAccountSwitcher();
+                  } catch (e) {}
+                };
+                // Refresh-токен отвергнут (например, ротирован другим устройством с тем же
+                // аккаунтом), но access-токен может быть ещё жив (~3 мес). НЕ разлогиниваем,
+                // пока он рабочий — иначе на мультидевайсе авторизация слетает каждые несколько
+                // дней. Проверяем access-токен сырым запросом (минуя рефреш-машинерию).
+                var _accessToken = Lampa.Storage.get('trakt_token');
+                if (_accessToken) {
+                  return requestApiWithToken(_accessToken, 'GET', '/users/settings').then(function () {
+                    logWarn('Refresh rejected but access token still valid — keeping session', undefined, {
+                      debugOnly: true
+                    });
+                    // Резолвим старым (живым) токеном — вызывающий продолжит без логаута.
+                    return { access_token: _accessToken };
+                  })["catch"](function () {
+                    _terminalLogout();
+                    throw error;
                   });
-                  refreshTraktAccountSwitcher();
-                } catch (e) {}
+                }
+                _terminalLogout();
               }
               throw error;
             }));
